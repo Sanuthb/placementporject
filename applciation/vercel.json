@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/blocking/evaluate",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/reports/schedules/run",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/crm/follow-ups/run",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/notifications/round-reminders/run",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

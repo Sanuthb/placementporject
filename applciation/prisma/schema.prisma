@@ -1,0 +1,1761 @@
+// Phase 0 foundation: tenancy, modules, departments, users/roles, audit log.
+// Every tenant table carries collegeId so one deployment can serve many colleges.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  TPO_ADMIN
+  PLACEMENT_OFFICER
+  DEPARTMENT_COORDINATOR
+}
+
+// Sellable modules (spec: "module tags"). Core is always on and is not stored.
+enum ModuleKey {
+  ONBOARDING
+  PSYCHOMETRICS
+  DRIVES
+  ATTENDANCE_BLOCKING
+  ANALYTICS
+  ASSESSMENTS
+  EMPLOYER_CRM
+  STUDENT_PREP
+  INTERNSHIPS
+  EVENTS
+  LEARNING
+  RECRUITER_PORTAL
+  TALENT_SHOWCASE
+}
+
+// Student profile sections (spec 2.3). Used for required-section configuration.
+enum ProfileSection {
+  PERSONAL
+  ACADEMICS
+  EDUCATION_HISTORY
+  SKILLS
+  PROJECTS
+  INTERNSHIPS
+  RESUME
+  DOCUMENTS
+}
+
+enum InviteStatus {
+  NOT_SENT
+  SENT
+  ACTIVATED
+}
+
+enum SectionStatus {
+  DRAFT
+  SUBMITTED
+  CHANGES_REQUESTED
+  VERIFIED
+}
+
+enum StudentStage {
+  PROFILE_PENDING
+  VERIFIED
+  ONBOARDED
+}
+
+enum ParticipationStatus {
+  REGISTERED
+  OPTED_OUT
+  HIGHER_STUDIES
+  ENTREPRENEURSHIP
+  NOT_ELIGIBLE
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VerificationAction {
+  SUBMITTED
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+enum CompanyTier {
+  DREAM
+  SUPER_DREAM
+  CORE
+  REGULAR
+}
+
+enum RelationshipStatus {
+  ACTIVE
+  DORMANT
+  BLACKLISTED
+}
+
+enum NoteKind {
+  CONVERSATION
+  FOLLOW_UP
+}
+
+enum JobType {
+  FULL_TIME
+  INTERNSHIP
+  INTERNSHIP_WITH_OFFER
+}
+
+enum DriveStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum RoundType {
+  APTITUDE
+  CODING
+  GROUP_DISCUSSION
+  TECHNICAL
+  HR
+  OTHER
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SHORTLISTED
+  ON_HOLD
+  REJECTED
+  WITHDRAWN
+}
+
+enum RoundResultStatus {
+  ATTENDED
+  ABSENT
+  CLEARED
+  REJECTED
+}
+
+enum OfferStatus {
+  OFFERED
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
+enum JoiningStatus {
+  PENDING
+  JOINED
+  NOT_JOINED
+}
+
+enum ApprovalAction {
+  OFFER_CREATE
+  BULK_EMAIL
+  BULK_STATUS_CHANGE
+  ELIGIBILITY_EXCEPTION
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SENT_BACK
+}
+
+enum MessageStatus {
+  SENT
+  FAILED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum CheckInMethod {
+  MANUAL
+  CODE
+  AUTO_CLOSE
+}
+
+enum SlotStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum BlockPolicyType {
+  MISSED_DRIVES
+  PLACED_LOWER_TIER
+}
+
+enum BlockSource {
+  POLICY
+  MANUAL
+}
+
+enum BlockStatus {
+  ACTIVE
+  LIFTED
+  EXPIRED
+}
+
+enum AlertStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum AlertEventKind {
+  VIEW
+  CLICK
+  INTERESTED
+}
+
+enum TicketCategory {
+  DATA_CORRECTION
+  APPLICATION_ISSUE
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum ReportType {
+  PLACEMENT_SUMMARY
+  NIRF
+}
+
+enum ReportFrequency {
+  WEEKLY
+  MONTHLY
+}
+
+enum ProspectStage {
+  PROSPECT
+  IN_CONVERSATION
+  DRIVE_SCHEDULED
+  WON
+  LOST
+}
+
+enum InternshipStatus {
+  ALLOTTED
+  ONGOING
+  COMPLETED
+  TERMINATED
+}
+
+enum LogStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum EvaluatorType {
+  COMPANY
+  FACULTY
+}
+
+enum EventType {
+  CAREER_FAIR
+  HACKATHON
+  CODING_CONTEST
+  CASE_CHALLENGE
+  WORKSHOP
+}
+
+enum EventMode {
+  VIRTUAL
+  ONSITE
+  HYBRID
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WAITLISTED
+  CANCELLED
+  ATTENDED
+}
+
+enum ProgrammeDelivery {
+  IN_HOUSE
+  PARTNER
+}
+
+enum ProgrammeStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+}
+
+enum SlotState {
+  OPEN
+  BOOKED
+  COMPLETED
+  CANCELLED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ResourceCategory {
+  APTITUDE
+  CODING
+  INTERVIEW
+  SOFT_SKILLS
+  OTHER
+}
+
+enum RecruiterJobStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ImportStatus {
+  PREVIEW
+  PROCESSING
+  COMPLETED
+}
+
+model College {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String   @unique
+  logoUrl    String?
+  brandColor String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  modules     CollegeModule[]
+  departments   Department[]
+  users         User[]
+  auditLogs     AuditLog[]
+  programs      Program[]
+  academicYears AcademicYear[]
+  batches       Batch[]
+  settings      CollegeSettings?
+  students      Student[]
+  importJobs    ImportJob[]
+  sections      StudentSection[]
+  sectionDocs   SectionDocument[]
+  verificationEvents    VerificationEvent[]
+  participationHistory  ParticipationHistory[]
+  participationRequests ParticipationRequest[]
+  companies     Company[]
+  drives        Drive[]
+  offers        Offer[]
+  approvals     ApprovalRequest[]
+  messages      MessageLog[]
+}
+
+model CollegeSettings {
+  collegeId                     String           @id @db.Uuid
+  requiredSections              ProfileSection[]
+  requireAssessmentToOnboard    Boolean          @default(false)
+  maxOffersPerStudent           Int?             @default(1)
+  enforceTierUpgrade            Boolean          @default(false)
+  shareRoundScores              Boolean          @default(false)
+  approvalRequired              ApprovalAction[]
+  updatedAt                     DateTime         @updatedAt
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+}
+
+model Program {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  batches  Batch[]
+  students Student[]
+
+  @@unique([collegeId, code])
+}
+
+model AcademicYear {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isCurrent Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, name])
+}
+
+model Batch {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  programId String?  @db.Uuid
+  name      String
+  startYear Int
+  endYear   Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  program  Program?  @relation(fields: [programId], references: [id])
+  students Student[]
+
+  @@unique([collegeId, name])
+}
+
+model CollegeModule {
+  collegeId String    @db.Uuid
+  module    ModuleKey
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@id([collegeId, module])
+}
+
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  users    User[]
+  students Student[]
+
+  @@unique([collegeId, code])
+  @@index([collegeId])
+}
+
+// id equals the Supabase auth.users id, so the JWT subject maps directly to a row.
+model User {
+  id           String   @id @db.Uuid
+  collegeId    String   @db.Uuid
+  email        String
+  name         String
+  role         Role
+  departmentId String?  @db.Uuid
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  college    College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id])
+  auditLogs  AuditLog[]
+  verificationEvents   VerificationEvent[]
+  participationChanges ParticipationHistory[]
+  companyNotes         CompanyNote[]
+  approvalsRequested   ApprovalRequest[] @relation("ApprovalRequester")
+  approvalsDecided     ApprovalRequest[] @relation("ApprovalDecider")
+  notifications        Notification[]
+  ticketsAssigned      Ticket[]          @relation("TicketAssignee")
+  studentNotes         StudentNote[]
+  prospectsOwned       Prospect[]
+  counsellingSlots     CounsellingSlot[]
+
+  @@unique([collegeId, email])
+  @@index([collegeId, role])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  actorId   String?  @db.Uuid
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  reason    String?
+  createdAt DateTime @default(now())
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  @@index([collegeId, createdAt])
+  @@index([collegeId, entity, entityId])
+}
+
+// userId is set when the student is invited (Supabase auth user id).
+model Student {
+  id           String       @id @default(uuid()) @db.Uuid
+  collegeId    String       @db.Uuid
+  userId       String?      @unique @db.Uuid
+  enrollmentNo String
+  name         String
+  email        String
+  phone        String?
+  departmentId String       @db.Uuid
+  programId    String?      @db.Uuid
+  batchId      String       @db.Uuid
+  inviteStatus InviteStatus @default(NOT_SENT)
+  invitedAt    DateTime?
+  isActive     Boolean      @default(true)
+  isArchived   Boolean      @default(false)
+  stage                StudentStage        @default(PROFILE_PENDING)
+  onboardedAt          DateTime?
+  participationStatus  ParticipationStatus @default(REGISTERED)
+  participationReason  String?
+  isPlaced             Boolean             @default(false)
+  placedTier           CompanyTier?
+  // Privacy choices the student makes themselves.
+  savedDrives          SavedDrive[]
+  mockInterviews       MockInterview[]
+  psychConsentAt       DateTime?
+  psychShareWithStaff  Boolean             @default(false)
+  emailAnnouncements   Boolean             @default(true)
+  emailReminders       Boolean             @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  college    College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id])
+  program    Program?   @relation(fields: [programId], references: [id])
+  batch      Batch      @relation(fields: [batchId], references: [id])
+  sections             StudentSection[]
+  verificationEvents   VerificationEvent[]
+  participationHistory ParticipationHistory[]
+  participationRequests ParticipationRequest[]
+  applications         Application[]
+  driveExceptions      DriveException[]
+  offers               Offer[]
+  messages             MessageLog[]
+  attendance           AttendanceRecord[]
+  blocks               Block[]
+  notifications        Notification[]
+  tickets              Ticket[]
+  notes                StudentNote[]
+  psychAttempt         PsychAttempt?
+  internships          Internship[]
+  eventRegistrations   EventRegistration[]
+  learningMemberships  LearningMember[]
+  assessmentAttempts   AssessmentAttempt[]
+  counsellingBookings  CounsellingSlot[]
+  interviewExperiences InterviewExperience[]
+  showcase             ShowcaseProfile?
+
+  @@unique([collegeId, enrollmentNo])
+  @@unique([collegeId, email])
+  @@index([collegeId, departmentId, batchId])
+  @@index([collegeId, inviteStatus])
+}
+
+// Holds the raw uploaded rows between preview and confirm; cleared once the import completes.
+model ImportJob {
+  id           String       @id @default(uuid()) @db.Uuid
+  collegeId    String       @db.Uuid
+  createdById  String       @db.Uuid
+  fileName     String
+  status       ImportStatus @default(PREVIEW)
+  totalRows    Int
+  createdCount Int          @default(0)
+  skippedCount Int          @default(0)
+  failedCount  Int          @default(0)
+  rows         Json?
+  report       Json?
+  createdAt    DateTime     @default(now())
+  completedAt  DateTime?
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, createdAt])
+}
+
+// One row per student per profile section. `data` is the accepted (or draft) content.
+// Edits to an already-verified section go to `pendingData` so verified values are never silently overwritten.
+model StudentSection {
+  id            String         @id @default(uuid()) @db.Uuid
+  collegeId     String         @db.Uuid
+  studentId     String         @db.Uuid
+  section       ProfileSection
+  status        SectionStatus  @default(DRAFT)
+  data          Json           @default("{}")
+  pendingData   Json?
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  reviewComment String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  college   College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  student   Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  documents SectionDocument[]
+
+  @@unique([studentId, section])
+  @@index([collegeId, status, submittedAt])
+}
+
+model SectionDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  collegeId   String   @db.Uuid
+  sectionId   String   @db.Uuid
+  storagePath String
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  college College        @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  section StudentSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId])
+}
+
+// Append-only history of who verified what and when.
+model VerificationEvent {
+  id        String             @id @default(uuid()) @db.Uuid
+  collegeId String             @db.Uuid
+  studentId String             @db.Uuid
+  section   ProfileSection
+  action    VerificationAction
+  actorId   String?            @db.Uuid
+  comment   String?
+  snapshot  Json?
+  createdAt DateTime           @default(now())
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  @@index([studentId, createdAt])
+  @@index([collegeId, createdAt])
+}
+
+model ParticipationHistory {
+  id          String               @id @default(uuid()) @db.Uuid
+  collegeId   String               @db.Uuid
+  studentId   String               @db.Uuid
+  fromStatus  ParticipationStatus?
+  toStatus    ParticipationStatus
+  reason      String?
+  changedById String?              @db.Uuid
+  createdAt   DateTime             @default(now())
+
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation(fields: [changedById], references: [id])
+
+  @@index([studentId, createdAt])
+}
+
+// Raised by students (student-facing spec); decided by staff here.
+model ParticipationRequest {
+  id              String              @id @default(uuid()) @db.Uuid
+  collegeId       String              @db.Uuid
+  studentId       String              @db.Uuid
+  requestedStatus ParticipationStatus
+  reason          String
+  status          RequestStatus       @default(PENDING)
+  decidedById     String?             @db.Uuid
+  decisionComment String?
+  decidedAt       DateTime?
+  createdAt       DateTime            @default(now())
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, status, createdAt])
+}
+
+model Company {
+  id                 String             @id @default(uuid()) @db.Uuid
+  collegeId          String             @db.Uuid
+  name               String
+  industry           String?
+  website            String?
+  tier               CompanyTier        @default(REGULAR)
+  relationshipStatus RelationshipStatus @default(ACTIVE)
+  contacts           Json               @default("[]")
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  college College       @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  drives  Drive[]
+  notes   CompanyNote[]
+  offers  Offer[]
+  recruiters Recruiter[]
+
+  @@unique([collegeId, name])
+}
+
+model CompanyNote {
+  id           String    @id @default(uuid()) @db.Uuid
+  collegeId    String    @db.Uuid
+  companyId    String    @db.Uuid
+  authorId     String    @db.Uuid
+  kind         NoteKind  @default(CONVERSATION)
+  body         String
+  followUpDate DateTime? @db.Date
+  createdAt    DateTime  @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+
+  @@index([companyId, createdAt])
+}
+
+model Drive {
+  id                  String      @id @default(uuid()) @db.Uuid
+  collegeId           String      @db.Uuid
+  companyId           String      @db.Uuid
+  role                String
+  jobType             JobType
+  location            String?
+  packageMinLpa       Decimal?    @db.Decimal(6, 2)
+  packageMaxLpa       Decimal?    @db.Decimal(6, 2)
+  venue               String?
+  description         String?
+  applicationDeadline DateTime
+  driveDate           DateTime
+  status              DriveStatus @default(DRAFT)
+
+  // Eligibility rules. Empty arrays mean "no restriction".
+  minCgpa           Decimal? @db.Decimal(4, 2)
+  minTenthPct       Decimal? @db.Decimal(5, 2)
+  minTwelfthPct     Decimal? @db.Decimal(5, 2)
+  maxActiveBacklogs Int?
+  departmentIds     String[] @db.Uuid
+  batchIds          String[] @db.Uuid
+  programIds        String[] @db.Uuid
+  allowPlaced       Boolean  @default(false)
+
+  createdById  String    @db.Uuid
+  publishedAt  DateTime?
+  closedAt     DateTime?
+  cancelReason String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  college      College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company      Company          @relation(fields: [companyId], references: [id])
+  rounds       DriveRound[]
+  documents    DriveDocument[]
+  exceptions   DriveException[]
+  applications Application[]
+  feedback     DriveFeedback?
+  offers       Offer[]
+  attendanceSessions AttendanceSession[]
+  attendance   AttendanceRecord[]
+  savedBy      SavedDrive[]
+  panels       InterviewPanel[]
+  slots        InterviewSlot[]
+  prospects    Prospect[]
+
+  @@index([collegeId, status, driveDate])
+  @@index([companyId])
+}
+
+model DriveRound {
+  id          String    @id @default(uuid()) @db.Uuid
+  driveId     String    @db.Uuid
+  order       Int
+  type        RoundType
+  name        String?
+  scheduledAt DateTime?
+  venue       String?
+
+  drive   Drive         @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  results RoundResult[]
+  slots   InterviewSlot[]
+
+  @@unique([driveId, order])
+}
+
+model DriveDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  driveId     String   @db.Uuid
+  storagePath String
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+
+  @@index([driveId])
+}
+
+// Lets a specific student apply despite failing the rules. Never overrides hard criteria
+// (inactive, archived, not onboarded, not registered for placement).
+model DriveException {
+  id          String   @id @default(uuid()) @db.Uuid
+  driveId     String   @db.Uuid
+  studentId   String   @db.Uuid
+  reason      String
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  drive   Drive   @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([driveId, studentId])
+}
+
+model Application {
+  id          String            @id @default(uuid()) @db.Uuid
+  collegeId   String            @db.Uuid
+  driveId     String            @db.Uuid
+  studentId   String            @db.Uuid
+  status      ApplicationStatus @default(APPLIED)
+  appliedAt   DateTime          @default(now())
+  decidedById String?           @db.Uuid
+  // Round progress. currentRound is the order of the round the student is waiting for.
+  currentRound     Int?
+  clearedAllRounds Boolean @default(false)
+  // The resume as it was when the student applied: the verified profile data, and optionally a copy of the file they picked.
+  resumeSnapshot   Json?
+  resumeFilePath   String?
+  resumeFileName   String?
+  updatedAt   DateTime          @updatedAt
+
+  drive   Drive               @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  student Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  events  ApplicationEvent[]
+  results RoundResult[]
+  offers  Offer[]
+  slots   InterviewSlot[]
+
+  @@unique([driveId, studentId])
+  @@index([collegeId, studentId])
+  @@index([driveId, status])
+}
+
+// Timeline of every status change per student per drive.
+model ApplicationEvent {
+  id            String            @id @default(uuid()) @db.Uuid
+  applicationId String            @db.Uuid
+  status        ApplicationStatus?
+  roundId       String?           @db.Uuid
+  roundResult   RoundResultStatus?
+  actorId       String?           @db.Uuid
+  note          String?
+  createdAt     DateTime          @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
+}
+
+model DriveFeedback {
+  driveId      String   @id @db.Uuid
+  onStudents   String?
+  onProcess    String?
+  improvements String?
+  updatedAt    DateTime @updatedAt
+
+  drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+}
+
+model RoundResult {
+  id           String            @id @default(uuid()) @db.Uuid
+  applicationId String           @db.Uuid
+  roundId      String            @db.Uuid
+  status       RoundResultStatus
+  score        Decimal?          @db.Decimal(7, 2)
+  remarks      String?
+  recordedById String?           @db.Uuid
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  round       DriveRound  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, roundId])
+  @@index([roundId, status])
+}
+
+model Offer {
+  id             String        @id @default(uuid()) @db.Uuid
+  collegeId      String        @db.Uuid
+  applicationId  String?       @db.Uuid
+  driveId        String?       @db.Uuid
+  isHistorical   Boolean       @default(false)
+  offerYear      Int?
+  studentId      String        @db.Uuid
+  companyId      String        @db.Uuid
+  role           String
+  packageLpa     Decimal       @db.Decimal(6, 2)
+  isPpo          Boolean       @default(false)
+  status         OfferStatus   @default(OFFERED)
+  expiresAt      DateTime?
+  letterPath     String?
+  letterName     String?
+  offeredAt      DateTime      @default(now())
+  respondedAt    DateTime?
+  revokeReason   String?
+  joiningStatus  JoiningStatus @default(PENDING)
+  joiningDate    DateTime?     @db.Date
+  // What the student reports: the date they joined and an optional proof file. Staff confirm through joiningStatus.
+  studentJoiningDate DateTime? @db.Date
+  joiningProofPath   String?
+  joiningProofName   String?
+  createdById    String        @db.Uuid
+  updatedAt      DateTime      @updatedAt
+
+  college     College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id])
+  drive       Drive?       @relation(fields: [driveId], references: [id])
+  student     Student      @relation(fields: [studentId], references: [id])
+  company     Company     @relation(fields: [companyId], references: [id])
+
+  @@index([collegeId, status])
+  @@index([studentId, status])
+  @@index([driveId])
+  @@index([companyId, status])
+}
+
+// Actions the college marked "needs approval" wait here; nothing happens until an approver decides.
+model ApprovalRequest {
+  id              String         @id @default(uuid()) @db.Uuid
+  collegeId       String         @db.Uuid
+  action          ApprovalAction
+  status          ApprovalStatus @default(PENDING)
+  summary         String
+  payload         Json
+  requestedById   String         @db.Uuid
+  decidedById     String?        @db.Uuid
+  decisionComment String?
+  decidedAt       DateTime?
+  executedAt      DateTime?
+  executionError  String?
+  result          Json?
+  createdAt       DateTime       @default(now())
+
+  college     College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  requestedBy User    @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  decidedBy   User?   @relation("ApprovalDecider", fields: [decidedById], references: [id])
+
+  @@index([collegeId, status, createdAt])
+}
+
+// History of messages sent and to whom.
+model MessageLog {
+  id               String        @id @default(uuid()) @db.Uuid
+  collegeId        String        @db.Uuid
+  purpose          String
+  subject          String
+  recipientEmail   String
+  studentId        String?       @db.Uuid
+  status           MessageStatus
+  error            String?
+  sentById         String?       @db.Uuid
+  approvalRequestId String?      @db.Uuid
+  createdAt        DateTime      @default(now())
+
+  college College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  student Student? @relation(fields: [studentId], references: [id])
+
+  @@index([collegeId, createdAt])
+}
+
+// One session per drive (roundKey "drive") or per round (roundKey = roundId). The code is what students scan or type.
+model AttendanceSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  collegeId String    @db.Uuid
+  driveId   String    @db.Uuid
+  roundId   String?   @db.Uuid
+  roundKey  String
+  code      String
+  isOpen    Boolean   @default(true)
+  openedAt  DateTime  @default(now())
+  closedAt  DateTime?
+  closedById String?  @db.Uuid
+
+  drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+
+  @@unique([driveId, roundKey])
+}
+
+model AttendanceRecord {
+  id           String           @id @default(uuid()) @db.Uuid
+  collegeId    String           @db.Uuid
+  driveId      String           @db.Uuid
+  roundId      String?          @db.Uuid
+  roundKey     String
+  studentId    String           @db.Uuid
+  status       AttendanceStatus
+  method       CheckInMethod
+  excused      Boolean          @default(false)
+  excuseReason String?
+  markedById   String?          @db.Uuid
+  markedAt     DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  drive   Drive   @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([driveId, roundKey, studentId])
+  @@index([studentId, status])
+  @@index([collegeId, status])
+}
+
+model InterviewPanel {
+  id        String   @id @default(uuid()) @db.Uuid
+  driveId   String   @db.Uuid
+  name      String
+  room      String?
+  createdAt DateTime @default(now())
+
+  drive Drive           @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  slots InterviewSlot[]
+
+  @@unique([driveId, name])
+}
+
+model InterviewSlot {
+  id              String     @id @default(uuid()) @db.Uuid
+  collegeId       String     @db.Uuid
+  driveId         String     @db.Uuid
+  roundId         String     @db.Uuid
+  panelId         String     @db.Uuid
+  applicationId   String     @db.Uuid
+  startsAt        DateTime
+  endsAt          DateTime
+  status          SlotStatus @default(SCHEDULED)
+  notes           String?
+  rescheduleCount Int        @default(0)
+  createdById     String     @db.Uuid
+  updatedAt       DateTime   @updatedAt
+
+  drive       Drive          @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  round       DriveRound     @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  panel       InterviewPanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  application Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([panelId, startsAt])
+  @@index([applicationId])
+  @@index([driveId, roundId])
+}
+
+// params by type. MISSED_DRIVES: { threshold, blockDays, windowDays?, graceHours? }. PLACED_LOWER_TIER: {}.
+model BlockPolicy {
+  id        String          @id @default(uuid()) @db.Uuid
+  collegeId String          @db.Uuid
+  type      BlockPolicyType
+  name      String
+  params    Json
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([collegeId, isActive])
+}
+
+model Block {
+  id          String      @id @default(uuid()) @db.Uuid
+  collegeId   String      @db.Uuid
+  studentId   String      @db.Uuid
+  source      BlockSource
+  policyId    String?     @db.Uuid
+  reason      String
+  startsAt    DateTime    @default(now())
+  endsAt      DateTime
+  status      BlockStatus @default(ACTIVE)
+  evidence    Json?
+  createdById String?     @db.Uuid
+  liftedById  String?     @db.Uuid
+  liftReason  String?
+  liftedAt    DateTime?
+  notifiedAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, status, endsAt])
+  @@index([studentId, status])
+}
+
+model JobAlert {
+  id                  String      @id @default(uuid()) @db.Uuid
+  collegeId           String      @db.Uuid
+  title               String
+  companyName         String
+  jobType             JobType
+  location            String?
+  description         String?
+  applyUrl            String
+  deadline            DateTime?
+  targetDepartmentIds String[]    @db.Uuid
+  targetBatchIds      String[]    @db.Uuid
+  targetSkills        String[]
+  status              AlertStatus @default(DRAFT)
+  createdById         String      @db.Uuid
+  publishedAt         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  events JobAlertEvent[]
+
+  @@index([collegeId, status])
+}
+
+model JobAlertEvent {
+  id        String         @id @default(uuid()) @db.Uuid
+  alertId   String         @db.Uuid
+  studentId String         @db.Uuid
+  kind      AlertEventKind
+  createdAt DateTime       @default(now())
+
+  alert JobAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  @@index([alertId, kind])
+}
+
+// In-app notification for a staff member (userId) or a student (studentId).
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  collegeId String    @db.Uuid
+  userId    String?   @db.Uuid
+  studentId String?   @db.Uuid
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  student Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([studentId, readAt, createdAt])
+}
+
+// Shown on the student dashboard (student app reads these).
+model Announcement {
+  id                  String    @id @default(uuid()) @db.Uuid
+  collegeId           String    @db.Uuid
+  title               String
+  body                String
+  targetDepartmentIds String[]  @db.Uuid
+  targetBatchIds      String[]  @db.Uuid
+  publishedAt         DateTime  @default(now())
+  expiresAt           DateTime?
+  isActive            Boolean   @default(true)
+  createdById         String    @db.Uuid
+  createdAt           DateTime  @default(now())
+
+  @@index([collegeId, isActive, publishedAt])
+}
+
+model MessageTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  collegeId   String   @db.Uuid
+  name        String
+  subject     String
+  body        String
+  createdById String   @db.Uuid
+  updatedAt   DateTime @updatedAt
+
+  @@unique([collegeId, name])
+}
+
+model Ticket {
+  id           String         @id @default(uuid()) @db.Uuid
+  collegeId    String         @db.Uuid
+  studentId    String         @db.Uuid
+  departmentId String         @db.Uuid
+  category     TicketCategory
+  section      ProfileSection?
+  subject      String
+  status       TicketStatus   @default(OPEN)
+  assigneeId   String?        @db.Uuid
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  resolvedAt   DateTime?
+
+  student  Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignee User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  messages TicketMessage[]
+  attachments TicketAttachment[]
+
+  @@index([collegeId, status, createdAt])
+  @@index([assigneeId, status])
+}
+
+model TicketMessage {
+  id              String   @id @default(uuid()) @db.Uuid
+  ticketId        String   @db.Uuid
+  authorUserId    String?  @db.Uuid
+  authorStudentId String?  @db.Uuid
+  body            String
+  createdAt       DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+// A screenshot or document the student attached to a support request.
+model TicketAttachment {
+  id          String   @id @default(uuid()) @db.Uuid
+  ticketId    String   @db.Uuid
+  storagePath String
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+// Questions and placement rules the college publishes for students. Staff edit them; students read them.
+model FaqItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  collegeId   String   @db.Uuid
+  kind        String   @default("FAQ")
+  question    String
+  answer      String
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([collegeId, isPublished, sortOrder])
+}
+
+model StudentNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  studentId String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+
+  @@index([studentId, createdAt])
+}
+
+model ReportSchedule {
+  id          String          @id @default(uuid()) @db.Uuid
+  collegeId   String          @db.Uuid
+  type        ReportType
+  frequency   ReportFrequency
+  recipients  String[]
+  nextRunAt   DateTime
+  lastRunAt   DateTime?
+  lastError   String?
+  isActive    Boolean         @default(true)
+  createdById String          @db.Uuid
+  createdAt   DateTime        @default(now())
+
+  @@index([isActive, nextRunAt])
+}
+
+// Personality and aptitude results live apart from academic data and are never read by eligibility or blocking.
+model PsychAttempt {
+  id                String   @id @default(uuid()) @db.Uuid
+  collegeId         String   @db.Uuid
+  studentId         String   @unique @db.Uuid
+  instrumentVersion String
+  answers           Json
+  scores            Json
+  completedAt       DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, completedAt])
+}
+
+// A practice interview with an AI interviewer. The transcript alternates interviewer questions and the student's answers.
+model MockInterview {
+  id          String    @id @default(uuid()) @db.Uuid
+  collegeId   String    @db.Uuid
+  studentId   String    @db.Uuid
+  role        String
+  topic       String
+  status      String    @default("IN_PROGRESS")
+  transcript  Json      @default("[]")
+  feedback    Json?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+}
+
+// A drive a student bookmarked to look at later.
+model SavedDrive {
+  studentId String   @db.Uuid
+  driveId   String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  drive   Drive   @relation(fields: [driveId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, driveId])
+}
+
+// Every time staff open a student's profile, so the student can see who looked.
+model ProfileView {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  studentId String   @db.Uuid
+  actorId   String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([actorId, studentId, createdAt])
+}
+
+// Every time staff open an individual result.
+model PsychAccessLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  actorId   String   @db.Uuid
+  studentId String   @db.Uuid
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([collegeId, createdAt])
+  @@index([studentId])
+}
+
+// ---------- Employer CRM ----------
+model Prospect {
+  id             String        @id @default(uuid()) @db.Uuid
+  collegeId      String        @db.Uuid
+  companyName    String
+  industry       String?
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  stage          ProspectStage @default(PROSPECT)
+  ownerId        String        @db.Uuid
+  companyId      String?       @db.Uuid
+  driveId        String?       @db.Uuid
+  notes          String?
+  nextFollowUpAt DateTime?
+  lastReminderAt DateTime?
+  lostReason     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  owner      User               @relation(fields: [ownerId], references: [id])
+  drive      Drive?             @relation(fields: [driveId], references: [id])
+  activities ProspectActivity[]
+
+  @@index([collegeId, stage])
+  @@index([nextFollowUpAt])
+}
+
+model ProspectActivity {
+  id         String   @id @default(uuid()) @db.Uuid
+  prospectId String   @db.Uuid
+  authorId   String   @db.Uuid
+  kind       String
+  body       String
+  createdAt  DateTime @default(now())
+
+  prospect Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@index([prospectId, createdAt])
+}
+
+// ---------- Internships ----------
+model Internship {
+  id          String           @id @default(uuid()) @db.Uuid
+  collegeId   String           @db.Uuid
+  studentId   String           @db.Uuid
+  companyId   String?          @db.Uuid
+  companyName String
+  role        String
+  startDate   DateTime         @db.Date
+  endDate     DateTime         @db.Date
+  mentorName  String?
+  mentorEmail String?
+  status      InternshipStatus @default(ALLOTTED)
+  createdById String           @db.Uuid
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  student     Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  logs        WorkLog[]
+  evaluations InternshipEvaluation[]
+
+  @@index([collegeId, status])
+  @@index([studentId])
+}
+
+model WorkLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  internshipId  String    @db.Uuid
+  weekStart     DateTime  @db.Date
+  hours         Int
+  summary       String
+  status        LogStatus @default(SUBMITTED)
+  reviewComment String?
+  reviewedById  String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@unique([internshipId, weekStart])
+}
+
+model InternshipEvaluation {
+  id            String        @id @default(uuid()) @db.Uuid
+  internshipId  String        @db.Uuid
+  evaluatorType EvaluatorType
+  evaluatorName String
+  score         Int
+  remarks       String?
+  createdById   String        @db.Uuid
+  createdAt     DateTime      @default(now())
+
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@index([internshipId])
+}
+
+// ---------- Events and fairs ----------
+model Event {
+  id                   String      @id @default(uuid()) @db.Uuid
+  collegeId            String      @db.Uuid
+  type                 EventType
+  title                String
+  description          String?
+  mode                 EventMode
+  venue                String?
+  joinUrl              String?
+  startsAt             DateTime
+  endsAt               DateTime
+  registrationDeadline DateTime?
+  capacity             Int?
+  targetDepartmentIds  String[]    @db.Uuid
+  targetBatchIds       String[]    @db.Uuid
+  status               EventStatus @default(DRAFT)
+  createdById          String      @db.Uuid
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  registrations EventRegistration[]
+
+  @@index([collegeId, status, startsAt])
+}
+
+model EventRegistration {
+  id           String             @id @default(uuid()) @db.Uuid
+  eventId      String             @db.Uuid
+  studentId    String             @db.Uuid
+  status       RegistrationStatus @default(REGISTERED)
+  rank         Int?
+  score        Decimal?           @db.Decimal(8, 2)
+  registeredAt DateTime           @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, studentId])
+  @@index([studentId])
+}
+
+// ---------- Learning programmes ----------
+model LearningJourney {
+  id          String   @id @default(uuid()) @db.Uuid
+  collegeId   String   @db.Uuid
+  name        String
+  description String?
+  steps       Json
+  createdAt   DateTime @default(now())
+
+  programmes LearningProgramme[]
+
+  @@unique([collegeId, name])
+}
+
+model LearningProgramme {
+  id          String            @id @default(uuid()) @db.Uuid
+  collegeId   String            @db.Uuid
+  title       String
+  goal        String
+  delivery    ProgrammeDelivery @default(IN_HOUSE)
+  partnerName String?
+  journeyId   String?           @db.Uuid
+  startsAt    DateTime?
+  endsAt      DateTime?
+  status      ProgrammeStatus   @default(ACTIVE)
+  createdById String            @db.Uuid
+  createdAt   DateTime          @default(now())
+
+  journey LearningJourney? @relation(fields: [journeyId], references: [id])
+  members LearningMember[]
+
+  @@index([collegeId, status])
+}
+
+model LearningMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  programmeId String   @db.Uuid
+  studentId   String   @db.Uuid
+  joinedAt    DateTime @default(now())
+
+  programme LearningProgramme  @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+  student   Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  progress  LearningProgress[]
+
+  @@unique([programmeId, studentId])
+  @@index([studentId])
+}
+
+model LearningProgress {
+  id          String   @id @default(uuid()) @db.Uuid
+  memberId    String   @db.Uuid
+  stepIndex   Int
+  completedAt DateTime @default(now())
+
+  member LearningMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, stepIndex])
+}
+
+// ---------- Assessments builder ----------
+model QuestionBank {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  name      String
+  topic     String?
+  createdAt DateTime @default(now())
+
+  questions Question[]
+
+  @@unique([collegeId, name])
+}
+
+model Question {
+  id            String   @id @default(uuid()) @db.Uuid
+  collegeId     String   @db.Uuid
+  bankId        String   @db.Uuid
+  text          String
+  options       Json
+  correct       Int[]
+  marks         Int      @default(1)
+  negativeMarks Decimal  @default(0) @db.Decimal(4, 2)
+  explanation   String?
+  difficulty    String?
+  tags          String[]
+  createdAt     DateTime @default(now())
+
+  bank QuestionBank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@index([bankId])
+}
+
+model AssessmentPaper {
+  id            String   @id @default(uuid()) @db.Uuid
+  collegeId     String   @db.Uuid
+  title         String
+  instructions  String?
+  durationMin   Int
+  questions     Json
+  shuffle       Boolean  @default(true)
+  proctoring    Json
+  passPercent   Int?
+  createdById   String   @db.Uuid
+  createdAt     DateTime @default(now())
+
+  schedules AssessmentSchedule[]
+}
+
+model AssessmentSchedule {
+  id                  String   @id @default(uuid()) @db.Uuid
+  collegeId           String   @db.Uuid
+  paperId             String   @db.Uuid
+  title               String
+  startsAt            DateTime
+  endsAt              DateTime
+  targetDepartmentIds String[] @db.Uuid
+  targetBatchIds      String[] @db.Uuid
+  isBaseline          Boolean  @default(false)
+  isPractice          Boolean  @default(false)
+  createdById         String   @db.Uuid
+  createdAt           DateTime @default(now())
+
+  paper    AssessmentPaper     @relation(fields: [paperId], references: [id])
+  attempts AssessmentAttempt[]
+
+  @@index([collegeId, startsAt])
+}
+
+model AssessmentAttempt {
+  id           String        @id @default(uuid()) @db.Uuid
+  scheduleId   String        @db.Uuid
+  studentId    String        @db.Uuid
+  startedAt    DateTime      @default(now())
+  deadlineAt   DateTime
+  submittedAt  DateTime?
+  answers      Json          @default("{}")
+  score        Decimal?      @db.Decimal(8, 2)
+  maxScore     Decimal?      @db.Decimal(8, 2)
+  violations   Int           @default(0)
+  flagged      Boolean       @default(false)
+  proctorEvents Json         @default("[]")
+  status       AttemptStatus @default(IN_PROGRESS)
+
+  schedule AssessmentSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  student  Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, studentId])
+  @@index([studentId])
+}
+
+// ---------- Student preparation ----------
+model PrepResource {
+  id          String           @id @default(uuid()) @db.Uuid
+  collegeId   String           @db.Uuid
+  title       String
+  category    ResourceCategory
+  url         String
+  description String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+
+  @@index([collegeId, isActive])
+}
+
+model CounsellingSlot {
+  id           String    @id @default(uuid()) @db.Uuid
+  collegeId    String    @db.Uuid
+  counsellorId String    @db.Uuid
+  startsAt     DateTime
+  endsAt       DateTime
+  status       SlotState @default(OPEN)
+  studentId    String?   @db.Uuid
+  topic        String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+
+  counsellor User     @relation(fields: [counsellorId], references: [id])
+  student    Student? @relation(fields: [studentId], references: [id])
+
+  @@index([collegeId, status, startsAt])
+}
+
+model InterviewExperience {
+  id             String           @id @default(uuid()) @db.Uuid
+  collegeId      String           @db.Uuid
+  studentId      String           @db.Uuid
+  companyName    String
+  role           String
+  roundType      RoundType?
+  experience     String
+  difficulty     Int
+  status         ModerationStatus @default(PENDING)
+  moderatedById  String?          @db.Uuid
+  moderationNote String?
+  createdAt      DateTime         @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, status, createdAt])
+}
+
+// ---------- Recruiter portal ----------
+model Recruiter {
+  id        String   @id @db.Uuid
+  collegeId String   @db.Uuid
+  companyId String   @db.Uuid
+  email     String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  company Company        @relation(fields: [companyId], references: [id])
+  jobs    RecruiterJob[]
+
+  @@unique([collegeId, email])
+  @@index([companyId])
+}
+
+model RecruiterJob {
+  id             String             @id @default(uuid()) @db.Uuid
+  collegeId      String             @db.Uuid
+  recruiterId    String             @db.Uuid
+  title          String
+  jobType        JobType
+  location       String?
+  description    String?
+  applyUrl       String
+  deadline       DateTime?
+  status         RecruiterJobStatus @default(PENDING_REVIEW)
+  reviewedById   String?            @db.Uuid
+  reviewNote     String?
+  jobAlertId     String?            @db.Uuid
+  createdAt      DateTime           @default(now())
+
+  recruiter Recruiter @relation(fields: [recruiterId], references: [id])
+
+  @@index([collegeId, status])
+}
+
+// ---------- Talent showcase ----------
+model ShowcaseProfile {
+  id          String    @id @default(uuid()) @db.Uuid
+  collegeId   String    @db.Uuid
+  studentId   String    @unique @db.Uuid
+  token       String    @unique
+  isEnabled   Boolean   @default(true)
+  headline    String?
+  showCgpa    Boolean   @default(false)
+  showContact Boolean   @default(false)
+  expiresAt   DateTime?
+  views       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, isEnabled])
+}
+
+// Fixed-window counters for rate limiting. Shared by every server instance, so limits hold behind a load balancer.
+model RateLimitBucket {
+  key         String
+  windowStart BigInt
+  count       Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  @@id([key, windowStart])
+  @@index([createdAt])
+}

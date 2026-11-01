@@ -1,0 +1,1 @@
+ALTER TYPE "AlertEventKind" ADD VALUE 'INTERESTED';
