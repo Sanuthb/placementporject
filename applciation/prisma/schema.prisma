@@ -337,6 +337,58 @@ enum RecruiterJobStatus {
   REJECTED
 }
 
+enum ProgrammeLevel {
+  DIPLOMA
+  UG
+  PG
+  DOCTORAL
+  OTHER
+}
+
+enum BatchStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum SessionStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum EducationStatus {
+  PURSUING
+  COMPLETED
+  DISCONTINUED
+}
+
+enum DocCategory {
+  TENTH_MARKS
+  TWELFTH_MARKS
+  DIPLOMA_CERTIFICATE
+  DEGREE_MARKS
+  DEGREE_CERTIFICATE
+  PROVISIONAL_CERTIFICATE
+  OTHER
+}
+
+enum DocVerification {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ProgressionKind {
+  ENROLLED
+  PROMOTED
+  REPEATED
+  ARREAR
+  TRANSFERRED
+  DISCONTINUED
+}
+
 enum ImportStatus {
   PREVIEW
   PROCESSING
@@ -353,85 +405,144 @@ model College {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  modules     CollegeModule[]
-  departments   Department[]
-  users         User[]
-  auditLogs     AuditLog[]
-  programs      Program[]
-  academicYears AcademicYear[]
-  batches       Batch[]
-  settings      CollegeSettings?
-  students      Student[]
-  importJobs    ImportJob[]
-  sections      StudentSection[]
-  sectionDocs   SectionDocument[]
+  modules               CollegeModule[]
+  departments           Department[]
+  users                 User[]
+  auditLogs             AuditLog[]
+  programs              Program[]
+  academicYears         AcademicYear[]
+  batches               Batch[]
+  settings              CollegeSettings?
+  students              Student[]
+  importJobs            ImportJob[]
+  sections              StudentSection[]
+  sectionDocs           SectionDocument[]
   verificationEvents    VerificationEvent[]
   participationHistory  ParticipationHistory[]
   participationRequests ParticipationRequest[]
-  companies     Company[]
-  drives        Drive[]
-  offers        Offer[]
-  approvals     ApprovalRequest[]
-  messages      MessageLog[]
+  companies             Company[]
+  drives                Drive[]
+  offers                Offer[]
+  approvals             ApprovalRequest[]
+  messages              MessageLog[]
 }
 
 model CollegeSettings {
-  collegeId                     String           @id @db.Uuid
-  requiredSections              ProfileSection[]
-  requireAssessmentToOnboard    Boolean          @default(false)
-  maxOffersPerStudent           Int?             @default(1)
-  enforceTierUpgrade            Boolean          @default(false)
-  shareRoundScores              Boolean          @default(false)
-  approvalRequired              ApprovalAction[]
-  updatedAt                     DateTime         @updatedAt
+  collegeId                  String           @id @db.Uuid
+  requiredSections           ProfileSection[]
+  requireAssessmentToOnboard Boolean          @default(false)
+  maxOffersPerStudent        Int?             @default(1)
+  enforceTierUpgrade         Boolean          @default(false)
+  shareRoundScores           Boolean          @default(false)
+  approvalRequired           ApprovalAction[]
+  updatedAt                  DateTime         @updatedAt
 
   college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 }
 
 model Program {
+  id            String         @id @default(uuid()) @db.Uuid
+  collegeId     String         @db.Uuid
+  name          String
+  code          String
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  departmentId  String?        @db.Uuid
+  level         ProgrammeLevel @default(PG)
+  qualification String?
+  durationYears Int            @default(2)
+  semesterCount Int            @default(4)
+  university    String?
+
+  college    College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department Department?       @relation(fields: [departmentId], references: [id])
+  batches    Batch[]
+  students   Student[]
+  branches   ProgrammeBranch[]
+
+  @@unique([collegeId, code])
+  @@index([collegeId, departmentId])
+}
+
+/// A specialisation inside a programme, for example "Data Science" under MCA.
+model ProgrammeBranch {
   id        String   @id @default(uuid()) @db.Uuid
   collegeId String   @db.Uuid
+  programId String   @db.Uuid
   name      String
-  code      String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  program  Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
   batches  Batch[]
   students Student[]
 
-  @@unique([collegeId, code])
+  @@unique([programId, name])
+  @@index([collegeId])
 }
 
 model AcademicYear {
-  id        String   @id @default(uuid()) @db.Uuid
-  collegeId String   @db.Uuid
+  id        String        @id @default(uuid()) @db.Uuid
+  collegeId String        @db.Uuid
   name      String
-  startDate DateTime @db.Date
-  endDate   DateTime @db.Date
-  isCurrent Boolean  @default(false)
-  createdAt DateTime @default(now())
+  startDate DateTime      @db.Date
+  endDate   DateTime      @db.Date
+  isCurrent Boolean       @default(false)
+  status    SessionStatus @default(UPCOMING)
+  createdAt DateTime      @default(now())
 
-  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college     College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  semesters   Semester[]
+  studentsNow Student[]
 
   @@unique([collegeId, name])
 }
 
 model Batch {
-  id        String   @id @default(uuid()) @db.Uuid
-  collegeId String   @db.Uuid
-  programId String?  @db.Uuid
-  name      String
-  startYear Int
-  endYear   Int
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id            String      @id @default(uuid()) @db.Uuid
+  collegeId     String      @db.Uuid
+  programId     String?     @db.Uuid
+  name          String
+  startYear     Int
+  endYear       Int
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  admissionYear Int?
+  branchId      String?     @db.Uuid
+  coordinatorId String?     @db.Uuid
+  status        BatchStatus @default(ACTIVE)
 
-  college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  program  Program?  @relation(fields: [programId], references: [id])
-  students Student[]
+  college     College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  program     Program?         @relation(fields: [programId], references: [id])
+  branch      ProgrammeBranch? @relation(fields: [branchId], references: [id])
+  coordinator User?            @relation("BatchCoordinator", fields: [coordinatorId], references: [id])
+  students    Student[]
+  semesters   Semester[]
 
   @@unique([collegeId, name])
+  @@index([collegeId, programId])
+}
+
+/// One term of a batch, for example "Semester 1" of MCA 2026-2028. The batch never changes; students move through these.
+model Semester {
+  id             String        @id @default(uuid()) @db.Uuid
+  collegeId      String        @db.Uuid
+  batchId        String        @db.Uuid
+  academicYearId String?       @db.Uuid
+  number         Int
+  name           String
+  startDate      DateTime?     @db.Date
+  endDate        DateTime?     @db.Date
+  status         SessionStatus @default(UPCOMING)
+  createdAt      DateTime      @default(now())
+
+  batch        Batch                @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear?        @relation(fields: [academicYearId], references: [id])
+  studentsNow  Student[]
+  progression  StudentProgression[]
+
+  @@unique([batchId, number])
+  @@index([collegeId])
 }
 
 model CollegeModule {
@@ -457,6 +568,7 @@ model Department {
   college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   users    User[]
   students Student[]
+  programs Program[]
 
   @@unique([collegeId, code])
   @@index([collegeId])
@@ -474,19 +586,21 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  college    College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  department Department? @relation(fields: [departmentId], references: [id])
-  auditLogs  AuditLog[]
+  college              College                @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department           Department?            @relation(fields: [departmentId], references: [id])
+  auditLogs            AuditLog[]
   verificationEvents   VerificationEvent[]
   participationChanges ParticipationHistory[]
   companyNotes         CompanyNote[]
-  approvalsRequested   ApprovalRequest[] @relation("ApprovalRequester")
-  approvalsDecided     ApprovalRequest[] @relation("ApprovalDecider")
+  approvalsRequested   ApprovalRequest[]      @relation("ApprovalRequester")
+  approvalsDecided     ApprovalRequest[]      @relation("ApprovalDecider")
   notifications        Notification[]
-  ticketsAssigned      Ticket[]          @relation("TicketAssignee")
+  ticketsAssigned      Ticket[]               @relation("TicketAssignee")
   studentNotes         StudentNote[]
   prospectsOwned       Prospect[]
   counsellingSlots     CounsellingSlot[]
+  batchesCoordinated   Batch[]                @relation("BatchCoordinator")
+  documentsVerified    StudentDocument[]
 
   @@unique([collegeId, email])
   @@index([collegeId, role])
@@ -513,61 +627,73 @@ model AuditLog {
 
 // userId is set when the student is invited (Supabase auth user id).
 model Student {
-  id           String       @id @default(uuid()) @db.Uuid
-  collegeId    String       @db.Uuid
-  userId       String?      @unique @db.Uuid
-  enrollmentNo String
-  name         String
-  email        String
-  phone        String?
-  departmentId String       @db.Uuid
-  programId    String?      @db.Uuid
-  batchId      String       @db.Uuid
-  inviteStatus InviteStatus @default(NOT_SENT)
-  invitedAt    DateTime?
-  isActive     Boolean      @default(true)
-  isArchived   Boolean      @default(false)
-  stage                StudentStage        @default(PROFILE_PENDING)
-  onboardedAt          DateTime?
-  participationStatus  ParticipationStatus @default(REGISTERED)
-  participationReason  String?
-  isPlaced             Boolean             @default(false)
-  placedTier           CompanyTier?
+  id                    String              @id @default(uuid()) @db.Uuid
+  collegeId             String              @db.Uuid
+  userId                String?             @unique @db.Uuid
+  enrollmentNo          String
+  name                  String
+  email                 String
+  phone                 String?
+  departmentId          String              @db.Uuid
+  programId             String?             @db.Uuid
+  batchId               String              @db.Uuid
+  branchId              String?             @db.Uuid
+  dateOfBirth           DateTime?           @db.Date
+  gender                String?
+  address               String?
+  currentSemesterId     String?             @db.Uuid
+  currentAcademicYearId String?             @db.Uuid
+  inviteStatus          InviteStatus        @default(NOT_SENT)
+  invitedAt             DateTime?
+  isActive              Boolean             @default(true)
+  isArchived            Boolean             @default(false)
+  stage                 StudentStage        @default(PROFILE_PENDING)
+  onboardedAt           DateTime?
+  participationStatus   ParticipationStatus @default(REGISTERED)
+  participationReason   String?
+  isPlaced              Boolean             @default(false)
+  placedTier            CompanyTier?
   // Privacy choices the student makes themselves.
-  savedDrives          SavedDrive[]
-  mockInterviews       MockInterview[]
-  psychConsentAt       DateTime?
-  psychShareWithStaff  Boolean             @default(false)
-  emailAnnouncements   Boolean             @default(true)
-  emailReminders       Boolean             @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  savedDrives           SavedDrive[]
+  mockInterviews        MockInterview[]
+  psychConsentAt        DateTime?
+  psychShareWithStaff   Boolean             @default(false)
+  emailAnnouncements    Boolean             @default(true)
+  emailReminders        Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
-  college    College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  department Department @relation(fields: [departmentId], references: [id])
-  program    Program?   @relation(fields: [programId], references: [id])
-  batch      Batch      @relation(fields: [batchId], references: [id])
-  sections             StudentSection[]
-  verificationEvents   VerificationEvent[]
-  participationHistory ParticipationHistory[]
+  college               College                  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department            Department               @relation(fields: [departmentId], references: [id])
+  program               Program?                 @relation(fields: [programId], references: [id])
+  batch                 Batch                    @relation(fields: [batchId], references: [id])
+  branch                ProgrammeBranch?         @relation(fields: [branchId], references: [id])
+  currentSemester       Semester?                @relation(fields: [currentSemesterId], references: [id])
+  currentAcademicYear   AcademicYear?            @relation(fields: [currentAcademicYearId], references: [id])
+  educationRecords      StudentEducationRecord[]
+  documents             StudentDocument[]
+  progression           StudentProgression[]
+  sections              StudentSection[]
+  verificationEvents    VerificationEvent[]
+  participationHistory  ParticipationHistory[]
   participationRequests ParticipationRequest[]
-  applications         Application[]
-  driveExceptions      DriveException[]
-  offers               Offer[]
-  messages             MessageLog[]
-  attendance           AttendanceRecord[]
-  blocks               Block[]
-  notifications        Notification[]
-  tickets              Ticket[]
-  notes                StudentNote[]
-  psychAttempt         PsychAttempt?
-  internships          Internship[]
-  eventRegistrations   EventRegistration[]
-  learningMemberships  LearningMember[]
-  assessmentAttempts   AssessmentAttempt[]
-  counsellingBookings  CounsellingSlot[]
-  interviewExperiences InterviewExperience[]
-  showcase             ShowcaseProfile?
+  applications          Application[]
+  driveExceptions       DriveException[]
+  offers                Offer[]
+  messages              MessageLog[]
+  attendance            AttendanceRecord[]
+  blocks                Block[]
+  notifications         Notification[]
+  tickets               Ticket[]
+  notes                 StudentNote[]
+  psychAttempt          PsychAttempt?
+  internships           Internship[]
+  eventRegistrations    EventRegistration[]
+  learningMemberships   LearningMember[]
+  assessmentAttempts    AssessmentAttempt[]
+  counsellingBookings   CounsellingSlot[]
+  interviewExperiences  InterviewExperience[]
+  showcase              ShowcaseProfile?
 
   @@unique([collegeId, enrollmentNo])
   @@unique([collegeId, email])
@@ -705,10 +831,10 @@ model Company {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  college College       @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  drives  Drive[]
-  notes   CompanyNote[]
-  offers  Offer[]
+  college    College       @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  drives     Drive[]
+  notes      CompanyNote[]
+  offers     Offer[]
   recruiters Recruiter[]
 
   @@unique([collegeId, name])
@@ -762,20 +888,20 @@ model Drive {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  college      College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  company      Company          @relation(fields: [companyId], references: [id])
-  rounds       DriveRound[]
-  documents    DriveDocument[]
-  exceptions   DriveException[]
-  applications Application[]
-  feedback     DriveFeedback?
-  offers       Offer[]
+  college            College             @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company            Company             @relation(fields: [companyId], references: [id])
+  rounds             DriveRound[]
+  documents          DriveDocument[]
+  exceptions         DriveException[]
+  applications       Application[]
+  feedback           DriveFeedback?
+  offers             Offer[]
   attendanceSessions AttendanceSession[]
-  attendance   AttendanceRecord[]
-  savedBy      SavedDrive[]
-  panels       InterviewPanel[]
-  slots        InterviewSlot[]
-  prospects    Prospect[]
+  attendance         AttendanceRecord[]
+  savedBy            SavedDrive[]
+  panels             InterviewPanel[]
+  slots              InterviewSlot[]
+  prospects          Prospect[]
 
   @@index([collegeId, status, driveDate])
   @@index([companyId])
@@ -790,7 +916,7 @@ model DriveRound {
   scheduledAt DateTime?
   venue       String?
 
-  drive   Drive         @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  drive   Drive           @relation(fields: [driveId], references: [id], onDelete: Cascade)
   results RoundResult[]
   slots   InterviewSlot[]
 
@@ -828,24 +954,24 @@ model DriveException {
 }
 
 model Application {
-  id          String            @id @default(uuid()) @db.Uuid
-  collegeId   String            @db.Uuid
-  driveId     String            @db.Uuid
-  studentId   String            @db.Uuid
-  status      ApplicationStatus @default(APPLIED)
-  appliedAt   DateTime          @default(now())
-  decidedById String?           @db.Uuid
+  id               String            @id @default(uuid()) @db.Uuid
+  collegeId        String            @db.Uuid
+  driveId          String            @db.Uuid
+  studentId        String            @db.Uuid
+  status           ApplicationStatus @default(APPLIED)
+  appliedAt        DateTime          @default(now())
+  decidedById      String?           @db.Uuid
   // Round progress. currentRound is the order of the round the student is waiting for.
   currentRound     Int?
-  clearedAllRounds Boolean @default(false)
+  clearedAllRounds Boolean           @default(false)
   // The resume as it was when the student applied: the verified profile data, and optionally a copy of the file they picked.
   resumeSnapshot   Json?
   resumeFilePath   String?
   resumeFileName   String?
-  updatedAt   DateTime          @updatedAt
+  updatedAt        DateTime          @updatedAt
 
-  drive   Drive               @relation(fields: [driveId], references: [id], onDelete: Cascade)
-  student Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  drive   Drive              @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  student Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
   events  ApplicationEvent[]
   results RoundResult[]
   offers  Offer[]
@@ -858,14 +984,14 @@ model Application {
 
 // Timeline of every status change per student per drive.
 model ApplicationEvent {
-  id            String            @id @default(uuid()) @db.Uuid
-  applicationId String            @db.Uuid
+  id            String             @id @default(uuid()) @db.Uuid
+  applicationId String             @db.Uuid
   status        ApplicationStatus?
-  roundId       String?           @db.Uuid
+  roundId       String?            @db.Uuid
   roundResult   RoundResultStatus?
-  actorId       String?           @db.Uuid
+  actorId       String?            @db.Uuid
   note          String?
-  createdAt     DateTime          @default(now())
+  createdAt     DateTime           @default(now())
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
@@ -883,15 +1009,15 @@ model DriveFeedback {
 }
 
 model RoundResult {
-  id           String            @id @default(uuid()) @db.Uuid
-  applicationId String           @db.Uuid
-  roundId      String            @db.Uuid
-  status       RoundResultStatus
-  score        Decimal?          @db.Decimal(7, 2)
-  remarks      String?
-  recordedById String?           @db.Uuid
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id            String            @id @default(uuid()) @db.Uuid
+  applicationId String            @db.Uuid
+  roundId       String            @db.Uuid
+  status        RoundResultStatus
+  score         Decimal?          @db.Decimal(7, 2)
+  remarks       String?
+  recordedById  String?           @db.Uuid
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   round       DriveRound  @relation(fields: [roundId], references: [id], onDelete: Cascade)
@@ -901,38 +1027,38 @@ model RoundResult {
 }
 
 model Offer {
-  id             String        @id @default(uuid()) @db.Uuid
-  collegeId      String        @db.Uuid
-  applicationId  String?       @db.Uuid
-  driveId        String?       @db.Uuid
-  isHistorical   Boolean       @default(false)
-  offerYear      Int?
-  studentId      String        @db.Uuid
-  companyId      String        @db.Uuid
-  role           String
-  packageLpa     Decimal       @db.Decimal(6, 2)
-  isPpo          Boolean       @default(false)
-  status         OfferStatus   @default(OFFERED)
-  expiresAt      DateTime?
-  letterPath     String?
-  letterName     String?
-  offeredAt      DateTime      @default(now())
-  respondedAt    DateTime?
-  revokeReason   String?
-  joiningStatus  JoiningStatus @default(PENDING)
-  joiningDate    DateTime?     @db.Date
+  id                 String        @id @default(uuid()) @db.Uuid
+  collegeId          String        @db.Uuid
+  applicationId      String?       @db.Uuid
+  driveId            String?       @db.Uuid
+  isHistorical       Boolean       @default(false)
+  offerYear          Int?
+  studentId          String        @db.Uuid
+  companyId          String        @db.Uuid
+  role               String
+  packageLpa         Decimal       @db.Decimal(6, 2)
+  isPpo              Boolean       @default(false)
+  status             OfferStatus   @default(OFFERED)
+  expiresAt          DateTime?
+  letterPath         String?
+  letterName         String?
+  offeredAt          DateTime      @default(now())
+  respondedAt        DateTime?
+  revokeReason       String?
+  joiningStatus      JoiningStatus @default(PENDING)
+  joiningDate        DateTime?     @db.Date
   // What the student reports: the date they joined and an optional proof file. Staff confirm through joiningStatus.
-  studentJoiningDate DateTime? @db.Date
+  studentJoiningDate DateTime?     @db.Date
   joiningProofPath   String?
   joiningProofName   String?
-  createdById    String        @db.Uuid
-  updatedAt      DateTime      @updatedAt
+  createdById        String        @db.Uuid
+  updatedAt          DateTime      @updatedAt
 
-  college     College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college     College      @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   application Application? @relation(fields: [applicationId], references: [id])
   drive       Drive?       @relation(fields: [driveId], references: [id])
   student     Student      @relation(fields: [studentId], references: [id])
-  company     Company     @relation(fields: [companyId], references: [id])
+  company     Company      @relation(fields: [companyId], references: [id])
 
   @@index([collegeId, status])
   @@index([studentId, status])
@@ -966,17 +1092,17 @@ model ApprovalRequest {
 
 // History of messages sent and to whom.
 model MessageLog {
-  id               String        @id @default(uuid()) @db.Uuid
-  collegeId        String        @db.Uuid
-  purpose          String
-  subject          String
-  recipientEmail   String
-  studentId        String?       @db.Uuid
-  status           MessageStatus
-  error            String?
-  sentById         String?       @db.Uuid
-  approvalRequestId String?      @db.Uuid
-  createdAt        DateTime      @default(now())
+  id                String        @id @default(uuid()) @db.Uuid
+  collegeId         String        @db.Uuid
+  purpose           String
+  subject           String
+  recipientEmail    String
+  studentId         String?       @db.Uuid
+  status            MessageStatus
+  error             String?
+  sentById          String?       @db.Uuid
+  approvalRequestId String?       @db.Uuid
+  createdAt         DateTime      @default(now())
 
   college College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   student Student? @relation(fields: [studentId], references: [id])
@@ -986,16 +1112,16 @@ model MessageLog {
 
 // One session per drive (roundKey "drive") or per round (roundKey = roundId). The code is what students scan or type.
 model AttendanceSession {
-  id        String    @id @default(uuid()) @db.Uuid
-  collegeId String    @db.Uuid
-  driveId   String    @db.Uuid
-  roundId   String?   @db.Uuid
-  roundKey  String
-  code      String
-  isOpen    Boolean   @default(true)
-  openedAt  DateTime  @default(now())
-  closedAt  DateTime?
-  closedById String?  @db.Uuid
+  id         String    @id @default(uuid()) @db.Uuid
+  collegeId  String    @db.Uuid
+  driveId    String    @db.Uuid
+  roundId    String?   @db.Uuid
+  roundKey   String
+  code       String
+  isOpen     Boolean   @default(true)
+  openedAt   DateTime  @default(now())
+  closedAt   DateTime?
+  closedById String?   @db.Uuid
 
   drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
 
@@ -1187,22 +1313,22 @@ model MessageTemplate {
 }
 
 model Ticket {
-  id           String         @id @default(uuid()) @db.Uuid
-  collegeId    String         @db.Uuid
-  studentId    String         @db.Uuid
-  departmentId String         @db.Uuid
+  id           String          @id @default(uuid()) @db.Uuid
+  collegeId    String          @db.Uuid
+  studentId    String          @db.Uuid
+  departmentId String          @db.Uuid
   category     TicketCategory
   section      ProfileSection?
   subject      String
-  status       TicketStatus   @default(OPEN)
-  assigneeId   String?        @db.Uuid
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  status       TicketStatus    @default(OPEN)
+  assigneeId   String?         @db.Uuid
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   resolvedAt   DateTime?
 
-  student  Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  assignee User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
-  messages TicketMessage[]
+  student     Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignee    User?              @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  messages    TicketMessage[]
   attachments TicketAttachment[]
 
   @@index([collegeId, status, createdAt])
@@ -1583,17 +1709,17 @@ model Question {
 }
 
 model AssessmentPaper {
-  id            String   @id @default(uuid()) @db.Uuid
-  collegeId     String   @db.Uuid
-  title         String
-  instructions  String?
-  durationMin   Int
-  questions     Json
-  shuffle       Boolean  @default(true)
-  proctoring    Json
-  passPercent   Int?
-  createdById   String   @db.Uuid
-  createdAt     DateTime @default(now())
+  id           String   @id @default(uuid()) @db.Uuid
+  collegeId    String   @db.Uuid
+  title        String
+  instructions String?
+  durationMin  Int
+  questions    Json
+  shuffle      Boolean  @default(true)
+  proctoring   Json
+  passPercent  Int?
+  createdById  String   @db.Uuid
+  createdAt    DateTime @default(now())
 
   schedules AssessmentSchedule[]
 }
@@ -1619,19 +1745,19 @@ model AssessmentSchedule {
 }
 
 model AssessmentAttempt {
-  id           String        @id @default(uuid()) @db.Uuid
-  scheduleId   String        @db.Uuid
-  studentId    String        @db.Uuid
-  startedAt    DateTime      @default(now())
-  deadlineAt   DateTime
-  submittedAt  DateTime?
-  answers      Json          @default("{}")
-  score        Decimal?      @db.Decimal(8, 2)
-  maxScore     Decimal?      @db.Decimal(8, 2)
-  violations   Int           @default(0)
-  flagged      Boolean       @default(false)
-  proctorEvents Json         @default("[]")
-  status       AttemptStatus @default(IN_PROGRESS)
+  id            String        @id @default(uuid()) @db.Uuid
+  scheduleId    String        @db.Uuid
+  studentId     String        @db.Uuid
+  startedAt     DateTime      @default(now())
+  deadlineAt    DateTime
+  submittedAt   DateTime?
+  answers       Json          @default("{}")
+  score         Decimal?      @db.Decimal(8, 2)
+  maxScore      Decimal?      @db.Decimal(8, 2)
+  violations    Int           @default(0)
+  flagged       Boolean       @default(false)
+  proctorEvents Json          @default("[]")
+  status        AttemptStatus @default(IN_PROGRESS)
 
   schedule AssessmentSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   student  Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -1709,20 +1835,20 @@ model Recruiter {
 }
 
 model RecruiterJob {
-  id             String             @id @default(uuid()) @db.Uuid
-  collegeId      String             @db.Uuid
-  recruiterId    String             @db.Uuid
-  title          String
-  jobType        JobType
-  location       String?
-  description    String?
-  applyUrl       String
-  deadline       DateTime?
-  status         RecruiterJobStatus @default(PENDING_REVIEW)
-  reviewedById   String?            @db.Uuid
-  reviewNote     String?
-  jobAlertId     String?            @db.Uuid
-  createdAt      DateTime           @default(now())
+  id           String             @id @default(uuid()) @db.Uuid
+  collegeId    String             @db.Uuid
+  recruiterId  String             @db.Uuid
+  title        String
+  jobType      JobType
+  location     String?
+  description  String?
+  applyUrl     String
+  deadline     DateTime?
+  status       RecruiterJobStatus @default(PENDING_REVIEW)
+  reviewedById String?            @db.Uuid
+  reviewNote   String?
+  jobAlertId   String?            @db.Uuid
+  createdAt    DateTime           @default(now())
 
   recruiter Recruiter @relation(fields: [recruiterId], references: [id])
 
@@ -1758,4 +1884,73 @@ model RateLimitBucket {
 
   @@id([key, windowStart])
   @@index([createdAt])
+}
+
+/// One row per previous or current qualification (SSLC, PUC, BCA, MCA ...).
+model StudentEducationRecord {
+  id                String          @id @default(uuid()) @db.Uuid
+  collegeId         String          @db.Uuid
+  studentId         String          @db.Uuid
+  level             String
+  qualification     String
+  specialisation    String?
+  institution       String
+  boardOrUniversity String?
+  rollNo            String?
+  admissionYear     Int?
+  completionYear    Int?
+  percentage        Decimal?        @db.Decimal(5, 2)
+  cgpa              Decimal?        @db.Decimal(4, 2)
+  maxMarks          Int?
+  obtainedMarks     Int?
+  backlogs          Int             @default(0)
+  status            EducationStatus @default(COMPLETED)
+  isCurrent         Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, studentId])
+}
+
+/// A single uploaded academic document with its own verification state.
+model StudentDocument {
+  id           String          @id @default(uuid()) @db.Uuid
+  collegeId    String          @db.Uuid
+  studentId    String          @db.Uuid
+  category     DocCategory
+  storagePath  String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  status       DocVerification @default(PENDING)
+  verifiedById String?         @db.Uuid
+  verifiedAt   DateTime?
+  rejectReason String?
+  createdAt    DateTime        @default(now())
+
+  student    Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  verifiedBy User?   @relation(fields: [verifiedById], references: [id])
+
+  @@index([collegeId, studentId])
+  @@index([collegeId, status])
+}
+
+/// History of a student moving through semesters. Rows are only added, never overwritten.
+model StudentProgression {
+  id             String          @id @default(uuid()) @db.Uuid
+  collegeId      String          @db.Uuid
+  studentId      String          @db.Uuid
+  semesterId     String?         @db.Uuid
+  academicYearId String?         @db.Uuid
+  kind           ProgressionKind
+  note           String?
+  createdById    String?         @db.Uuid
+  createdAt      DateTime        @default(now())
+
+  student  Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semester Semester? @relation(fields: [semesterId], references: [id])
+
+  @@index([collegeId, studentId, createdAt])
 }

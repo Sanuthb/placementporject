@@ -7,6 +7,8 @@ import { toast } from "sonner"
 
 import { OptionSelect } from "@/components/option-select"
 import { VerificationHistory } from "@/components/staff-extras"
+import { DocumentsPanel, EducationPanel } from "@/components/student-academic"
+import { ProgressionPanel } from "@/components/student-progression"
 import { SectionReview } from "@/components/section-review"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -102,12 +104,19 @@ export default function StudentPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Sections</TabsTrigger>
+          <TabsTrigger value="education">Education</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="progression">Progression</TabsTrigger>
           {d.drives && <TabsTrigger value="drives">Drives</TabsTrigger>}
           {d.offers && <TabsTrigger value="offers">Offers</TabsTrigger>}
           <TabsTrigger value="analysis">Analysis</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="education"><EducationPanel studentId={id} canEdit={canEdit} /></TabsContent>
+        <TabsContent value="documents"><DocumentsPanel studentId={id} canEdit={canEdit} /></TabsContent>
+        <TabsContent value="progression"><ProgressionPanel studentId={id} canEdit={canEdit} isAdmin={state.status === "ready" && state.profile.role === "TPO_ADMIN"} /></TabsContent>
 
         <TabsContent value="overview">
           <Table>

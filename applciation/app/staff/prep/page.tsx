@@ -27,7 +27,7 @@ export default function PrepPage() {
     <Tabs defaultValue="resources">
       <TabsList><TabsTrigger value="resources">Resources</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling slots</TabsTrigger></TabsList>
       <TabsContent value="resources">
-        <MasterTab<Res> endpoint="/api/prep/resources" addLabel="Add resource" patchPath={(r) => `/api/prep/resources/${r.id}`}
+        <MasterTab<Res> endpoint="/api/prep/resources" addLabel="Add resource" noun="resource" editable editFields={[{ name: "title", label: "Title" }, { name: "url", label: "Link" }, { name: "description", label: "Description", required: false }]} toEditBody={(v) => ({ title: v.title, url: v.url, description: v.description || null })} deletePath={(r) => `/api/prep/resources/${r.id}`} patchPath={(r) => `/api/prep/resources/${r.id}`}
           fields={[{ name: "title", label: "Title" }, { name: "category", label: "Category", type: "select", options: CATS, required: true }, { name: "url", label: "Link" }, { name: "description", label: "Description", required: false }]}
           columns={[{ label: "Title", cell: (r) => <a className="underline underline-offset-4" href={r.url} target="_blank" rel="noreferrer">{r.title}</a> }, { label: "Category", cell: (r) => titleCase(r.category) }, { label: "State", cell: (r) => <ActiveBadge active={r.isActive} /> }]} />
       </TabsContent>

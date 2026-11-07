@@ -4,19 +4,13 @@ import { parseBody, parseQuery } from "@/lib/api/parse";
 import { ApiError, badRequest } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
-import { departmentScope } from "@/lib/auth/session";
 import { studentSelect } from "@/lib/students";
-import { InviteStatus } from "@/generated/prisma/client";
+import { resolveMapping } from "@/lib/academicMapping";
+import { educationInput } from "@/lib/api/academic";
+import { ProfileSection } from "@/generated/prisma/client";
+import { studentFilterQuery, studentWhere } from "@/lib/studentFilters";
 
-const bool = z.enum(["true", "false"]).transform((v) => v === "true");
-const listQuery = z.object({
-  q: z.string().trim().max(100).optional(),
-  departmentId: z.uuid().optional(),
-  batchId: z.uuid().optional(),
-  programId: z.uuid().optional(),
-  inviteStatus: z.enum(InviteStatus).optional(),
-  isActive: bool.optional(),
-  isArchived: bool.default(false),
+const listQuery = studentFilterQuery.extend({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   cursor: z.uuid().optional(),
 });
@@ -26,51 +20,67 @@ const create = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.email().transform((e) => e.toLowerCase()),
   phone: z.string().trim().regex(/^\+?[\d\s-]{7,16}$/).optional(),
+  dateOfBirth: z.coerce.date().max(new Date(), { message: "Date of birth cannot be in the future" }).nullable().optional(),
+  gender: z.string().trim().max(30).nullable().optional(),
+  address: z.string().trim().max(500).nullable().optional(),
   departmentId: z.uuid(),
   batchId: z.uuid(),
   programId: z.uuid().nullable().optional(),
+  branchId: z.uuid().nullable().optional(),
+  semesterId: z.uuid().nullable().optional(),
+  academicYearId: z.uuid().nullable().optional(),
+  education: z.array(educationInput).max(12).default([]),
 });
 
 export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
-  const q = parseQuery(req, listQuery);
-  const rows = await db.student.findMany({
-    where: {
-      collegeId: s.collegeId,
-      ...departmentScope(s),
-      ...(q.departmentId && s.role !== "DEPARTMENT_COORDINATOR" ? { departmentId: q.departmentId } : {}),
-      batchId: q.batchId,
-      programId: q.programId,
-      inviteStatus: q.inviteStatus,
-      isActive: q.isActive,
-      isArchived: q.isArchived,
-      ...(q.q ? { OR: [{ name: { contains: q.q, mode: "insensitive" } }, { enrollmentNo: { contains: q.q, mode: "insensitive" } }, { email: { contains: q.q, mode: "insensitive" } }] } : {}),
-    },
-    select: studentSelect,
-    orderBy: [{ name: "asc" }, { id: "asc" }],
-    take: q.limit + 1,
-    ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-  });
-  const hasMore = rows.length > q.limit;
-  const items = hasMore ? rows.slice(0, q.limit) : rows;
+  const { limit, cursor, ...filters } = parseQuery(req, listQuery);
+  const [settings, rows] = await Promise.all([
+    db.collegeSettings.findUnique({ where: { collegeId: s.collegeId }, select: { requiredSections: true } }),
+    db.student.findMany({
+      where: studentWhere(s, filters),
+      select: {
+        ...studentSelect,
+        stage: true, isPlaced: true, participationStatus: true,
+        department: { select: { name: true } },
+        program: { select: { name: true, code: true } },
+        batch: { select: { name: true, endYear: true } },
+        currentSemester: { select: { name: true } },
+        sections: { where: { status: "VERIFIED" }, select: { section: true } },
+        _count: { select: { documents: { where: { status: "PENDING" } } } },
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    }),
+  ]);
+  const required = settings?.requiredSections?.length ? settings.requiredSections : Object.values(ProfileSection);
+  const hasMore = rows.length > limit;
+  const items = (hasMore ? rows.slice(0, limit) : rows).map(({ sections, _count, ...r }) => ({
+    ...r,
+    // Profile completion is the share of required sections a staff member has verified.
+    completion: Math.round((sections.filter((x) => required.includes(x.section)).length / required.length) * 100),
+    pendingDocs: _count.documents,
+    graduationYear: r.batch.endYear,
+  }));
   return { items, nextCursor: hasMore ? items[items.length - 1].id : null };
 });
 
 export const POST = route({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"], module: "ONBOARDING" }, async (req, s) => {
-  const data = await parseBody(req, create);
-  const [dept, batch, program, dupe] = await Promise.all([
-    db.department.findFirst({ where: { id: data.departmentId, collegeId: s.collegeId, isActive: true } }),
-    db.batch.findFirst({ where: { id: data.batchId, collegeId: s.collegeId, isActive: true } }),
-    data.programId ? db.program.findFirst({ where: { id: data.programId, collegeId: s.collegeId, isActive: true } }) : Promise.resolve(true),
-    db.student.findFirst({ where: { collegeId: s.collegeId, OR: [{ enrollmentNo: data.enrollmentNo }, { email: data.email }] }, select: { id: true } }),
-  ]);
-  if (!dept) throw badRequest("Department not found or inactive");
-  if (!batch) throw badRequest("Batch not found or inactive");
-  if (!program) throw badRequest("Program not found or inactive");
-  if (dupe) throw new ApiError(409, "CONFLICT", "A student with this enrollment number or email already exists");
+  const { education, semesterId, academicYearId, ...data } = await parseBody(req, create);
+  if (education.filter((e) => e.isCurrent).length > 1) throw badRequest("Only one qualification can be marked as current");
+  if (await db.student.findFirst({ where: { collegeId: s.collegeId, OR: [{ enrollmentNo: data.enrollmentNo }, { email: data.email }] }, select: { id: true } }))
+    throw new ApiError(409, "CONFLICT", "A student with this admission number or email already exists");
 
   return db.$transaction(async (tx) => {
-    const st = await tx.student.create({ data: { ...data, programId: data.programId ?? null, collegeId: s.collegeId }, select: studentSelect });
-    await audit(s, { action: "student.create", entity: "Student", entityId: st.id, after: { enrollmentNo: st.enrollmentNo, email: st.email } }, tx);
+    const m = await resolveMapping(tx, s.collegeId, { ...data, semesterId, academicYearId });
+    const st = await tx.student.create({
+      data: { ...data, ...m, collegeId: s.collegeId, dateOfBirth: data.dateOfBirth ?? null, gender: data.gender ?? null, address: data.address ?? null },
+      select: studentSelect,
+    });
+    if (education.length) await tx.studentEducationRecord.createMany({ data: education.map((e) => ({ ...e, collegeId: s.collegeId, studentId: st.id })) });
+    // The first progression row records where the student started; later moves add rows and never overwrite this one.
+    await tx.studentProgression.create({ data: { collegeId: s.collegeId, studentId: st.id, semesterId: m.currentSemesterId, academicYearId: m.currentAcademicYearId, kind: "ENROLLED", createdById: s.userId } });
+    await audit(s, { action: "student.create", entity: "Student", entityId: st.id, after: { enrollmentNo: st.enrollmentNo, email: st.email, batchId: m.batchId, programId: m.programId, education: education.length } }, tx);
     return st;
   });
 });

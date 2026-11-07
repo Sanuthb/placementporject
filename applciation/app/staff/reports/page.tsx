@@ -31,7 +31,7 @@ export default function ReportsPage() {
         <Card><CardHeader><CardTitle>NIRF-style data</CardTitle><CardDescription>Placement data in a NAAC/NIRF layout, as Excel.</CardDescription></CardHeader><CardContent><Button onClick={() => download("/api/reports/nirf").catch(toastError)}>Download Excel</Button></CardContent></Card>
       </TabsContent>
       <TabsContent value="schedules">
-        <MasterTab<Sched> endpoint="/api/reports/schedules" addLabel="Schedule a report"
+        <MasterTab<Sched> endpoint="/api/reports/schedules" addLabel="Schedule a report" noun="schedule" editable deletePath={(r) => `/api/reports/schedules/${r.id}`} editFields={[{ name: "frequency", label: "How often", type: "select", required: true, options: [{ value: "WEEKLY", label: "Weekly" }, { value: "MONTHLY", label: "Monthly" }] }, { name: "recipients", label: "Send to (emails, comma separated)" }]} toEditBody={(v) => ({ frequency: v.frequency, recipients: String(v.recipients).split(",").map((x) => x.trim()).filter(Boolean) })}
           fields={[{ name: "type", label: "Report", type: "select", required: true, options: [{ value: "PLACEMENT_SUMMARY", label: "Placement summary (PDF)" }, { value: "NIRF", label: "NIRF data (Excel)" }] }, { name: "frequency", label: "How often", type: "select", required: true, options: [{ value: "WEEKLY", label: "Weekly" }, { value: "MONTHLY", label: "Monthly" }] }, { name: "recipients", label: "Send to (emails, separated by commas)" }]}
           toBody={(v) => ({ type: v.type, frequency: v.frequency, recipients: String(v.recipients).split(",").map((s) => s.trim()).filter(Boolean) })}
           patchPath={(r) => `/api/reports/schedules/${r.id}`}

@@ -37,6 +37,8 @@ export async function dashboard(s: Session) {
       db.student.count({ where: registered }),
     ]);
     out.studentCounts = { total, invited, active, awaitingReview, verified, onboarded, placed, registeredForPlacement: registeredCount };
+    // Registered students split into placed and still looking; everyone else (opted out, higher studies, ...) is shown apart so they never lower the rate.
+    out.placementSplit = { placed, unplaced: Math.max(registeredCount - placed, 0), notRegistered: Math.max(total - registeredCount, 0) };
 
     const [byDept, byDeptPlaced, byBatch, byBatchPlaced, depts, batches] = await Promise.all([
       db.student.groupBy({ by: ["departmentId"], where: registered, _count: true }),
@@ -81,6 +83,27 @@ export async function dashboard(s: Session) {
     ]);
     out.upcoming = { drives, rounds };
     out.offersThisWeek = { count: weekOffers.length, latest: weekOffers };
+
+    // Season-level insights for the dashboard tiles: package spread, who hires and pays most, and the state of the drives.
+    const [accepted, driveStatus] = await Promise.all([
+      db.offer.findMany({ where: { collegeId: s.collegeId, status: "ACCEPTED", isHistorical: false, student: { ...scope } }, select: { packageLpa: true, company: { select: { name: true } } } }),
+      db.drive.groupBy({ by: ["status"], where: { collegeId: s.collegeId }, _count: true }),
+    ]);
+    const priced = accepted.filter((o) => o.packageLpa !== null).map((o) => ({ lpa: Number(o.packageLpa), company: o.company.name }));
+    const lpas = priced.map((p) => p.lpa);
+    const round1 = (n: number) => Math.round(n * 10) / 10;
+    const buckets = new Map<number, number>();
+    for (const v of lpas) buckets.set(Math.floor(v / 5) * 5, (buckets.get(Math.floor(v / 5) * 5) ?? 0) + 1);
+    const hires = new Map<string, number>(), best = new Map<string, number>();
+    for (const o of accepted) hires.set(o.company.name, (hires.get(o.company.name) ?? 0) + 1);
+    for (const p of priced) best.set(p.company, Math.max(best.get(p.company) ?? 0, p.lpa));
+    out.insights = {
+      ctc: { unit: "LPA", count: lpas.length, min: lpas.length ? Math.min(...lpas) : null, max: lpas.length ? Math.max(...lpas) : null, average: lpas.length ? round1(lpas.reduce((a, b) => a + b, 0) / lpas.length) : null },
+      ctcBuckets: [...buckets.entries()].sort((a, b) => a[0] - b[0]).map(([from, count]) => ({ label: `${from}–${from + 5}`, count })),
+      topHiring: [...hires.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([company, count]) => ({ company, count })),
+      topPaying: [...best.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([company, lpa]) => ({ company, lpa })),
+      driveStatus: driveStatus.map((d) => ({ status: d.status, count: d._count })),
+    };
   }
   out.quickActions = ACTIONS.filter((a) => a.roles.includes(s.role) && (!a.module || mods.has(a.module))).map(({ key, label, method, path }) => ({ key, label, method, path }));
   return out;

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { CompanyTier, RelationshipStatus } from "@/generated/prisma/client";
 import { contactSchema } from "@/lib/companies";
+import { removeOwned } from "@/lib/api/remove";
 
 const patch = z.object({
   name: z.string().trim().min(2).max(200).optional(),
@@ -51,3 +52,13 @@ export const PATCH = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFF
     return after;
   });
 });
+
+export const DELETE = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"], module: "DRIVES" }, (_req, s, { id }) => removeOwned(s, {
+  entity: "Company", label: "Company", id, action: "company.delete",
+  find: (tx) => tx.company.findFirst({ where: { id, collegeId: s.collegeId } }),
+  blockers: async (tx) => {
+    const [drives, offers] = await Promise.all([tx.drive.count({ where: { companyId: id } }), tx.offer.count({ where: { companyId: id } })]);
+    return drives || offers ? `${drives} drives and ${offers} offers refer to this company.` : null;
+  },
+  remove: (tx) => tx.company.delete({ where: { id } }),
+}));

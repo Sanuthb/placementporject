@@ -1,18 +1,15 @@
-import { z } from "zod";
 import { route } from "@/lib/api/handler";
 import { parseQuery } from "@/lib/api/parse";
 import { db } from "@/lib/db";
-import { departmentScope } from "@/lib/auth/session";
+import { studentFilterQuery, studentWhere } from "@/lib/studentFilters";
 import { sheetResponse } from "@/lib/xlsx";
-import { InviteStatus, StudentStage } from "@/generated/prisma/client";
 
-const query = z.object({ departmentId: z.uuid().optional(), batchId: z.uuid().optional(), stage: z.enum(StudentStage).optional(), inviteStatus: z.enum(InviteStatus).optional(), isArchived: z.enum(["true", "false"]).default("false") });
+const query = studentFilterQuery;
 
 export const GET = route({ limit: { name: "export", max: 60, windowSec: 3600 }, roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "DEPARTMENT_COORDINATOR"], module: "ONBOARDING" }, async (req, s) => {
   const q = parseQuery(req, query);
-  const scope = departmentScope(s);
   const rows = await db.student.findMany({
-    where: { collegeId: s.collegeId, ...scope, departmentId: scope.departmentId ?? q.departmentId, batchId: q.batchId, stage: q.stage, inviteStatus: q.inviteStatus, isArchived: q.isArchived === "true" },
+    where: studentWhere(s, q),
     select: { enrollmentNo: true, name: true, email: true, phone: true, stage: true, inviteStatus: true, participationStatus: true, isPlaced: true, department: { select: { code: true } }, batch: { select: { name: true } } },
     orderBy: [{ name: "asc" }], take: 20_000,
   });

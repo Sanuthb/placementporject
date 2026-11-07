@@ -56,3 +56,51 @@ export async function readSheet(buffer: Buffer, fileName: string, columns: reado
   if (!rows.length) throw badRequest("The file has no data rows");
   return rows;
 }
+
+/**
+ * Reads the first sheet with whatever headers it has, so the user can map them to system fields afterwards.
+ * Headers keep the file's own wording; blank ones are ignored and repeated ones get a number.
+ */
+export async function readAnySheet(buffer: Buffer, fileName: string, maxRows: number): Promise<{ headers: string[]; rows: SheetRow[] }> {
+  const lower = fileName.toLowerCase();
+  if (!lower.endsWith(".xlsx") && !lower.endsWith(".csv")) throw badRequest("Upload an .xlsx or .csv file");
+  const wb = new ExcelJS.Workbook();
+  let sheet: ExcelJS.Worksheet | undefined;
+  try {
+    if (lower.endsWith(".csv")) sheet = await wb.csv.read(Readable.from(buffer));
+    else {
+      await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+      sheet = wb.worksheets[0];
+    }
+  } catch {
+    throw badRequest("The file could not be read. Check that it is a valid spreadsheet");
+  }
+  if (!sheet || sheet.rowCount < 2) throw badRequest("The file has no data rows");
+
+  const byColumn = new Map<number, string>();
+  const used = new Set<string>();
+  sheet.getRow(1).eachCell({ includeEmpty: false }, (c, i) => {
+    const base = cellText(c.value);
+    if (!base) return;
+    let name = base, n = 2;
+    while (used.has(name)) name = `${base} (${n++})`;
+    used.add(name);
+    byColumn.set(i, name);
+  });
+  if (!byColumn.size) throw badRequest("The first row must contain column headings");
+
+  const rows: SheetRow[] = [];
+  for (let r = 2; r <= sheet.rowCount; r++) {
+    const data: Record<string, string> = {};
+    let any = false;
+    for (const [idx, name] of byColumn) {
+      const text = cellText(sheet.getRow(r).getCell(idx).value);
+      data[name] = text;
+      if (text) any = true;
+    }
+    if (any) rows.push({ row: r, data });
+    if (rows.length > maxRows) throw badRequest(`Too many rows. The limit is ${maxRows} per file`);
+  }
+  if (!rows.length) throw badRequest("The file has no data rows");
+  return { headers: [...byColumn.values()], rows };
+}

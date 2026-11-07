@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { assertDriveRefs, checkDriveShape, getDrive, patchDriveSchema } from "@/lib/drives";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { removeOwned } from "@/lib/api/remove";
 
 export const GET = route<{ id: string }>({ module: "DRIVES" }, async (_req, s, { id }) => {
   const d = await db.drive.findFirst({
@@ -34,4 +35,21 @@ export const PATCH = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFF
     await audit(s, { action: before.status === "PUBLISHED" ? "drive.update.published" : "drive.update", entity: "Drive", entityId: id, after: data as object }, tx);
     return after;
   });
+});
+
+/** Only a draft that nobody has applied to can be deleted; anything published is cancelled or closed instead. */
+export const DELETE = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"], module: "DRIVES" }, async (_req, s, { id }) => {
+  const docs = await db.driveDocument.findMany({ where: { driveId: id, drive: { collegeId: s.collegeId } }, select: { storagePath: true } });
+  const out = await removeOwned(s, {
+    entity: "Drive", label: "Drive", id, action: "drive.delete",
+    find: async (tx) => { const d = await tx.drive.findFirst({ where: { id, collegeId: s.collegeId }, include: { company: { select: { name: true } } } }); return d && { name: `${d.company.name}, ${d.role}` }; },
+    blockers: async (tx) => {
+      const d = await tx.drive.findFirst({ where: { id }, select: { status: true, _count: { select: { applications: true, offers: true } } } });
+      if (d && d.status !== "DRAFT") return "Only a draft drive can be deleted; cancel or close this one.";
+      return d && (d._count.applications || d._count.offers) ? "Students have already applied." : null;
+    },
+    remove: (tx) => tx.drive.delete({ where: { id } }),
+  });
+  if (docs.length) await supabaseAdmin().storage.from("drive-documents").remove(docs.map((d) => d.storagePath)).catch(() => undefined);
+  return out;
 });

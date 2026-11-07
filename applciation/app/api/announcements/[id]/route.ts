@@ -4,6 +4,7 @@ import { parseBody } from "@/lib/api/parse";
 import { notFound } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { removeOwned } from "@/lib/api/remove";
 
 const patch = z.object({ title: z.string().trim().min(3).max(200).optional(), body: z.string().trim().min(3).max(10_000).optional(), expiresAt: z.coerce.date().nullable().optional(), isActive: z.boolean().optional() });
 
@@ -16,3 +17,9 @@ export const PATCH = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFF
     return tx.announcement.findUniqueOrThrow({ where: { id } });
   });
 });
+
+export const DELETE = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] }, (_req, s, { id }) => removeOwned(s, {
+  entity: "Announcement", label: "Announcement", id, action: "announcement.delete",
+  find: async (tx) => { const a = await tx.announcement.findFirst({ where: { id, collegeId: s.collegeId } }); return a && { name: a.title }; },
+  remove: (tx) => tx.announcement.delete({ where: { id } }),
+}));

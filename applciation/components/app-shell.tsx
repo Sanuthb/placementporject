@@ -56,7 +56,7 @@ export function AppShell({ kind, children }: { kind: Kind; children: React.React
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+        <div className="mx-auto flex w-full min-w-0 max-w-[1680px] flex-1 flex-col gap-4 p-4 pt-0 sm:p-6 sm:pt-0">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

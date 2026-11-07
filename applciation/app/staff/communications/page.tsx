@@ -8,7 +8,6 @@ import { OptionSelect } from "@/components/option-select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -34,8 +33,8 @@ export default function CommunicationsPage() {
       <TabsContent value="email"><SendEmail /></TabsContent>
       <TabsContent value="history"><History /></TabsContent>
       <TabsContent value="templates">
-        <MasterTab<Tpl> endpoint="/api/templates" addLabel="Add template"
-          fields={[{ name: "name", label: "Name" }, { name: "subject", label: "Subject" }, { name: "body", label: "Message", type: "text" }]}
+        <MasterTab<Tpl> endpoint="/api/templates" addLabel="Add template" noun="template" editable patchPath={(r) => `/api/templates/${r.id}`} deletePath={(r) => `/api/templates/${r.id}`}
+          fields={[{ name: "name", label: "Name" }, { name: "subject", label: "Subject" }, { name: "body", label: "Message", type: "textarea" }]}
           columns={[{ label: "Name", cell: (r) => r.name }, { label: "Subject", cell: (r) => r.subject }, { label: "Message", cell: (r) => <span className="text-muted-foreground">{r.body.slice(0, 80)}</span> }]} />
       </TabsContent>
       <TabsContent value="faqs" className="flex flex-col gap-2">
@@ -50,62 +49,40 @@ type Faq = { id: string; kind: string; question: string; answer: string; sortOrd
 
 function FaqTab() {
   async function patch(id: string, body: Partial<Faq>, reload: () => void) { try { await api(`/api/faqs/${id}`, { method: "PATCH", body }); reload() } catch (e) { toastError(e) } }
-  async function remove(id: string, reload: () => void) { try { await api(`/api/faqs/${id}`, { method: "DELETE" }); reload() } catch (e) { toastError(e) } }
   return (
-    <MasterTab<Faq> endpoint="/api/faqs" addLabel="Add FAQ or rule"
+    <MasterTab<Faq> endpoint="/api/faqs" addLabel="Add FAQ or rule" noun="FAQ" editable patchPath={(r) => `/api/faqs/${r.id}`} deletePath={(r) => `/api/faqs/${r.id}`}
       fields={[{ name: "kind", label: "Type", type: "select", options: [{ value: "FAQ", label: "FAQ" }, { value: "RULE", label: "Rule" }], required: true }, { name: "question", label: "Question or title" }, { name: "answer", label: "Answer", type: "textarea" }, { name: "sortOrder", label: "Order (0 shows first)", type: "number", required: false }]}
       toBody={(v) => ({ kind: v.kind, question: v.question, answer: v.answer, ...(v.sortOrder ? { sortOrder: Number(v.sortOrder) } : {}) })}
+      toEditBody={(v) => ({ kind: v.kind, question: v.question, answer: v.answer, sortOrder: v.sortOrder ? Number(v.sortOrder) : 0 })}
       columns={[
         { label: "Type", cell: (r) => titleCase(r.kind) },
         { label: "Question", cell: (r) => <>{r.question}<div className="line-clamp-1 text-xs text-muted-foreground">{r.answer}</div></> },
         { label: "Shown to students", cell: (r, reload) => <Switch checked={r.isPublished} onCheckedChange={(v) => patch(r.id, { isPublished: v }, reload)} aria-label="Shown to students" /> },
-        { label: "", cell: (r, reload) => <Button size="sm" variant="outline" onClick={() => remove(r.id, reload)}>Delete</Button> },
       ]} />
   )
 }
 
 function Announcements() {
-  const { data, reload } = useApi<Ann[]>("/api/announcements")
   const lk = useLookups()
-  const [open, setOpen] = React.useState(false)
-  const [dept, setDept] = React.useState("")
-  const [batch, setBatch] = React.useState("")
-  const [busy, setBusy] = React.useState(false)
-  async function create(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const f = new FormData(e.currentTarget)
-    const exp = String(f.get("expiresAt") ?? "")
-    setBusy(true)
-    try { await api("/api/announcements", { method: "POST", body: { title: f.get("title"), body: f.get("body"), targetDepartmentIds: dept ? [dept] : [], targetBatchIds: batch ? [batch] : [], ...(exp ? { expiresAt: new Date(`${exp}T23:59:59`).toISOString() } : {}) } }); toast.success("Announcement published"); setOpen(false); reload() } catch (err) { toastError(err) } finally { setBusy(false) }
-  }
-  async function toggle(a: Ann) { try { await api(`/api/announcements/${a.id}`, { method: "PATCH", body: { isActive: !a.isActive } }); reload() } catch (e) { toastError(e) } }
-  if (!data) return <Skeleton className="h-40" />
+  const at = (d: string) => new Date(`${d}T23:59:59`).toISOString()
   return (
-    <div className="flex flex-col gap-3">
-      <div><Button onClick={() => setOpen(true)}>New announcement</Button></div>
-      <Table>
-        <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Published</TableHead><TableHead>Expires</TableHead><TableHead>State</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
-        <TableBody>
-          {data.map((a) => <TableRow key={a.id}><TableCell>{a.title}<div className="text-xs text-muted-foreground">{a.body.slice(0, 90)}</div></TableCell><TableCell>{fmtDate(a.publishedAt)}</TableCell><TableCell>{fmtDate(a.expiresAt)}</TableCell><TableCell><Badge variant={a.isActive ? "default" : "outline"}>{a.isActive ? "Visible" : "Hidden"}</Badge></TableCell><TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => toggle(a)}>{a.isActive ? "Hide" : "Show"}</Button></TableCell></TableRow>)}
-          {data.length === 0 && <TableRow><TableCell colSpan={5} className="text-muted-foreground">No announcements yet.</TableCell></TableRow>}
-        </TableBody>
-      </Table>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>New announcement</DialogTitle></DialogHeader>
-          <form onSubmit={create}>
-            <FieldGroup>
-              <Field><FieldLabel htmlFor="title">Title</FieldLabel><Input id="title" name="title" minLength={3} required /></Field>
-              <Field><FieldLabel htmlFor="body">Message</FieldLabel><Textarea id="body" name="body" minLength={3} required /></Field>
-              <Field><FieldLabel>Department (optional)</FieldLabel><OptionSelect className="w-full" value={dept} onChange={setDept} options={[{ value: "", label: "Everyone" }, ...lk.departments]} placeholder="Everyone" /></Field>
-              <Field><FieldLabel>Batch (optional)</FieldLabel><OptionSelect className="w-full" value={batch} onChange={setBatch} options={[{ value: "", label: "All batches" }, ...lk.batches]} placeholder="All batches" /></Field>
-              <Field><FieldLabel htmlFor="expiresAt">Hide after (optional)</FieldLabel><Input id="expiresAt" name="expiresAt" type="date" /></Field>
-            </FieldGroup>
-            <DialogFooter className="mt-4"><Button type="submit" disabled={busy}>{busy && <Spinner />}Publish</Button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+    <MasterTab<Ann> endpoint="/api/announcements" addLabel="New announcement" noun="announcement" editable
+      patchPath={(r) => `/api/announcements/${r.id}`} deletePath={(r) => `/api/announcements/${r.id}`}
+      fields={[
+        { name: "title", label: "Title" }, { name: "body", label: "Message", type: "textarea" },
+        { name: "dept", label: "Department (optional)", type: "select", required: false, options: [{ value: "", label: "Everyone" }, ...lk.departments] },
+        { name: "batch", label: "Batch (optional)", type: "select", required: false, options: [{ value: "", label: "All batches" }, ...lk.batches] },
+        { name: "expiresAt", label: "Hide after (optional)", type: "date", required: false },
+      ]}
+      toBody={(v) => ({ title: v.title, body: v.body, targetDepartmentIds: v.dept ? [v.dept] : [], targetBatchIds: v.batch ? [v.batch] : [], ...(v.expiresAt ? { expiresAt: at(String(v.expiresAt)) } : {}) })}
+      editFields={[{ name: "title", label: "Title" }, { name: "body", label: "Message", type: "textarea" }, { name: "expiresAt", label: "Hide after (optional)", type: "date", required: false }]}
+      toEditBody={(v) => ({ title: v.title, body: v.body, expiresAt: v.expiresAt ? at(String(v.expiresAt)) : null })}
+      columns={[
+        { label: "Title", cell: (a) => <>{a.title}<div className="line-clamp-1 text-xs font-normal text-muted-foreground">{a.body}</div></> },
+        { label: "Published", cell: (a) => fmtDate(a.publishedAt) },
+        { label: "Expires", cell: (a) => fmtDate(a.expiresAt) },
+        { label: "State", cell: (a) => <Badge variant={a.isActive ? "default" : "outline"}>{a.isActive ? "Live" : "Hidden"}</Badge> },
+      ]} />
   )
 }
 

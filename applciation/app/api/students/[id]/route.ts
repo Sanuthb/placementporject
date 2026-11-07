@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { route } from "@/lib/api/handler";
 import { parseBody } from "@/lib/api/parse";
-import { badRequest, notFound } from "@/lib/api/errors";
+import { notFound } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { departmentScope } from "@/lib/auth/session";
 import { setLoginBlocked } from "@/lib/supabase-admin";
 import { studentSelect } from "@/lib/students";
+import { resolveMapping } from "@/lib/academicMapping";
 
 const patch = z.object({
   name: z.string().trim().min(2).max(120).optional(),
@@ -14,6 +15,12 @@ const patch = z.object({
   departmentId: z.uuid().optional(),
   batchId: z.uuid().optional(),
   programId: z.uuid().nullable().optional(),
+  branchId: z.uuid().nullable().optional(),
+  semesterId: z.uuid().nullable().optional(),
+  academicYearId: z.uuid().nullable().optional(),
+  dateOfBirth: z.coerce.date().max(new Date()).nullable().optional(),
+  gender: z.string().trim().max(30).nullable().optional(),
+  address: z.string().trim().max(500).nullable().optional(),
   isActive: z.boolean().optional(),
   isArchived: z.boolean().optional(),
 });
@@ -29,14 +36,30 @@ export const PATCH = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFF
   const before = await db.student.findFirst({ where: { id, collegeId: s.collegeId } });
   if (!before) throw notFound("Student not found");
 
-  if (data.departmentId && !(await db.department.findFirst({ where: { id: data.departmentId, collegeId: s.collegeId, isActive: true } }))) throw badRequest("Department not found or inactive");
-  if (data.batchId && !(await db.batch.findFirst({ where: { id: data.batchId, collegeId: s.collegeId, isActive: true } }))) throw badRequest("Batch not found or inactive");
-  if (data.programId && !(await db.program.findFirst({ where: { id: data.programId, collegeId: s.collegeId, isActive: true } }))) throw badRequest("Program not found or inactive");
+  const { semesterId, academicYearId, ...fields } = data;
+  const mapKeys = ["departmentId", "batchId", "programId", "branchId"] as const;
+  const remaps = mapKeys.some((k) => k in data) || semesterId !== undefined || academicYearId !== undefined;
+  const batchChanged = !!data.batchId && data.batchId !== before.batchId;
 
   const after = await db.$transaction(async (tx) => {
-    const a = await tx.student.update({ where: { id }, data, select: studentSelect });
+    let mapped: Record<string, unknown> = {};
+    if (remaps) {
+      // A new batch means a different programme and semester list, so what depended on the old batch is cleared unless given again.
+      const m = await resolveMapping(tx, s.collegeId, {
+        departmentId: data.departmentId ?? before.departmentId,
+        batchId: data.batchId ?? before.batchId,
+        programId: data.programId !== undefined ? data.programId : batchChanged ? null : before.programId,
+        branchId: data.branchId !== undefined ? data.branchId : batchChanged ? null : before.branchId,
+        semesterId: semesterId !== undefined ? semesterId : batchChanged ? null : before.currentSemesterId,
+        academicYearId: academicYearId !== undefined ? academicYearId : batchChanged ? null : before.currentAcademicYearId,
+      });
+      mapped = m;
+      if (m.currentSemesterId !== before.currentSemesterId)
+        await tx.studentProgression.create({ data: { collegeId: s.collegeId, studentId: id, semesterId: m.currentSemesterId, academicYearId: m.currentAcademicYearId, kind: "PROMOTED", note: batchChanged ? "Moved to a different batch" : null, createdById: s.userId } });
+    }
+    const a = await tx.student.update({ where: { id }, data: { ...fields, ...mapped }, select: studentSelect });
     const action = data.isActive === false ? "student.deactivate" : data.isActive === true && !before.isActive ? "student.reactivate" : "student.update";
-    await audit(s, { action, entity: "Student", entityId: id, before: { name: before.name, departmentId: before.departmentId, batchId: before.batchId, isActive: before.isActive, isArchived: before.isArchived }, after: data }, tx);
+    await audit(s, { action, entity: "Student", entityId: id, before: { name: before.name, departmentId: before.departmentId, batchId: before.batchId, programId: before.programId, isActive: before.isActive, isArchived: before.isArchived }, after: { ...fields, ...mapped } as object }, tx);
     return a;
   });
 

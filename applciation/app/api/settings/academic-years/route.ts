@@ -4,9 +4,10 @@ import { parseBody } from "@/lib/api/parse";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { ApiError } from "@/lib/api/errors";
+import { SESSION_STATUS } from "@/lib/api/academic";
 
 const academicYearInput = z
-  .object({ name: z.string().trim().min(4).max(20), startDate: z.coerce.date(), endDate: z.coerce.date(), isCurrent: z.boolean().default(false) })
+  .object({ name: z.string().trim().min(4).max(20), startDate: z.coerce.date(), endDate: z.coerce.date(), isCurrent: z.boolean().default(false), status: z.enum(SESSION_STATUS).default("UPCOMING") })
   .refine((v) => v.endDate > v.startDate, { message: "endDate must be after startDate", path: ["endDate"] });
 
 export const GET = route({}, (_req, s) => db.academicYear.findMany({ where: { collegeId: s.collegeId }, orderBy: { startDate: "desc" } }));
