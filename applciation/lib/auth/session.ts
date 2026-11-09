@@ -66,6 +66,13 @@ export const hasRole = (s: { roles: Role[] }, ...roles: Role[]) => roles.some((r
 /** A coordinator who is also an officer or admin is not limited to one department; only a pure coordinator is. */
 export const isCoordinatorOnly = (s: { roles: Role[] }) => s.roles.includes("DEPARTMENT_COORDINATOR") && !hasRole(s, "TPO_ADMIN", "PLACEMENT_OFFICER");
 
+/**
+ * A person whose only role is FACULTY. Such a session is refused by every route that does not name FACULTY or set `facultyOk`
+ * (see lib/api/handler.ts), so a route that forgot to list roles can never leak placement data to faculty.
+ * Someone who is faculty and also holds another role keeps that other role's access, as with every multi-role user.
+ */
+export const isFacultyOnly = (s: { roles: Role[] }) => s.roles.length > 0 && s.roles.every((r) => r === "FACULTY");
+
 export function requireRole(session: Session, ...roles: Role[]) {
   if (!hasRole(session, ...roles)) throw forbidden();
 }

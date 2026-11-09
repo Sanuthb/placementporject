@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/api/errors";
 
 const create = z.object({ name: z.string().trim().min(2).max(120), code: z.string().trim().toUpperCase().min(1).max(20) });
 
-export const GET = route({}, (_req, s) =>
+export const GET = route({ facultyOk: true }, (_req, s) =>
   db.department.findMany({ where: { collegeId: s.collegeId }, orderBy: { name: "asc" } }),
 );
 

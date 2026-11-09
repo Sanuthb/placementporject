@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/api/errors";
 
 const create = z.object({ name: z.string().trim().min(2).max(120), code: z.string().trim().toUpperCase().max(20).optional() });
 
-export const GET = route({}, (_req, s) => db.campus.findMany({ where: { collegeId: s.collegeId }, orderBy: { name: "asc" } }));
+export const GET = route({ facultyOk: true }, (_req, s) => db.campus.findMany({ where: { collegeId: s.collegeId }, orderBy: { name: "asc" } }));
 
 export const POST = route({ roles: ["TPO_ADMIN"] }, async (req, s) => {
   const data = await parseBody(req, create);

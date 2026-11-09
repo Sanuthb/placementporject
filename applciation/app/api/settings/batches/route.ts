@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { ApiError, badRequest } from "@/lib/api/errors";
 import { BATCH_STATUS, batchName } from "@/lib/api/academic";
+import { assertBranchOfProgram } from "@/lib/academicIntegrity";
 
 /**
  * A batch is created once per programme and admission cycle. The programme sets the duration, so the end year and the
@@ -20,7 +21,7 @@ const create = z.object({
   status: z.enum(BATCH_STATUS).default("ACTIVE"),
 });
 
-export const GET = route({}, (_req, s) =>
+export const GET = route({ facultyOk: true }, (_req, s) =>
   db.batch.findMany({
     where: { collegeId: s.collegeId },
     include: {
@@ -36,7 +37,7 @@ export const POST = route({ roles: ["TPO_ADMIN"] }, async (req, s) => {
   const data = await parseBody(req, create);
   const program = await db.program.findFirst({ where: { id: data.programId, collegeId: s.collegeId } });
   if (!program) throw badRequest("Programme not found");
-  if (data.branchId && !(await db.programmeBranch.findFirst({ where: { id: data.branchId, programId: program.id } }))) throw badRequest("That branch does not belong to the chosen programme");
+  if (data.branchId) await assertBranchOfProgram(db, s.collegeId, data.branchId, program.id);
   if (data.coordinatorId && !(await db.user.findFirst({ where: { id: data.coordinatorId, collegeId: s.collegeId, isActive: true } }))) throw badRequest("Coordinator not found");
 
   const startYear = data.startYear ?? data.admissionYear;

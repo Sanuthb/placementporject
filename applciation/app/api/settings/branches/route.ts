@@ -8,7 +8,7 @@ import { ApiError, badRequest } from "@/lib/api/errors";
 const create = z.object({ programId: z.uuid(), name: z.string().trim().min(2).max(80) });
 const query = z.object({ programId: z.uuid().optional() });
 
-export const GET = route({}, (req, s) => {
+export const GET = route({ facultyOk: true }, (req, s) => {
   const { programId } = parseQuery(req, query);
   return db.programmeBranch.findMany({ where: { collegeId: s.collegeId, ...(programId ? { programId } : {}) }, orderBy: { name: "asc" } });
 });

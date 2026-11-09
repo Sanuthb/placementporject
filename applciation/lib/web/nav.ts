@@ -1,4 +1,4 @@
-import { ClipboardCheckIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import { ClipboardCheckIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, PresentationIcon, type LucideIcon } from "lucide-react"
 
 import type { Kind } from "@/lib/web/auth"
 
@@ -11,6 +11,7 @@ export type NavSection = { label: string; items: NavItem[] }
  */
 export const NAV: Record<Kind, NavSection[]> = {
   staff: [
+    { label: "Faculty", items: [{ title: "My students", href: "/staff/faculty", icon: PresentationIcon, roles: ["FACULTY"] }] },
     { label: "Placement", items: [{ title: "Dashboard", href: "/staff", icon: LayoutDashboardIcon }] },
     {
       label: "Students",
@@ -80,7 +81,10 @@ export const NAV: Record<Kind, NavSection[]> = {
 export const KIND_LABEL: Record<Kind, string> = { staff: "Staff console", student: "Student", recruiter: "Recruiter" }
 
 export function visibleNav(kind: Kind, modules: string[], roles: string[] = []): NavSection[] {
+  // Faculty-only logins see only what is explicitly meant for faculty. Items with no role list are for placement staff.
+  const facultyOnly = kind === "staff" && roles.length > 0 && roles.every((r) => r === "FACULTY")
   return NAV[kind]
     .map((s) => ({ ...s, items: s.items.filter((i) => (!i.module || modules.includes(i.module)) && (!i.roles || i.roles.some((r) => roles.includes(r)))) }))
+    .map((s) => (facultyOnly ? { ...s, items: s.items.filter((i) => i.roles?.includes("FACULTY")) } : s))
     .filter((s) => s.items.length)
 }

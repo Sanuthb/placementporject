@@ -14,6 +14,8 @@ enum Role {
   TPO_ADMIN
   PLACEMENT_OFFICER
   DEPARTMENT_COORDINATOR
+  // Teaching staff and mentors. Gets no placement access; only what the faculty routes explicitly allow.
+  FACULTY
 }
 
 // Sellable modules (spec: "module tags"). Core is always on and is not stored.
@@ -454,6 +456,8 @@ model College {
   approvals             ApprovalRequest[]
   messages              MessageLog[]
   studentInvitations    StudentInvitation[]
+  universities          University[]
+  facultyProfiles       FacultyProfile[]
 }
 
 model CollegeSettings {
@@ -484,16 +488,21 @@ model Program {
   qualification String?
   durationYears Int            @default(2)
   semesterCount Int            @default(4)
+  // Legacy free-text name, kept so no existing data is lost. universityId is the managed link; the two are kept in step by the API.
   university    String?
+  universityId  String?        @db.Uuid
 
-  college    College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  department Department?       @relation(fields: [departmentId], references: [id])
-  batches    Batch[]
-  students   Student[]
-  branches   ProgrammeBranch[]
+  college            College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department         Department?       @relation(fields: [departmentId], references: [id])
+  uni                University?       @relation(fields: [universityId], references: [id])
+  facultyAllocations FacultyProgram[]
+  batches            Batch[]
+  students           Student[]
+  branches           ProgrammeBranch[]
 
   @@unique([collegeId, code])
   @@index([collegeId, departmentId])
+  @@index([universityId])
 }
 
 /// A specialisation inside a programme, for example "Data Science" under MCA.
@@ -544,12 +553,13 @@ model Batch {
   coordinatorId String?     @db.Uuid
   status        BatchStatus @default(ACTIVE)
 
-  college     College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  program     Program?         @relation(fields: [programId], references: [id])
-  branch      ProgrammeBranch? @relation(fields: [branchId], references: [id])
-  coordinator User?            @relation("BatchCoordinator", fields: [coordinatorId], references: [id])
-  students    Student[]
-  semesters   Semester[]
+  college            College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  program            Program?         @relation(fields: [programId], references: [id])
+  branch             ProgrammeBranch? @relation(fields: [branchId], references: [id])
+  coordinator        User?            @relation("BatchCoordinator", fields: [coordinatorId], references: [id])
+  students           Student[]
+  semesters          Semester[]
+  facultyAllocations FacultyBatch[]
 
   @@unique([collegeId, name])
   @@index([collegeId, programId])
@@ -597,10 +607,11 @@ model Department {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college  College             @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   users    User[]
   students Student[]
   programs Program[]
+  faculty  FacultyDepartment[]
 
   @@unique([collegeId, code])
   @@index([collegeId])
@@ -635,22 +646,29 @@ model User {
   counsellingSlots     CounsellingSlot[]
   batchesCoordinated   Batch[]                @relation("BatchCoordinator")
   documentsVerified    StudentDocument[]
+  facultyProfile       FacultyProfile?
+  facultyDepartments   FacultyDepartment[]
+  facultyPrograms      FacultyProgram[]
+  facultyBatches       FacultyBatch[]
+  mentees              Student[]              @relation("StudentMentor")
 
   @@unique([collegeId, email])
   @@index([collegeId, role])
 }
 
 model AuditLog {
-  id        String   @id @default(uuid()) @db.Uuid
-  collegeId String   @db.Uuid
-  actorId   String?  @db.Uuid
-  action    String
-  entity    String
-  entityId  String?
-  before    Json?
-  after     Json?
-  reason    String?
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid()) @db.Uuid
+  collegeId       String   @db.Uuid
+  actorId         String?  @db.Uuid
+  action          String
+  entity          String
+  entityId        String?
+  before          Json?
+  after           Json?
+  reason          String?
+  // Set instead of actorId when a platform administrator (who belongs to no college) made the change.
+  platformActorId String?  @db.Uuid
+  createdAt       DateTime @default(now())
 
   college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   actor   User?   @relation(fields: [actorId], references: [id])
@@ -673,6 +691,8 @@ model Student {
   batchId               String              @db.Uuid
   branchId              String?             @db.Uuid
   campusId              String?             @db.Uuid
+  // The faculty member who mentors this student, if any.
+  mentorId              String?             @db.Uuid
   admissionYear         Int?
   onboardingStatus      OnboardingStatus    @default(INVITATION_PENDING)
   lastActivityAt        DateTime?
@@ -738,12 +758,14 @@ model Student {
   correctionRequests    StudentCorrectionRequest[]
   emailLogs             InvitationEmailLog[]
   intelligenceReports   StudentIntelligenceReport[]
+  mentor                User?                       @relation("StudentMentor", fields: [mentorId], references: [id], onDelete: SetNull)
 
   @@unique([collegeId, enrollmentNo])
   @@unique([collegeId, email])
   @@index([collegeId, departmentId, batchId])
   @@index([collegeId, inviteStatus])
   @@index([collegeId, onboardingStatus])
+  @@index([collegeId, mentorId])
 }
 
 // Holds the raw uploaded rows between preview and confirm; cleared once the import completes.
@@ -2150,4 +2172,92 @@ model LoginEvent {
 
   @@index([userId, createdAt])
   @@index([collegeId, createdAt])
+}
+
+/// A university a college's programmes are affiliated to. Scoped to one college, like the programmes that point at it.
+model University {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  name      String
+  code      String
+  website   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  college  College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  programs Program[]
+
+  // Names are also unique ignoring case, through a lower(name) index created in the migration.
+  @@unique([collegeId, code])
+  @@index([collegeId])
+}
+
+/// Extra details for a staff member who has the FACULTY role. Sign-in, status and name stay on User.
+model FacultyProfile {
+  userId         String    @id @db.Uuid
+  collegeId      String    @db.Uuid
+  employeeId     String?
+  designation    String?
+  qualification  String?
+  specialisation String?
+  phone          String?
+  joinedOn       DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, employeeId])
+  @@index([collegeId])
+}
+
+/// Which departments a faculty member belongs to.
+model FacultyDepartment {
+  userId       String @db.Uuid
+  departmentId String @db.Uuid
+  collegeId    String @db.Uuid
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, departmentId])
+  @@index([collegeId, departmentId])
+}
+
+/// Programmes a faculty member teaches or oversees. Gives access to those programmes' students.
+model FacultyProgram {
+  userId    String @db.Uuid
+  programId String @db.Uuid
+  collegeId String @db.Uuid
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@id([userId, programId])
+  @@index([collegeId, programId])
+}
+
+/// Batches a faculty member is allocated to. Gives access to those batches' students.
+model FacultyBatch {
+  userId    String @db.Uuid
+  batchId   String @db.Uuid
+  collegeId String @db.Uuid
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, batchId])
+  @@index([collegeId, batchId])
+}
+
+/// People who run the platform and can create institutions. They belong to no college and have no User row, so they reach no tenant data.
+/// Rows are added only from the command line (npm run db:platform-admin); no API grants this.
+model PlatformAdmin {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 }

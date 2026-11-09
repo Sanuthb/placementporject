@@ -1,6 +1,8 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowUpRightIcon } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
@@ -11,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, fmtLpa, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
@@ -80,7 +83,11 @@ function Row({ label, value, href }: { label: React.ReactNode; value?: React.Rea
 }
 
 export default function DashboardPage() {
-  const { data, error, loading } = useApi<Dash>("/api/dashboard")
+  const { state } = useAuth()
+  const router = useRouter()
+  const facultyOnly = state.status === "ready" && state.profile.roles.length > 0 && state.profile.roles.every((r) => r === "FACULTY")
+  React.useEffect(() => { if (facultyOnly) router.replace("/staff/faculty") }, [facultyOnly, router])
+  const { data, error, loading } = useApi<Dash>(state.status === "ready" && !facultyOnly ? "/api/dashboard" : null)
 
   if (error) return <Alert variant="destructive"><AlertTitle>Could not load the dashboard</AlertTitle><AlertDescription>{error instanceof Error ? error.message : "Try again"}</AlertDescription></Alert>
   if (!data) return <div className="grid gap-4 sm:grid-cols-6 lg:grid-cols-12">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-40 rounded-2xl sm:col-span-3 lg:col-span-3" />)}</div>

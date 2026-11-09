@@ -5,7 +5,7 @@ type Client = Pick<typeof db, "auditLog">;
 
 /** Pass a transaction client as `tx` so the log commits atomically with the change. */
 export function audit(
-  session: { collegeId: string; userId: string | null },
+  session: { collegeId: string; userId: string | null; /** A platform administrator who acted, instead of a college user. */ platformActorId?: string },
   entry: {
     action: string;
     entity: string;
@@ -17,6 +17,6 @@ export function audit(
   tx: Client = db,
 ) {
   return tx.auditLog.create({
-    data: { collegeId: session.collegeId, actorId: session.userId, ...entry },
+    data: { collegeId: session.collegeId, actorId: session.userId, platformActorId: session.platformActorId, ...entry },
   });
 }

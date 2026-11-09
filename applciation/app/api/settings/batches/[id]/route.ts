@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { badRequest, notFound } from "@/lib/api/errors";
 import { removeOwned } from "@/lib/api/remove";
 import { BATCH_STATUS } from "@/lib/api/academic";
+import { assertBranchOfProgram } from "@/lib/academicIntegrity";
 
 const patch = z.object({
   name: z.string().trim().min(2).max(60).optional(),
@@ -20,7 +21,7 @@ export const PATCH = route<{ id: string }>({ roles: ["TPO_ADMIN"] }, async (req,
   return db.$transaction(async (tx) => {
     const before = await tx.batch.findFirst({ where: { id, collegeId: s.collegeId } });
     if (!before) throw notFound("Batch not found");
-    if (data.branchId && !(await tx.programmeBranch.findFirst({ where: { id: data.branchId, programId: before.programId ?? undefined } }))) throw badRequest("That branch does not belong to this batch's programme");
+    if (data.branchId) await assertBranchOfProgram(tx, s.collegeId, data.branchId, before.programId);
     if (data.coordinatorId && !(await tx.user.findFirst({ where: { id: data.coordinatorId, collegeId: s.collegeId, isActive: true } }))) throw badRequest("Coordinator not found");
     // Archiving and deactivating are the same switch, so the two never disagree.
     const next = { ...data, ...(data.status ? { isActive: data.status !== "ARCHIVED" } : {}) };

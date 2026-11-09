@@ -10,7 +10,7 @@ const patch = z.object({
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #1a73e8").nullable().optional(),
 });
 
-export const GET = route({}, (_req, s) =>
+export const GET = route({ facultyOk: true }, (_req, s) =>
   db.college.findUniqueOrThrow({
     where: { id: s.collegeId },
     select: { id: true, name: true, slug: true, logoUrl: true, brandColor: true },

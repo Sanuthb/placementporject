@@ -1,10 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { BuildingIcon, CalendarRangeIcon, ClipboardCheckIcon, GitBranchIcon, GraduationCapIcon, HandshakeIcon, LayersIcon, ListOrderedIcon, MailIcon, MapPinIcon, ShieldCheckIcon, UsersIcon, UsersRoundIcon, type LucideIcon } from "lucide-react"
+import { BuildingIcon, CalendarRangeIcon, ClipboardCheckIcon, GitBranchIcon, GraduationCapIcon, HandshakeIcon, LandmarkIcon, PresentationIcon, LayersIcon, ListOrderedIcon, MailIcon, MapPinIcon, ShieldCheckIcon, UsersIcon, UsersRoundIcon, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { ActiveBadge, MasterTab } from "@/components/master-tab"
+import { FacultyPanel } from "@/components/faculty-panel"
 import { StaffPanel } from "@/components/staff-panel"
 import { SecuritySettings } from "@/components/security-settings"
 import { Button } from "@/components/ui/button"
@@ -22,7 +23,8 @@ import { useLookups } from "@/lib/web/lookups"
 import { useApi } from "@/lib/web/use-api"
 
 type Dept = { id: string; name: string; code: string; isActive: boolean }
-type Program = { id: string; name: string; code: string; isActive: boolean; level: string; qualification: string | null; durationYears: number; semesterCount: number; university: string | null; department: { name: string } | null; branches?: { id: string; name: string }[] }
+type University = { id: string; name: string; code: string; website: string | null; isActive: boolean; _count: { programs: number } }
+type Program = { id: string; universityId?: string | null; name: string; code: string; isActive: boolean; level: string; qualification: string | null; durationYears: number; semesterCount: number; university: string | null; department: { name: string } | null; branches?: { id: string; name: string }[] }
 type Branch = { id: string; name: string; programId: string; isActive: boolean }
 type Batch = { id: string; name: string; startYear: number; endYear: number; admissionYear: number | null; status: string; isActive: boolean; program: { name: string } | null; branch: { name: string } | null; coordinator: { name: string } | null; _count: { students: number; semesters: number } }
 type Semester = { id: string; number: number; name: string; status: string; startDate: string | null; endDate: string | null; academicYearId: string | null; academicYear: { name: string } | null; _count: { studentsNow: number } }
@@ -41,11 +43,12 @@ const APPROVALS = [
   ["ELIGIBILITY_EXCEPTION", "Eligibility exceptions", "Letting a student into a drive they don't qualify for needs sign-off."],
 ] as const
 
-type TabKey = "college" | "departments" | "programs" | "branches" | "batches" | "semesters" | "years" | "staff" | "verification" | "policies" | "campuses" | "invitations" | "security"
+type TabKey = "universities" | "faculty" | "college" | "departments" | "programs" | "branches" | "batches" | "semesters" | "years" | "staff" | "verification" | "policies" | "campuses" | "invitations" | "security"
 const GROUPS: { label: string; items: { key: TabKey; label: string; icon: LucideIcon; title: string; description: string }[] }[] = [
   { label: "Organisation", items: [
     { key: "college", label: "College profile", icon: BuildingIcon, title: "College profile", description: "The name, logo and brand colour used in reports and emails." },
     { key: "campuses", label: "Campuses", icon: MapPinIcon, title: "Campuses", description: "The campuses of your institution. Optional; students can be assigned to one when invited." },
+    { key: "universities", label: "Universities", icon: LandmarkIcon, title: "Universities", description: "The universities your programmes are affiliated to. Programmes link to one of these." },
     { key: "departments", label: "Departments", icon: LayersIcon, title: "Departments", description: "The branches students and coordinators belong to." },
     { key: "programs", label: "Programmes", icon: GraduationCapIcon, title: "Programmes", description: "Degrees a department offers, with their duration and number of semesters." },
     { key: "branches", label: "Branches", icon: GitBranchIcon, title: "Branches", description: "Specialisations inside a programme, such as Data Science under MCA." },
@@ -55,6 +58,7 @@ const GROUPS: { label: string; items: { key: TabKey; label: string; icon: Lucide
   ] },
   { label: "People", items: [
     { key: "staff", label: "Staff", icon: UsersIcon, title: "Staff", description: "Invite colleagues, give them one or more roles, review sign-ins and reset access." },
+    { key: "faculty", label: "Faculty", icon: PresentationIcon, title: "Faculty and mentors", description: "Teaching staff, their departments, and the programmes and batches they are allocated to. Faculty have no placement access." },
     { key: "security", label: "Security", icon: ShieldCheckIcon, title: "Security", description: "Two-step sign-in for administrators." },
   ] },
   { label: "Rules", items: [
@@ -114,19 +118,30 @@ const SESSION_STATUS = ["UPCOMING", "ACTIVE", "COMPLETED"].map((v) => ({ value: 
 
 const toProgramBody = (v: Record<string, string | boolean>) => ({
   ...(v.code ? { code: v.code } : {}), name: v.name, departmentId: v.departmentId, level: v.level || "PG",
-  qualification: v.qualification || null, durationYears: Number(v.durationYears), semesterCount: Number(v.semesterCount), university: v.university || null,
+  qualification: v.qualification || null, durationYears: Number(v.durationYears), semesterCount: Number(v.semesterCount),
+  // Only sent when a university is chosen, so editing an old programme that has just a typed name never wipes it.
+  ...(v.universityId ? { universityId: v.universityId } : {}),
 })
 
 function Panel({ tab }: { tab: TabKey }) {
   const lk = useLookups()
   const branches = useApi<Branch[]>("/api/settings/branches")
   const staff = useApi<Staff[]>("/api/settings/staff")
+  const unis = useApi<University[]>("/api/settings/universities")
+  const uniOptions = [{ value: "", label: "None" }, ...(unis.data ?? []).filter((u) => u.isActive).map((u) => ({ value: u.id, label: u.name }))]
   const years = useApi<Year[]>("/api/settings/academic-years")
   const branchOptions = [{ value: "", label: "None" }, ...(branches.data ?? []).filter((b) => b.isActive).map((b) => ({ value: b.id, label: `${lk.programName[b.programId] ?? ""} - ${b.name}` }))]
   const staffOptions = [{ value: "", label: "None" }, ...(staff.data ?? []).filter((x) => x.isActive).map((x) => ({ value: x.id, label: x.name }))]
   const yearOptions = [{ value: "", label: "None" }, ...(years.data ?? []).map((y) => ({ value: y.id, label: y.name }))]
   switch (tab) {
     case "college": return <CollegeForm />
+    case "faculty": return <FacultyPanel />
+    case "universities": return (
+      <MasterTab<University> endpoint="/api/settings/universities" addLabel="Add university" noun="university" editable deletePath={(r) => `/api/settings/universities/${r.id}`} patchPath={(r) => `/api/settings/universities/${r.id}`}
+        fields={[{ name: "name", label: "Name" }, { name: "code", label: "Code" }, { name: "website", label: "Website (optional)", type: "text", required: false }]}
+        toBody={(v) => ({ name: v.name, code: v.code, website: v.website || null })} toEditBody={(v) => ({ name: v.name, code: v.code, website: v.website || null })}
+        columns={[{ label: "University", cell: (r) => r.name }, { label: "Code", cell: (r) => r.code }, { label: "Website", cell: (r) => r.website ?? "—" }, { label: "Programmes", cell: (r) => r._count.programs }, { label: "State", cell: (r) => <ActiveBadge active={r.isActive} /> }]} />
+    )
     case "verification": return <VerificationForm />
     case "policies": return <PoliciesForm />
     case "invitations": return <InvitationSettings />
@@ -149,13 +164,13 @@ function Panel({ tab }: { tab: TabKey }) {
           { name: "level", label: "Level", type: "select", options: LEVELS, required: true },
           { name: "qualification", label: "Degree (for example MCA, BCA, B.Tech)", required: false },
           { name: "durationYears", label: "Duration in years", type: "number" }, { name: "semesterCount", label: "Number of semesters", type: "number" },
-          { name: "university", label: "Awarding university", required: false },
+          { name: "universityId", label: "Awarding university", type: "select", options: uniOptions, required: false },
         ]}
         toBody={toProgramBody} toEditBody={toProgramBody}
         editFields={[
           { name: "name", label: "Programme name" }, { name: "departmentId", label: "Department", type: "select", options: lk.departments, required: true },
           { name: "level", label: "Level", type: "select", options: LEVELS, required: true }, { name: "qualification", label: "Degree", required: false },
-          { name: "durationYears", label: "Duration in years", type: "number" }, { name: "semesterCount", label: "Number of semesters", type: "number" }, { name: "university", label: "Awarding university", required: false },
+          { name: "durationYears", label: "Duration in years", type: "number" }, { name: "semesterCount", label: "Number of semesters", type: "number" }, { name: "universityId", label: "Awarding university", type: "select", options: uniOptions, required: false },
         ]}
         columns={[
           { label: "Programme", cell: (r) => r.name }, { label: "Code", cell: (r) => r.code }, { label: "Department", cell: (r) => r.department?.name ?? "—" },

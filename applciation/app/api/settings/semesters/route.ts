@@ -8,7 +8,7 @@ import { ApiError, badRequest } from "@/lib/api/errors";
 const query = z.object({ batchId: z.uuid().optional() });
 const create = z.object({ batchId: z.uuid(), number: z.number().int().min(1).max(20), name: z.string().trim().min(1).max(40).optional() });
 
-export const GET = route({}, (req, s) => {
+export const GET = route({ facultyOk: true }, (req, s) => {
   const { batchId } = parseQuery(req, query);
   return db.semester.findMany({
     where: { collegeId: s.collegeId, ...(batchId ? { batchId } : {}) },

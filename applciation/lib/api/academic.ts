@@ -9,7 +9,9 @@ export const programBase = z.object({
   qualification: z.string().trim().max(40).nullable().optional(),
   durationYears: z.number().int().min(1).max(8),
   semesterCount: z.number().int().min(1).max(16),
+  /** Free-text name kept for existing data. Prefer universityId; when only a name is sent it is matched to a university record if one exists. */
   university: z.string().trim().max(120).nullable().optional(),
+  universityId: z.uuid().nullable().optional(),
 });
 
 export const programCreate = programBase.extend({
@@ -49,3 +51,9 @@ export const educationInput = z
   })
   .refine((v) => v.obtainedMarks == null || v.maxMarks == null || v.obtainedMarks <= v.maxMarks, { message: "Obtained marks cannot exceed maximum marks", path: ["obtainedMarks"] })
   .refine((v) => v.admissionYear == null || v.completionYear == null || v.completionYear >= v.admissionYear, { message: "Completion year cannot be before the admission year", path: ["completionYear"] });
+
+export const universityBase = z.object({
+  name: z.string().trim().min(2).max(200),
+  code: z.string().trim().toUpperCase().min(1).max(20),
+  website: z.url().max(300).nullable().optional(),
+});
