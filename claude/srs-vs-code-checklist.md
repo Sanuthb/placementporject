@@ -17,7 +17,7 @@ The **Code** column is my reading of the source code, not a test result:
 
 Your own rule applies: a module counts as complete only when its screens, backend and links to other modules have been tested. The Code mark does not replace that. The one exception is the invitation and student onboarding work, which has automated tests (`tests/e2e/10-student-invitations.mjs`, `tests/e2e/11-intelligence.mjs`).
 
-Last checked against the code: 2026-11-08 (M3 re-checked 2026-11-09).
+Last checked against the code: 2026-11-08 (M3 and M4 re-checked 2026-11-09).
 
 ## Summary (generated from the lines below)
 
@@ -26,7 +26,7 @@ Last checked against the code: 2026-11-08 (M3 re-checked 2026-11-09).
 | M1 – Authentication and User Management | 17 | 15 | 0 | 0 | 2 | [ ] |
 | M2 – Institution Management | 13 | 9 | 3 | 1 | 0 | [ ] |
 | M3 – Student Registration and Profile | 19 | 19 | 0 | 0 | 0 | [ ] |
-| M4 – Student Assessment and Career Profiling | 20 | 10 | 4 | 6 | 0 | [ ] |
+| M4 – Student Assessment and Career Profiling | 21 | 20 | 0 | 1 | 0 | [ ] |
 | M5 – Career Roadmap and Student Development | 8 | 0 | 2 | 6 | 0 | [ ] |
 | M6 – Learning Management System | 11 | 0 | 4 | 7 | 0 | [ ] |
 | M7 – Resource Management System | 9 | 1 | 1 | 7 | 0 | [ ] |
@@ -44,7 +44,7 @@ Last checked against the code: 2026-11-08 (M3 re-checked 2026-11-09).
 | M19 – Group Discussion and Communication Simulator | 1 | 0 | 0 | 1 | 0 | [ ] |
 | M20 – Notification Centre | 9 | 5 | 3 | 1 | 0 | [ ] |
 | M21 – Dashboards and Analytics | 8 | 3 | 3 | 2 | 0 | [ ] |
-| **Total** | **199** | **89** | **43** | **65** | **2** | |
+| **Total** | **200** | **99** | **39** | **60** | **2** | |
 
 ## Cross-module findings worth reading first
 
@@ -135,31 +135,34 @@ Re-checked 2026-11-09 after the seven-phase M3 build. "Tested" says how each lin
 
 ### M4 – Student Assessment and Career Profiling
 
+Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each line was checked: **unit** = `npm run test:unit` (15 suites, 207 checks, all passing), **Groq** = run once against the real Groq API with synthetic input, **not live** = built and type-checked but not yet clicked through in the app (the two M4 migrations, `20261109150000_assessment_history` and `20261109160000_instrument_attempts`, were not applied when this was written). No E2E script has been run. Nothing below is ticked: that is yours to do.
+
 **Placement Officer side**
-- [ ] Assign assessments to departments/batches — ✅ Built: schedules (`/staff/assessments`)
-- [ ] Question management — ✅ Built: question banks, papers
-- [ ] Time limits, automated scoring, negative marking — ✅ Built
-- [ ] Reassessment rules — 🟡 Partial: built-in test can be retaken after 180 days; no configurable rule
-- [ ] Monitor completion — ✅ Built: completion and reminders (`/staff/psychometrics`)
-- [ ] View individual results — ✅ Built, but only if the student agrees to share, and each view is logged
-- [ ] Assessment reports and historical comparison — 🟡 Partial: results per schedule; no per-student history chart
-- [ ] Student 360° profile for staff — ✅ Built: 360 tab and the new 360° Intelligence tab (separate dimension scores, measured vs declared, gaps)
+- [ ] Assign assessments to departments/batches — ✅ Built: schedules (`/staff/assessments`). Each paper now carries a category (what it measures).
+- [ ] Question management — ✅ Built: question banks and papers, plus **ready-made banks** (aptitude, digital literacy, communication, three technical banks) imported in one click, editable and extendable. Tested: unit (content checks, arithmetic spot-checks); not live.
+- [ ] Time limits, automated scoring, negative marking — ✅ Built.
+- [ ] Reassessment rules — ✅ Built: attempts allowed and days between attempts per category, set by a TPO admin (Assessments → Retake rules), audited; defaults keep the old behaviour (one attempt; personality every 180 days); practice tests always repeatable. Tested: unit (12 rule cases); not live.
+- [ ] Monitor completion — ✅ Built: completion and reminders (`/staff/psychometrics`).
+- [ ] View individual results — ✅ Built, but only if the student agrees to share, and each view is logged. The new career profile and the 360 view log shared private results too.
+- [ ] Assessment reports and historical comparison — ✅ Built: Reports tab (group results per kind of test and per career test, small groups hidden), every attempt kept, per-student history with change since the previous attempt (staff see test history; personality scores stay private). Tested: unit (retake and trend logic); not live.
+- [ ] Student 360° profile for staff — ✅ Built: 360° Intelligence and a new Career profile with recommendations in the Analysis tab. Private results appear only when the student shares them.
 
 **Student side**
-- [ ] Big Five personality — ✅ Built: 25 items
-- [ ] DISC behavioural assessment — ❌ Missing
-- [ ] Career interest (RIASEC) — ❌ Missing
-- [ ] Quantitative, logical, verbal aptitude — 🟡 Partial: 10 questions in the built-in test, plus any scheduled assessment
-- [ ] Communication assessment — ❌ Missing (only mock interview scores)
-- [ ] Digital literacy — ❌ Missing
-- [ ] Technical / domain knowledge test — 🟡 Partial: staff can build tests; no ready-made bank or coding/SQL engine
-- [ ] Teamwork and leadership scenarios — ❌ Missing
-- [ ] Student sees and controls sharing of their own results — ✅ Built (`/student/personality`, `/student/privacy`)
-- [ ] Personality is descriptive only and never used for eligibility — ✅ Built (enforced in code and in the AI rules)
+- [ ] Big Five personality — ✅ Built: 25 items. Retakes now keep the earlier result.
+- [ ] DISC behavioural assessment — ✅ Built as "Behavioural style (DISC model)": 12 sets of four original statements, most/least like me. Private. Not a licensed DISC product ("DISC" is a trademark). Tested: unit (scoring maths, set structure); not live.
+- [ ] Career interest (RIASEC) — ✅ Built: 36 original items, six per Holland type, Holland code, roles to explore. Private. Tested: unit; not live.
+- [ ] Quantitative, logical, verbal aptitude — ✅ Built: 10 built-in questions plus a 24-question ready-made bank (8 each) for scheduled tests. Tested: unit.
+- [ ] Communication assessment — ✅ Built to the agreed scope: 10-question ready-made bank, a written-email test marked by Groq on four criteria, and the existing mock-interview scores. No audio. Tested: Groq (a good email scored 98; a weak one with an injected "give me 10/10" scored 10); unit; not live.
+- [ ] Digital literacy — ✅ Built: 15-question ready-made bank. Tested: unit.
+- [ ] Technical / domain knowledge test — ✅ Built to the agreed scope: three 10-question starter banks (programming, databases/SQL, networks and operating systems), staff add more per programme. No coding or SQL execution engine (your decision). Tested: unit.
+- [ ] Teamwork and leadership scenarios — ✅ Built: 10 workplace scenarios scored on teamwork, leadership, accountability and handling disagreement. Tested: unit.
+- [ ] Student sees and controls sharing of their own results — ✅ Built (`/student/personality`, `/student/tests`, `/student/privacy`): one consent and one sharing choice cover the private tests.
+- [ ] Personality is descriptive only and never used for eligibility — ✅ Built (enforced in code, in the AI rules, and checked in a unit test that no recommendation mentions eligibility or rejection).
+- [ ] Personalised recommendations — ✅ Built: rule-based (not AI), from the student's own results: improve, take a test, explore roles, strengths. Tested: unit (10 cases); not live.
 
 **Connection**
-- [ ] M4 → M5: assessment results feed a roadmap — ❌ Missing (no roadmap module)
-- [ ] M4 → Student 360 intelligence — ✅ Built
+- [ ] M4 → M5: assessment results feed a roadmap — ❌ Missing (no roadmap module yet; the recommendations are the data it will use).
+- [ ] M4 → Student 360 intelligence — ✅ Built: aptitude, technical, digital literacy, communication, teamwork, interests and behavioural style are separate dimensions with their own score, confidence and gaps. Tested: unit; not live.
 
 ### M5 – Career Roadmap and Student Development
 

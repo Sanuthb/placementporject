@@ -5,15 +5,16 @@ import { badRequest } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import type { PaperQuestion } from "@/lib/assessments";
+import { AssessmentCategory } from "@/generated/prisma/client";
 
 const create = z.object({
-  title: z.string().trim().min(3).max(200), instructions: z.string().trim().max(5000).optional(), durationMin: z.number().int().min(5).max(480), shuffle: z.boolean().default(true), passPercent: z.number().int().min(1).max(100).optional(),
+  title: z.string().trim().min(3).max(200), category: z.enum(AssessmentCategory).default("OTHER"), instructions: z.string().trim().max(5000).optional(), durationMin: z.number().int().min(5).max(480), shuffle: z.boolean().default(true), passPercent: z.number().int().min(1).max(100).optional(),
   proctoring: z.object({ requireFullscreen: z.boolean().default(false), maxViolations: z.number().int().min(0).max(50).default(3) }).default({ requireFullscreen: false, maxViolations: 3 }),
   questionIds: z.array(z.uuid()).max(300).optional(), random: z.object({ bankId: z.uuid(), count: z.number().int().min(1).max(300), tag: z.string().trim().optional() }).optional(),
 }).refine((v) => v.questionIds?.length || v.random, { message: "Give questionIds or a random pick from a bank", path: ["questionIds"] });
 const R = { roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] as ("TPO_ADMIN" | "PLACEMENT_OFFICER")[], module: "ASSESSMENTS" as const };
 
-export const GET = route(R, async (_req, s) => (await db.assessmentPaper.findMany({ where: { collegeId: s.collegeId }, orderBy: { createdAt: "desc" }, take: 100 })).map((p) => ({ id: p.id, title: p.title, durationMin: p.durationMin, questions: (p.questions as unknown[]).length, createdAt: p.createdAt })));
+export const GET = route(R, async (_req, s) => (await db.assessmentPaper.findMany({ where: { collegeId: s.collegeId }, orderBy: { createdAt: "desc" }, take: 100 })).map((p) => ({ id: p.id, title: p.title, category: p.category, durationMin: p.durationMin, questions: (p.questions as unknown[]).length, createdAt: p.createdAt })));
 
 /** Builds a paper from chosen questions or a random pick from a bank. Questions are copied into the paper, so later edits to the bank never change a paper already scheduled. */
 export const POST = route(R, async (req, s) => {

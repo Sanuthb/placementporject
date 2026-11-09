@@ -150,7 +150,8 @@ function EduForm({ studentId, initial, onDone }: { studentId: string; initial: E
 const docVariant = (st: string) => (st === "VERIFIED" ? "default" : st === "REJECTED" ? "destructive" : "secondary")
 
 /** Academic documents with their own verification state. Staff can verify, reject, reopen, replace and remove them. */
-export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canEdit: boolean }) {
+/** `canEdit`: upload, replace and remove. `canReview`: verify, reject and reopen (also department coordinators). */
+export function DocumentsPanel({ studentId, canEdit, canReview = canEdit }: { studentId: string; canEdit: boolean; canReview?: boolean }) {
   const { data, loading, reload } = useApi<Doc[]>(`/api/students/${studentId}/documents`)
   const [showHistory, setShowHistory] = React.useState(false)
   const history = useApi<Doc[]>(showHistory ? `/api/students/${studentId}/documents?history=1` : null)
@@ -221,10 +222,12 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
           </div>
           <div className="flex flex-wrap gap-2">
             {d.url && <Button variant="outline" size="sm" onClick={() => setViewing(data!.findIndex((x) => x.id === d.id))}><DownloadIcon />View</Button>}
-            {canEdit && <>
+            {canReview && <>
               {d.status !== "VERIFIED" && <Button size="sm" disabled={busy === d.id} onClick={() => review(d, "VERIFIED")}>Verify</Button>}
               {d.status !== "REJECTED" && <Button variant="outline" size="sm" disabled={busy === d.id} onClick={() => { setRejecting(d); setReason("") }}>Reject</Button>}
               {d.status !== "PENDING" && <Button variant="outline" size="sm" disabled={busy === d.id} onClick={() => review(d, "PENDING")}>Reopen</Button>}
+            </>}
+            {canEdit && <>
               <Button variant="outline" size="sm" disabled={busy === d.id} onClick={() => { replaceFor.current = d; picker.current?.click() }}>Replace</Button>
               {d.status !== "VERIFIED" && <Button variant="ghost" size="sm" disabled={busy === d.id} onClick={() => setDeleting(d)}><Trash2Icon />Remove</Button>}
             </>}
@@ -239,7 +242,7 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
           <DialogFooter><Button disabled={reason.trim().length < 3 || busy === rejecting?.id} onClick={() => rejecting && review(rejecting, "REJECTED", reason.trim())}>Reject document</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-      <DocumentViewer docs={(data ?? []).map((d) => ({ id: d.id, category: d.category, fileName: d.fileName, mimeType: d.mimeType, status: d.status, rejectReason: d.rejectReason, url: d.url }))} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} studentId={canEdit ? studentId : undefined} onChanged={reload} />
+      <DocumentViewer docs={(data ?? []).map((d) => ({ id: d.id, category: d.category, fileName: d.fileName, mimeType: d.mimeType, status: d.status, rejectReason: d.rejectReason, url: d.url }))} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} studentId={canReview ? studentId : undefined} onChanged={reload} />
       <ConfirmDelete open={!!deleting} what={deleting ? deleting.fileName : "this document"} busy={busy === deleting?.id} onConfirm={remove} onClose={() => setDeleting(null)} />
       <div className="flex flex-col gap-2">
         <div><Button variant="ghost" size="sm" onClick={() => setShowHistory((v) => !v)}>{showHistory ? "Hide" : "Show"} removed and replaced versions</Button></div>

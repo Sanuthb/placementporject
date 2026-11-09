@@ -27,6 +27,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, download, toastError } from "@/lib/web/api"
 import { hasRole, isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, fmtLpa, statusVariant, titleCase } from "@/lib/web/format"
+import { AssessmentHistory } from "@/components/assessment-history"
+import { CareerProfile } from "@/components/career-profile"
 import { useApi } from "@/lib/web/use-api"
 
 type Name = { id: string; name: string; code?: string }
@@ -121,7 +123,7 @@ export default function StudentPage() {
         <TabsContent value="onboarding"><OnboardingReview studentId={id} name={p.name} canAct onChanged={full.reload} /></TabsContent>
         <TabsContent value="intelligence">{tab === "intelligence" && <StudentIntelligence studentId={id} />}</TabsContent>
         <TabsContent value="education"><div className="flex flex-col gap-6"><EducationPanel studentId={id} canEdit={canEdit} /><AcademicRecordsPanel studentId={id} /></div></TabsContent>
-        <TabsContent value="documents"><DocumentsPanel studentId={id} canEdit={canEdit} /></TabsContent>
+        <TabsContent value="documents"><DocumentsPanel studentId={id} canEdit={canEdit} canReview={canEdit || (state.status === "ready" && isCoordinatorOnly(state.profile))} /></TabsContent>
         <TabsContent value="progression"><ProgressionPanel studentId={id} canEdit={canEdit} isAdmin={state.status === "ready" && hasRole(state.profile, "TPO_ADMIN")} /></TabsContent>
 
         <TabsContent value="overview">
@@ -171,6 +173,8 @@ export default function StudentPage() {
         )}
 
         <TabsContent value="analysis" className="flex flex-col gap-4">
+          <CareerProfile endpoint={`/api/students/${id}/career-profile`} title="Career profile" />
+          <AssessmentHistory endpoint={`/api/students/${id}/assessment-history`} title="Assessment history" />
           {analysis.loading && !analysis.data ? <Skeleton className="h-64" /> : analysis.data && (
             <>
               {analysis.data.atRisk.flags.length > 0 && <Alert variant="destructive"><AlertTitle>At risk</AlertTitle><AlertDescription>{analysis.data.atRisk.flags.map((f) => f.detail).join(" · ")}</AlertDescription></Alert>}

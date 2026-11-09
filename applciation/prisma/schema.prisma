@@ -751,7 +751,8 @@ model Student {
   notifications         Notification[]
   tickets               Ticket[]
   notes                 StudentNote[]
-  psychAttempt          PsychAttempt?
+  psychAttempts         PsychAttempt[]
+  instrumentAttempts    InstrumentAttempt[]
   internships           Internship[]
   eventRegistrations    EventRegistration[]
   learningMemberships   LearningMember[]
@@ -1483,18 +1484,22 @@ model ReportSchedule {
 }
 
 // Personality and aptitude results live apart from academic data and are never read by eligibility or blocking.
+/// Every attempt is kept, so a student's results can be compared over time. Exactly one row per student has `isCurrent` (the newest);
+/// everything that reads "the" result (cohort figures, staff view, onboarding gate) reads only that row.
 model PsychAttempt {
   id                String   @id @default(uuid()) @db.Uuid
   collegeId         String   @db.Uuid
-  studentId         String   @unique @db.Uuid
+  studentId         String   @db.Uuid
   instrumentVersion String
   answers           Json
   scores            Json
   completedAt       DateTime @default(now())
+  isCurrent         Boolean  @default(true)
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([collegeId, completedAt])
+  @@index([studentId, isCurrent])
 }
 
 // A practice interview with an AI interviewer. The transcript alternates interviewer questions and the student's answers.
@@ -1792,10 +1797,59 @@ model AssessmentPaper {
   shuffle      Boolean  @default(true)
   proctoring   Json
   passPercent  Int?
+  /// Which part of the career profile this paper measures. Its schedules and attempts inherit it.
+  category     AssessmentCategory @default(OTHER)
   createdById  String   @db.Uuid
   createdAt    DateTime @default(now())
 
   schedules AssessmentSchedule[]
+}
+
+enum AssessmentCategory {
+  APTITUDE
+  TECHNICAL
+  COMMUNICATION
+  DIGITAL_LITERACY
+  TEAMWORK_LEADERSHIP
+  PERSONALITY
+  CAREER_INTEREST
+  BEHAVIOURAL_STYLE
+  OTHER
+}
+
+/// One attempt at a profile-style instrument (career interests, behavioural style, teamwork scenarios, written communication). Every attempt
+/// is kept; exactly one per student and instrument is current. Whether staff may see it depends on the instrument (see lib/instruments).
+model InstrumentAttempt {
+  id                String   @id @default(uuid()) @db.Uuid
+  collegeId         String   @db.Uuid
+  studentId         String   @db.Uuid
+  instrumentKey     String
+  instrumentVersion String
+  attemptNumber     Int      @default(1)
+  answers           Json
+  scores            Json
+  completedAt       DateTime @default(now())
+  isCurrent         Boolean  @default(true)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, instrumentKey, attemptNumber])
+  @@index([collegeId, instrumentKey, isCurrent])
+  @@index([studentId, instrumentKey])
+}
+
+/// A college's retake rule for one category. Without a row the defaults in lib/reassessment.ts apply (the behaviour before rules existed).
+model ReassessmentRule {
+  id           String             @id @default(uuid()) @db.Uuid
+  collegeId    String             @db.Uuid
+  category     AssessmentCategory
+  /// Null means no limit.
+  maxAttempts  Int?
+  cooldownDays Int                @default(0)
+  updatedById  String?            @db.Uuid
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([collegeId, category])
 }
 
 model AssessmentSchedule {
@@ -1832,11 +1886,14 @@ model AssessmentAttempt {
   flagged       Boolean       @default(false)
   proctorEvents Json          @default("[]")
   status        AttemptStatus @default(IN_PROGRESS)
+  /// 1 for the first attempt; retakes (when the category's rule allows them) count up. Earlier attempts are kept.
+  attemptNumber Int           @default(1)
 
   schedule AssessmentSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   student  Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([scheduleId, studentId])
+  @@unique([scheduleId, studentId, attemptNumber])
+  @@index([scheduleId, studentId])
   @@index([studentId])
 }
 

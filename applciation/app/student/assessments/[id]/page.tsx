@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -16,10 +16,11 @@ import { useApi } from "@/lib/web/use-api"
 
 type Start = { attemptId: string; secondsLeft: number; instructions: string | null; questions: { id: string; text: string; options: string[]; marks: number }[]; savedAnswers: Record<string, number[]> | null }
 type Review = { id: string; text: string; options: string[]; correct: number[]; mine: number[]; explanation: string | null }
-type Result = { review: Review[] | null; cohort: { averagePercent: number; betterThanPercent: number } | null; title: string; score: number; maxScore: number; percent: number; passed: boolean | null; status: string }
+type Result = { attemptNumber?: number; retakeInProgress?: boolean; review: Review[] | null; cohort: { averagePercent: number; betterThanPercent: number } | null; title: string; score: number; maxScore: number; percent: number; passed: boolean | null; status: string }
 
 export default function TakeAssessmentPage() {
   const { id } = useParams<{ id: string }>()
+  const wantsRetake = useSearchParams().get("retake") === "1"
   const result = useApi<Result>(`/api/student/assessments/${id}/result`)
   const [exam, setExam] = React.useState<Start | null>(null)
   const [busy, setBusy] = React.useState(false)
@@ -34,11 +35,17 @@ export default function TakeAssessmentPage() {
     return (
       <div className="flex max-w-2xl flex-col gap-4">
         <Card>
-          <CardHeader><CardTitle>{r.title}</CardTitle><CardDescription>Your result</CardDescription></CardHeader>
+          <CardHeader><CardTitle>{r.title}</CardTitle><CardDescription>Your result{r.attemptNumber && r.attemptNumber > 1 ? ` (attempt ${r.attemptNumber})` : ""}</CardDescription></CardHeader>
           <CardContent className="flex flex-col gap-2">
             <div className="text-3xl font-semibold">{r.score} / {r.maxScore} ({r.percent}%)</div>
             {r.passed !== null && <Badge variant={r.passed ? "default" : "destructive"}>{r.passed ? "Passed" : "Not passed"}</Badge>}
             {r.cohort && <p className="text-sm text-muted-foreground">Your batch averaged {r.cohort.averagePercent}%. You scored higher than {r.cohort.betterThanPercent}% of them.</p>}
+            {(r.retakeInProgress || wantsRetake) && (
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <Button disabled={busy} onClick={begin}>{busy && <Spinner />}{r.retakeInProgress ? "Continue retake" : "Start retake"}</Button>
+                <span className="text-xs text-muted-foreground">{r.retakeInProgress ? "Your retake is still running; its timer has not stopped." : "The timer starts when you press Start. This result is kept."}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
         {r.review?.map((q, n) => {

@@ -130,8 +130,8 @@ export async function studentAnalysis(s: Session, id: string) {
   const mine = acad?.cgpa;
 
   const assessments = mods.has("ASSESSMENTS")
-    ? (await db.assessmentAttempt.findMany({ where: { studentId: id, status: { not: "IN_PROGRESS" }, score: { not: null } }, select: { score: true, maxScore: true, submittedAt: true, schedule: { select: { title: true, isBaseline: true } } }, orderBy: { submittedAt: "desc" }, take: 20 }))
-        .map((a) => ({ title: a.schedule.title, isBaseline: a.schedule.isBaseline, percent: Number(a.maxScore) ? Math.round((Number(a.score) / Number(a.maxScore)) * 1000) / 10 : 0, at: a.submittedAt }))
+    ? (await db.assessmentAttempt.findMany({ where: { studentId: id, status: { not: "IN_PROGRESS" }, score: { not: null } }, select: { score: true, maxScore: true, submittedAt: true, attemptNumber: true, schedule: { select: { title: true, isBaseline: true } } }, orderBy: { submittedAt: "desc" }, take: 20 }))
+        .map((a) => ({ title: a.schedule.title, isBaseline: a.schedule.isBaseline, attemptNumber: a.attemptNumber, percent: Number(a.maxScore) ? Math.round((Number(a.score) / Number(a.maxScore)) * 1000) / 10 : 0, at: a.submittedAt }))
     : null;
   const [attendance, rejections, apps] = await Promise.all([
     mods.has("ATTENDANCE_BLOCKING") ? db.attendanceRecord.findMany({ where: { studentId: id }, select: { status: true, excused: true } }) : Promise.resolve([]),
@@ -159,7 +159,7 @@ export async function studentAnalysis(s: Session, id: string) {
       attendanceRate: attendance.length ? Math.round((present / attendance.length) * 100) : null,
     },
     // Only whether the assessment is done. Scores are the student's own; staff open them case by case (logged) via /api/psychometrics.
-    personalityProfile: mods.has("PSYCHOMETRICS") ? { completed: !!(await db.psychAttempt.findUnique({ where: { studentId: id }, select: { id: true } })), note: "Individual results are available to the student; staff access is limited and logged" } : null,
+    personalityProfile: mods.has("PSYCHOMETRICS") ? { completed: !!(await db.psychAttempt.findFirst({ where: { studentId: id, isCurrent: true }, select: { id: true } })), note: "Individual results are available to the student; staff access is limited and logged" } : null,
     atRisk: {
       flags: [
         ...(attendance.length >= 3 && present / attendance.length < 0.5 ? [{ flag: "LOW_DRIVE_ATTENDANCE", detail: `Attended ${present} of ${attendance.length} sessions` }] : []),

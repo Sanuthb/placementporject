@@ -17,10 +17,9 @@ import { api, toastError } from "@/lib/web/api"
 import { fmtDate } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
-type Instrument = { completed: boolean; consentAt: string | null; sharedWithStaff: boolean; canRetake: boolean; retakeAt: string | null; scale: { labels: string[] }; personality: { id: string; text: string }[]; aptitude: { id: string; area: string; text: string; options: string[] }[] }
+type Instrument = { completed: boolean; consentAt: string | null; sharedWithStaff: boolean; canRetake: boolean; retakeAt: string | null; retakeBlockedReason?: string | null; attempts?: number; scale: { labels: string[] }; personality: { id: string; text: string }[]; aptitude: { id: string; area: string; text: string; options: string[] }[] }
 
 const DRAFT = "personality-draft"
-const RETAKE_DAYS = 180
 
 export default function PersonalityPage() {
   const inst = useApi<Instrument>("/api/student/psychometrics/instrument")
@@ -51,7 +50,7 @@ export default function PersonalityPage() {
         <p><strong>Why we ask:</strong> it helps you see your strengths, work style and suggested role areas, and helps the placement office plan guidance for the batch as a whole.</p>
         <p><strong>How results are used:</strong> only for guidance and group-level analysis. They are never used to decide whether you are eligible for a drive, to block you, or to reject you.</p>
         <p><strong>Who sees them:</strong> you. The placement office sees group averages only. If you choose to share your individual result, a placement admin can open it after giving a reason, and each time is logged where you can see it.</p>
-        <p><strong>Your control:</strong> you can withdraw consent, share or stop sharing, retake after {RETAKE_DAYS} days, or delete your results at any time.</p>
+        <p><strong>Your control:</strong> you can withdraw consent, share or stop sharing, retake it when your college allows (your earlier results are kept so you can compare), or delete your results at any time.</p>
         <Button className="self-start" disabled={busy} onClick={() => consent(true)}>{busy && <Spinner />}I understand and agree</Button>
       </CardContent>
     </Card>
@@ -71,7 +70,7 @@ export default function PersonalityPage() {
             <Button variant="outline" onClick={() => setDel(true)}>Delete my results</Button>
             <Button variant="outline" disabled={busy} onClick={() => consent(false)}>Withdraw consent</Button>
           </div>
-          {!i.canRetake && i.retakeAt && <span className="text-muted-foreground">You can retake from {fmtDate(i.retakeAt)}.</span>}
+          {!i.canRetake && (i.retakeAt ? <span className="text-muted-foreground">You can retake from {fmtDate(i.retakeAt)}.</span> : i.retakeBlockedReason && <span className="text-muted-foreground">{i.retakeBlockedReason}.</span>)}
         </CardContent>
       </Card>
       <AlertDialog open={del} onOpenChange={setDel}>

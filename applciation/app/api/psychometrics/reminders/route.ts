@@ -14,7 +14,7 @@ export const POST = route({ limit: { name: "email", max: 5, windowSec: 3600 }, r
   const b = await parseBody(req, body.default({}));
   mailer();
   const pending = await db.student.findMany({
-    where: { collegeId: s.collegeId, isActive: true, isArchived: false, participationStatus: "REGISTERED", psychAttempt: null, departmentId: b.departmentId, batchId: b.batchId, ...(b.studentIds?.length ? { id: { in: b.studentIds } } : {}) },
+    where: { collegeId: s.collegeId, isActive: true, isArchived: false, participationStatus: "REGISTERED", psychAttempts: { none: {} }, departmentId: b.departmentId, batchId: b.batchId, ...(b.studentIds?.length ? { id: { in: b.studentIds } } : {}) },
     select: { id: true, email: true, name: true }, take: 501,
   });
   if (!pending.length) throw badRequest("Everyone in that group has completed the assessment");

@@ -13,8 +13,8 @@ export const GET = route({ module: "PSYCHOMETRICS" }, async (req, s) => {
   const where = { collegeId: s.collegeId, isActive: true, isArchived: false, participationStatus: "REGISTERED" as const, ...scope, departmentId: scope.departmentId ?? q.departmentId, batchId: q.batchId };
   const [total, done, rows] = await Promise.all([
     db.student.count({ where }),
-    db.student.count({ where: { ...where, psychAttempt: { isNot: null } } }),
-    db.student.findMany({ where: { ...where, ...(q.status ? { psychAttempt: q.status === "completed" ? { isNot: null } : null } : {}) }, select: { id: true, name: true, enrollmentNo: true, departmentId: true, batchId: true, psychAttempt: { select: { completedAt: true } } }, orderBy: { name: "asc" }, take: q.limit }),
+    db.student.count({ where: { ...where, psychAttempts: { some: { isCurrent: true } } } }),
+    db.student.findMany({ where: { ...where, ...(q.status ? { psychAttempts: q.status === "completed" ? { some: { isCurrent: true } } : { none: {} } } : {}) }, select: { id: true, name: true, enrollmentNo: true, departmentId: true, batchId: true, psychAttempts: { where: { isCurrent: true }, select: { completedAt: true }, take: 1 } }, orderBy: { name: "asc" }, take: q.limit }),
   ]);
-  return { total, completed: done, pending: total - done, students: rows.map(({ psychAttempt, ...r }) => ({ ...r, completed: !!psychAttempt, completedAt: psychAttempt?.completedAt ?? null })) };
+  return { total, completed: done, pending: total - done, students: rows.map(({ psychAttempts, ...r }) => ({ ...r, completed: psychAttempts.length > 0, completedAt: psychAttempts[0]?.completedAt ?? null })) };
 });

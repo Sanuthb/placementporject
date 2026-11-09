@@ -15,10 +15,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, download, toastError } from "@/lib/web/api"
 import { fmtDateTime } from "@/lib/web/format"
 import { useLookups } from "@/lib/web/lookups"
+import { PaperCategory, RetakeRules } from "@/components/assessment-rules"
+import { ASSESSMENT_CATEGORIES } from "@/lib/reassessment"
+import { StarterBanks } from "@/components/starter-banks"
+import { AssessmentReport } from "@/components/assessment-report"
 import { useApi } from "@/lib/web/use-api"
 
 type Bank = { id: string; name: string; topic: string | null; _count: { questions: number } }
-type Paper = { id: string; title: string; durationMin: number; questions: number }
+type Paper = { id: string; title: string; category: string; durationMin: number; questions: number }
 type Sched = { id: string; title: string; startsAt: string; endsAt: string; isBaseline: boolean; isPractice?: boolean; paper: { title: string }; _count: { attempts: number } }
 
 export default function AssessmentsPage() {
@@ -28,17 +32,20 @@ export default function AssessmentsPage() {
   const [bank, setBank] = React.useState<Bank | null>(null)
   return (
     <Tabs defaultValue="banks">
-      <TabsList><TabsTrigger value="banks">Question banks</TabsTrigger><TabsTrigger value="papers">Papers</TabsTrigger><TabsTrigger value="schedules">Schedules and results</TabsTrigger></TabsList>
-      <TabsContent value="banks">
+      <TabsList><TabsTrigger value="banks">Question banks</TabsTrigger><TabsTrigger value="papers">Papers</TabsTrigger><TabsTrigger value="schedules">Schedules and results</TabsTrigger><TabsTrigger value="reports">Reports</TabsTrigger><TabsTrigger value="rules">Retake rules</TabsTrigger></TabsList>
+      <TabsContent value="reports"><AssessmentReport /></TabsContent>
+      <TabsContent value="rules"><RetakeRules /></TabsContent>
+      <TabsContent value="banks" className="flex flex-col gap-4">
+        <StarterBanks onImported={() => { banks.reload(); papers.reload() }} />
         <MasterTab<Bank> endpoint="/api/assessments/banks" addLabel="New question bank"
           fields={[{ name: "name", label: "Name" }, { name: "topic", label: "Topic", required: false }]}
           columns={[{ label: "Bank", cell: (r) => <>{r.name}<div className="text-xs text-muted-foreground">{r.topic}</div></> }, { label: "Questions", cell: (r) => r._count.questions }, { label: "Add", cell: (r) => <Button size="sm" variant="outline" onClick={() => setBank(r)}>Add question</Button> }]} />
       </TabsContent>
       <TabsContent value="papers">
         <MasterTab<Paper> endpoint="/api/assessments/papers" addLabel="Create paper"
-          fields={[{ name: "title", label: "Title" }, { name: "durationMin", label: "Duration (minutes)", type: "number" }, { name: "passPercent", label: "Pass mark (%)", type: "number", required: false }, { name: "bankId", label: "Pick questions from", type: "select", required: true, options: (banks.data ?? []).map((b) => ({ value: b.id, label: `${b.name} (${b._count.questions})` })) }, { name: "count", label: "Number of questions", type: "number" }, { name: "instructions", label: "Instructions", type: "textarea", required: false }]}
-          toBody={(v) => ({ title: v.title, durationMin: Number(v.durationMin), ...(v.passPercent ? { passPercent: Number(v.passPercent) } : {}), random: { bankId: v.bankId, count: Number(v.count) }, ...(v.instructions ? { instructions: v.instructions } : {}) })}
-          columns={[{ label: "Paper", cell: (r) => r.title }, { label: "Duration", cell: (r) => `${r.durationMin} min` }, { label: "Questions", cell: (r) => r.questions }]} />
+          fields={[{ name: "title", label: "Title" }, { name: "category", label: "What it measures", type: "select", required: true, options: ASSESSMENT_CATEGORIES.map(([value, label]) => ({ value, label })) }, { name: "durationMin", label: "Duration (minutes)", type: "number" }, { name: "passPercent", label: "Pass mark (%)", type: "number", required: false }, { name: "bankId", label: "Pick questions from", type: "select", required: true, options: (banks.data ?? []).map((b) => ({ value: b.id, label: `${b.name} (${b._count.questions})` })) }, { name: "count", label: "Number of questions", type: "number" }, { name: "instructions", label: "Instructions", type: "textarea", required: false }]}
+          toBody={(v) => ({ title: v.title, category: v.category, durationMin: Number(v.durationMin), ...(v.passPercent ? { passPercent: Number(v.passPercent) } : {}), random: { bankId: v.bankId, count: Number(v.count) }, ...(v.instructions ? { instructions: v.instructions } : {}) })}
+          columns={[{ label: "Paper", cell: (r) => r.title }, { label: "Measures", cell: (r, reload) => <PaperCategory paper={r} onSaved={reload} /> }, { label: "Duration", cell: (r) => `${r.durationMin} min` }, { label: "Questions", cell: (r) => r.questions }]} />
       </TabsContent>
       <TabsContent value="schedules">
         <MasterTab<Sched> endpoint="/api/assessments/schedules" addLabel="Schedule an assessment"

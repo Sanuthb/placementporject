@@ -1,16 +1,19 @@
 import { studentRoute } from "@/lib/api/studentHandler";
 import { db } from "@/lib/db";
-import { RETAKE_AFTER_DAYS, instrumentForStudent } from "@/lib/psychometrics";
+import { instrumentForStudent } from "@/lib/psychometrics";
+import { retakeDecision } from "@/lib/reassessment";
+import { ruleOf } from "@/lib/reassessmentRules";
 
 export const GET = studentRoute({ module: "PSYCHOMETRICS" }, async (_req, me) => {
-  const [attempt, st] = await Promise.all([
-    db.psychAttempt.findUnique({ where: { studentId: me.studentId }, select: { completedAt: true } }),
+  const [past, st, rule] = await Promise.all([
+    db.psychAttempt.findMany({ where: { studentId: me.studentId }, select: { completedAt: true }, orderBy: { completedAt: "asc" } }),
     db.student.findUniqueOrThrow({ where: { id: me.studentId }, select: { psychConsentAt: true, psychShareWithStaff: true } }),
+    ruleOf(me.collegeId, "PERSONALITY"),
   ]);
-  const retakeAt = attempt ? new Date(attempt.completedAt.getTime() + RETAKE_AFTER_DAYS * 86_400_000) : null;
+  const d = past.length ? retakeDecision({ rule, attempts: past.map((p, i) => ({ attemptNumber: i + 1, status: "SUBMITTED", submittedAt: p.completedAt })) }) : null;
   return {
-    completed: !!attempt, consentAt: st.psychConsentAt, sharedWithStaff: st.psychShareWithStaff,
-    canRetake: !!retakeAt && retakeAt <= new Date(), retakeAt,
+    completed: past.length > 0, attempts: past.length, consentAt: st.psychConsentAt, sharedWithStaff: st.psychShareWithStaff,
+    canRetake: d?.kind === "start", retakeAt: d?.kind === "refuse" ? d.nextAt ?? null : null, retakeBlockedReason: d?.kind === "refuse" ? d.message : null,
     ...instrumentForStudent(),
   };
 });

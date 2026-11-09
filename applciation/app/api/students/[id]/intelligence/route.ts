@@ -17,7 +17,7 @@ export const GET = route<{ id: string }>({ module: "ONBOARDING" }, async (_req, 
   ]);
   const hash = evidenceHash(evidence);
   // The consent-gated personality data was read for this view, so it is logged like any other staff access.
-  if (evidence.personalityShared && evidence.dimensions.find((d) => d.key === "personality")?.items.length) {
+  if (evidence.personalityShared && evidence.dimensions.some((d) => ["personality", "disc", "riasec"].includes(d.key) && d.items.length > 0)) {
     await db.psychAccessLog.create({ data: { collegeId: s.collegeId, actorId: s.userId, studentId: id, reason: "Student 360° intelligence view" } });
   }
   return {

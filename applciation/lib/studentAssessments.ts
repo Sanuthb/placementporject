@@ -10,10 +10,10 @@ export async function visibleSchedule(me: StudentSession, id: string) {
   return sch;
 }
 
-/** The student's in-progress attempt, after checking time. Time-outs auto-submit and are reported as TIME_UP. */
+/** The student's newest attempt (the one in progress, if any), after checking time. Time-outs auto-submit and are reported as TIME_UP. */
 export async function liveAttempt(me: StudentSession, scheduleId: string) {
   const sch = await visibleSchedule(me, scheduleId);
-  const a = await db.assessmentAttempt.findUnique({ where: { scheduleId_studentId: { scheduleId, studentId: me.studentId } } });
+  const a = await db.assessmentAttempt.findFirst({ where: { scheduleId, studentId: me.studentId }, orderBy: { attemptNumber: "desc" } });
   if (!a) throw new ApiError(409, "NOT_STARTED", "You have not started this assessment");
   await enforceTime(a, paperQuestions(sch.paper.questions));
   return { sch, a };

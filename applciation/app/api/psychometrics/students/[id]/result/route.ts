@@ -13,7 +13,7 @@ export const GET = route<{ id: string }>({ roles: ["TPO_ADMIN"], module: "PSYCHO
   const st = await db.student.findFirst({ where: { id, collegeId: s.collegeId }, select: { psychShareWithStaff: true } });
   if (!st) throw notFound("Student not found");
   if (!st.psychShareWithStaff) throw new ApiError(403, "NOT_SHARED", "This student has not chosen to share their individual result with the placement office");
-  const a = await db.psychAttempt.findFirst({ where: { studentId: id, collegeId: s.collegeId }, select: { scores: true, completedAt: true, instrumentVersion: true } });
+  const a = await db.psychAttempt.findFirst({ where: { studentId: id, collegeId: s.collegeId, isCurrent: true }, select: { scores: true, completedAt: true, instrumentVersion: true } });
   if (!a) throw notFound("No result for this student");
   await db.$transaction(async (tx) => {
     await tx.psychAccessLog.create({ data: { collegeId: s.collegeId, actorId: s.userId, studentId: id, reason } });

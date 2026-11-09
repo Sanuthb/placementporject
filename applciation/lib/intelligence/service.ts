@@ -9,7 +9,7 @@ export async function generateReport(collegeId: string, studentId: string, actor
   const evidence = await gatherEvidence(collegeId, studentId);
   const narrative = await writeNarrative(evidence);
   const hash = evidenceHash(evidence);
-  const usedPersonality = evidence.personalityShared && !!evidence.dimensions.find((d) => d.key === "personality")?.items.length;
+  const usedPersonality = evidence.personalityShared && evidence.dimensions.some((d) => ["personality", "disc", "riasec"].includes(d.key) && d.items.length > 0);
   return db.$transaction(async (tx) => {
     const r = await tx.studentIntelligenceReport.create({ data: { collegeId, studentId, inputHash: hash, dimensions: evidence.dimensions, narrative, model: groqModel(), generatedById: actor?.userId ?? null }, select: { id: true, createdAt: true } });
     // The access log records people. An automatic refresh has no person, and the audit entry below still records it.

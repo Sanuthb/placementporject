@@ -16,7 +16,7 @@
     "db:harden": "prisma db execute --file prisma/harden.sql",
     "db:deploy": "prisma migrate deploy",
     "check:exposure": "node scripts/check-exposure.mjs",
-    "test:unit": "tsx tests/unit/scoring.test.mts && tsx tests/unit/invitations.test.mts && tsx tests/unit/intelligence.test.mts && tsx tests/unit/institution.test.mts && tsx tests/unit/personal.test.mts && tsx tests/unit/academic.test.mts && tsx tests/unit/documents.test.mts && tsx tests/unit/achievements.test.mts && tsx tests/unit/completion.test.mts && tsx tests/unit/ocr.test.mts && tsx tests/unit/docai.test.mts",
+    "test:unit": "tsx tests/unit/scoring.test.mts && tsx tests/unit/invitations.test.mts && tsx tests/unit/intelligence.test.mts && tsx tests/unit/institution.test.mts && tsx tests/unit/personal.test.mts && tsx tests/unit/academic.test.mts && tsx tests/unit/documents.test.mts && tsx tests/unit/achievements.test.mts && tsx tests/unit/completion.test.mts && tsx tests/unit/ocr.test.mts && tsx tests/unit/docai.test.mts && tsx tests/unit/reassessment.test.mts && tsx tests/unit/instruments.test.mts && tsx tests/unit/starterbanks.test.mts && tsx tests/unit/recommendations.test.mts",
     "test:e2e": "node tests/e2e/run.mjs",
     "typecheck": "tsc --noEmit",
     "docs:routes": "node scripts/list-routes.mjs",

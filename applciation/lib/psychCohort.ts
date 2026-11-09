@@ -14,7 +14,7 @@ const summarise = (list: PsychScores[]) => ({
 export async function cohortResults(s: Session, f: { departmentId?: string; batchId?: string; groupBy: "none" | "department" | "batch" }) {
   const scope = departmentScope(s);
   const rows = await db.psychAttempt.findMany({
-    where: { collegeId: s.collegeId, student: { isArchived: false, ...scope, departmentId: scope.departmentId ?? f.departmentId, batchId: f.batchId } },
+    where: { collegeId: s.collegeId, isCurrent: true, student: { isArchived: false, ...scope, departmentId: scope.departmentId ?? f.departmentId, batchId: f.batchId } },
     select: { scores: true, student: { select: { departmentId: true, batchId: true } } },
   });
   const [depts, batches] = await Promise.all([db.department.findMany({ where: { collegeId: s.collegeId }, select: { id: true, name: true } }), db.batch.findMany({ where: { collegeId: s.collegeId }, select: { id: true, name: true } })]);

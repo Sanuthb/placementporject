@@ -12,7 +12,7 @@ export const POST = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFI
 
   // If the college requires the assessment and has the Psychometrics module, the student must have completed it.
   const [settings, mods] = await Promise.all([db.collegeSettings.findUnique({ where: { collegeId: s.collegeId } }), modulesOf(s.collegeId)]);
-  if (settings?.requireAssessmentToOnboard && mods.has("PSYCHOMETRICS") && !(await db.psychAttempt.findUnique({ where: { studentId: id }, select: { id: true } })))
+  if (settings?.requireAssessmentToOnboard && mods.has("PSYCHOMETRICS") && !(await db.psychAttempt.findFirst({ where: { studentId: id, isCurrent: true }, select: { id: true } })))
     throw new ApiError(409, "ASSESSMENT_REQUIRED", "This student must complete the personality and aptitude assessment before onboarding");
   return db.$transaction(async (tx) => {
     const claim = await tx.student.updateMany({ where: { id, collegeId: s.collegeId, stage: "VERIFIED" }, data: { stage: "ONBOARDED", onboardedAt: new Date() } });

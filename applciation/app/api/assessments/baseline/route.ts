@@ -4,6 +4,7 @@ import { parseQuery } from "@/lib/api/parse";
 import { db } from "@/lib/db";
 import { departmentScope } from "@/lib/auth/session";
 import { distribution } from "@/lib/assessmentResults";
+import { latestBy } from "@/lib/reassessment";
 import { MIN_GROUP } from "@/lib/psychCohort";
 
 const query = z.object({ batchId: z.uuid().optional(), departmentId: z.uuid().optional() });
@@ -14,8 +15,8 @@ export const GET = route({ module: "ASSESSMENTS" }, async (req, s) => {
   const scope = departmentScope(s);
   const attempts = await db.assessmentAttempt.findMany({
     where: { status: { not: "IN_PROGRESS" }, score: { not: null }, schedule: { collegeId: s.collegeId, isBaseline: true }, student: { ...scope, departmentId: scope.departmentId ?? q.departmentId, batchId: q.batchId } },
-    select: { score: true, maxScore: true, student: { select: { departmentId: true } } },
-  });
+    select: { score: true, maxScore: true, attemptNumber: true, scheduleId: true, studentId: true, student: { select: { departmentId: true } } },
+  }).then((rows) => latestBy(rows, (r) => `${r.studentId}:${r.scheduleId}`)); // a retake replaces, never adds to, a student's figure
   const pct = (a: (typeof attempts)[number]) => (Number(a.maxScore) ? (Number(a.score) / Number(a.maxScore)) * 100 : 0);
   const depts = await db.department.findMany({ where: { collegeId: s.collegeId }, select: { id: true, name: true } });
   const view = (name: string, list: typeof attempts) => list.length < MIN_GROUP ? { name, hidden: true, reason: `Fewer than ${MIN_GROUP} students` } : { name, hidden: false, students: list.length, average: Math.round((list.map(pct).reduce((a, b) => a + b, 0) / list.length) * 10) / 10, distribution: distribution(list.map(pct)) };

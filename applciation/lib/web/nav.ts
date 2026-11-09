@@ -65,6 +65,8 @@ export const NAV: Record<Kind, NavSection[]> = {
       items: [
         { title: "Assessments", href: "/student/assessments", icon: ClipboardCheckIcon, module: "ASSESSMENTS" },
         { title: "Personality test", href: "/student/personality", icon: BrainIcon, module: "PSYCHOMETRICS" },
+        { title: "Career tests", href: "/student/tests", icon: ClipboardCheckIcon, module: "PSYCHOMETRICS" },
+        { title: "My career profile", href: "/student/career-profile", icon: BrainIcon, module: "ONBOARDING" },
         { title: "Preparation", href: "/student/prep", icon: NotebookPenIcon, module: "STUDENT_PREP" },
         { title: "Learning", href: "/student/learning", icon: BookOpenIcon, module: "LEARNING" },
         { title: "Internships", href: "/student/internships", icon: BriefcaseBusinessIcon, module: "INTERNSHIPS" },

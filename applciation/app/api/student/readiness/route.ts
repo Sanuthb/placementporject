@@ -1,6 +1,7 @@
 import { studentRoute } from "@/lib/api/studentHandler";
 import { db } from "@/lib/db";
 import { DEFAULT_REQUIRED_SECTIONS } from "@/lib/verification";
+import { latestBy } from "@/lib/reassessment";
 import { completionOf } from "@/lib/profileCompletionLoad";
 
 /** How ready I am, from things the platform already knows: profile, assessments, drives attended, mock interviews. */
@@ -9,7 +10,7 @@ export const GET = studentRoute({ module: "STUDENT_PREP" }, async (_req, me) => 
     db.collegeModule.findMany({ where: { collegeId: me.collegeId, enabled: true }, select: { module: true } }),
     db.collegeSettings.findUnique({ where: { collegeId: me.collegeId }, select: { requiredSections: true } }),
     db.studentSection.findMany({ where: { studentId: me.studentId }, select: { section: true, status: true } }),
-    db.assessmentAttempt.findMany({ where: { studentId: me.studentId, status: { not: "IN_PROGRESS" }, score: { not: null }, schedule: { isPractice: false } }, select: { score: true, maxScore: true } }),
+    db.assessmentAttempt.findMany({ where: { studentId: me.studentId, status: { not: "IN_PROGRESS" }, score: { not: null }, schedule: { isPractice: false } }, select: { score: true, maxScore: true, attemptNumber: true, scheduleId: true } }).then((rows) => latestBy(rows, (r) => r.scheduleId)),
     db.attendanceRecord.findMany({ where: { studentId: me.studentId, status: "PRESENT" }, select: { driveId: true } }),
     db.mockInterview.findMany({ where: { studentId: me.studentId, status: "COMPLETED" }, select: { feedback: true } }),
   ]);

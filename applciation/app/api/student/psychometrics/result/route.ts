@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 
 export const GET = studentRoute({ module: "PSYCHOMETRICS" }, async (_req, me) => {
-  const a = await db.psychAttempt.findUnique({ where: { studentId: me.studentId } });
+  const a = await db.psychAttempt.findFirst({ where: { studentId: me.studentId, isCurrent: true } });
   if (!a) throw notFound("You have not taken the assessment yet");
   return { completedAt: a.completedAt, instrumentVersion: a.instrumentVersion, scores: a.scores };
 });

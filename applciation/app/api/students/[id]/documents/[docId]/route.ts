@@ -13,8 +13,11 @@ type P = { id: string; docId: string };
 const review = z.object({ status: z.enum(["VERIFIED", "REJECTED", "PENDING"]), rejectReason: z.string().trim().min(3).max(300).optional() })
   .refine((v) => v.status !== "REJECTED" || !!v.rejectReason, { message: "Say why the document is rejected", path: ["rejectReason"] });
 
-/** Verify, reject or reopen a document. Records who did it and when. */
-export const PATCH = route<P>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"], module: "ONBOARDING" }, async (req, s, { id, docId }) => {
+/**
+ * Verify, reject or reopen a document. Records who did it and when. Department coordinators may review their own department's students
+ * (spec rule 6; `scopedStudent` enforces the department), the same as they may approve sections.
+ */
+export const PATCH = route<P>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "DEPARTMENT_COORDINATOR"], module: "ONBOARDING" }, async (req, s, { id, docId }) => {
   await scopedStudent(s, id);
   const data = await parseBody(req, review);
   return db.$transaction(async (tx) => {
