@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { notifyStudent } from "@/lib/notify";
 import { parseSection, recomputeStage, scopedStudent } from "@/lib/verification";
+import { requestChangesOnRecords } from "@/lib/academicRecords";
 
 const body = z.object({ comment: z.string().trim().min(3, "A comment is required").max(1000) });
 
@@ -19,6 +20,7 @@ export const POST = route<{ id: string; section: string }>({ module: "ONBOARDING
     const claim = await tx.studentSection.updateMany({ where: { id: row.id, status: "SUBMITTED" }, data: { status: "CHANGES_REQUESTED", reviewComment: comment, reviewedAt: new Date() } });
     if (claim.count === 0) throw new ApiError(409, "CONFLICT", "This section is not awaiting review");
     await tx.verificationEvent.create({ data: { collegeId: s.collegeId, studentId: p.id, section, action: "CHANGES_REQUESTED", actorId: s.userId, comment } });
+    await requestChangesOnRecords(tx, p.id, section, comment);
     await recomputeStage(tx, s.collegeId, p.id);
     await notifyStudent(s.collegeId, p.id, { type: "section.changesRequested", title: `Changes requested on your ${section.toLowerCase().replace("_", " ")}`, body: comment }, tx);
     await audit(s, { action: "section.requestChanges", entity: "StudentSection", entityId: row.id, after: { section, studentId: p.id }, reason: comment }, tx);

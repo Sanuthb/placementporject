@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import { notFound } from "@/lib/api/errors";
 import { listOf } from "@/lib/resume";
+import { sortedAchievements } from "@/lib/achievements";
 
 export const newToken = () => randomBytes(32).toString("base64url");
 
@@ -19,7 +20,7 @@ export async function publicProfile(token: string) {
     college, name: p.student.name, headline: p.headline, department: p.student.department.name, batch: p.student.batch.name,
     ...(p.showCgpa ? { cgpa: (sec("ACADEMICS") as { cgpa?: number } | undefined)?.cgpa ?? null } : {}),
     ...(p.showContact ? { contact: { email: p.student.email, phone: p.student.phone } } : {}),
-    summary: sec("RESUME")?.summary ?? null, skills: listOf(sec("SKILLS"), "skills"), projects: listOf(sec("PROJECTS"), "projects"), internships: listOf(sec("INTERNSHIPS"), "internships"), education: sec("EDUCATION_HISTORY") ?? null,
+    summary: sec("RESUME")?.summary ?? null, skills: listOf(sec("SKILLS"), "skills"), projects: listOf(sec("PROJECTS"), "projects"), internships: listOf(sec("INTERNSHIPS"), "internships"), achievements: sortedAchievements(sec("ACHIEVEMENTS")), education: sec("EDUCATION_HISTORY") ?? null,
     studentId: p.studentId, collegeId: p.collegeId,
   };
 }

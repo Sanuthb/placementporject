@@ -34,7 +34,7 @@ type Staff = { id: string; name: string; email: string; role: string; department
 const ROLES = ["TPO_ADMIN", "PLACEMENT_OFFICER", "DEPARTMENT_COORDINATOR"].map((v) => ({ value: v, label: titleCase(v) }))
 const SECTIONS = [
   ["PERSONAL", "Personal details"], ["ACADEMICS", "Academics"], ["EDUCATION_HISTORY", "Education history"], ["SKILLS", "Skills"],
-  ["PROJECTS", "Projects"], ["INTERNSHIPS", "Internships"], ["RESUME", "Resume"], ["DOCUMENTS", "Supporting documents"],
+  ["PROJECTS", "Projects"], ["INTERNSHIPS", "Internships"], ["RESUME", "Resume"], ["DOCUMENTS", "Supporting documents"], ["ACHIEVEMENTS", "Achievements (optional unless ticked)"],
 ] as const
 const APPROVALS = [
   ["OFFER_CREATE", "Creating offers", "An admin approves each offer before the student sees it."],
@@ -288,20 +288,21 @@ function CollegeInner({ data, reload }: { data: { name: string; logoUrl: string 
   )
 }
 
-type Verif = { requiredSections: string[]; requireAssessmentToOnboard: boolean }
+type Verif = { requiredSections: string[]; requireAssessmentToOnboard: boolean; aiDocumentReading?: boolean }
 function VerificationForm() {
   const { data, reload } = useApi<Verif>("/api/settings/verification")
   if (!data) return <Skeleton className="h-64 rounded-xl" />
-  return <VerificationInner key={`${data.requiredSections.join()}|${data.requireAssessmentToOnboard}`} data={data} reload={reload} />
+  return <VerificationInner key={`${data.requiredSections.join()}|${data.requireAssessmentToOnboard}|${data.aiDocumentReading}`} data={data} reload={reload} />
 }
 function VerificationInner({ data, reload }: { data: Verif; reload: () => void }) {
   const [sections, setSections] = React.useState(data.requiredSections)
   const [assess, setAssess] = React.useState(data.requireAssessmentToOnboard)
+  const [aiRead, setAiRead] = React.useState(!!data.aiDocumentReading)
   const [busy, setBusy] = React.useState(false)
-  const dirty = !sameSet(sections, data.requiredSections) || assess !== data.requireAssessmentToOnboard
+  const dirty = !sameSet(sections, data.requiredSections) || assess !== data.requireAssessmentToOnboard || aiRead !== !!data.aiDocumentReading
   async function save() {
     setBusy(true)
-    try { await api("/api/settings/verification", { method: "PATCH", body: { requiredSections: sections, requireAssessmentToOnboard: assess } }); toast.success("Verification rules saved"); reload() } catch (e) { toastError(e) } finally { setBusy(false) }
+    try { await api("/api/settings/verification", { method: "PATCH", body: { requiredSections: sections, requireAssessmentToOnboard: assess, aiDocumentReading: aiRead } }); toast.success("Verification rules saved"); reload() } catch (e) { toastError(e) } finally { setBusy(false) }
   }
   return (
     <div className="flex flex-col gap-4">
@@ -324,9 +325,12 @@ function VerificationInner({ data, reload }: { data: Verif; reload: () => void }
           <SettingRow label="Assessment before onboarding" description="Students must finish the personality and aptitude assessment before they can be onboarded.">
             <Switch checked={assess} onCheckedChange={setAssess} aria-label="Require the assessment before onboarding" />
           </SettingRow>
+          <SettingRow label="AI document reading" description="Students and staff can ask the AI to read an uploaded marksheet and suggest values. The file is sent to the AI provider (Groq) to be read. Suggestions only fill the student's draft when the student accepts them; nothing is ever verified automatically.">
+            <Switch checked={aiRead} onCheckedChange={setAiRead} aria-label="Allow AI document reading" />
+          </SettingRow>
         </CardContent>
       </Card>
-      <SaveBar dirty={dirty && sections.length > 0} busy={busy} onSave={save} onReset={() => { setSections(data.requiredSections); setAssess(data.requireAssessmentToOnboard) }} />
+      <SaveBar dirty={dirty && sections.length > 0} busy={busy} onSave={save} onReset={() => { setSections(data.requiredSections); setAssess(data.requireAssessmentToOnboard); setAiRead(!!data.aiDocumentReading) }} />
     </div>
   )
 }

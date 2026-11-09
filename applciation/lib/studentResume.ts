@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import type { SectionData } from "@/lib/resume";
 import { buildResumePdf } from "@/lib/resumePdf";
 import type { ProfileSection } from "@/generated/prisma/client";
+import { sortedAchievements } from "@/lib/achievements";
 
 /** Section content for resume work: `all` includes drafts (for feedback), `verified` only staff-approved data (for the generated resume). */
 export async function resumeSections(studentId: string) {
@@ -28,7 +29,7 @@ export async function generateResumePdf(collegeId: string, studentId: string) {
     contact: [st.email, st.phone ?? "", `${st.department.name}, ${st.batch.name}`, st.enrollmentNo].filter(Boolean),
     blocks: [
       { heading: "Summary", data: verified.RESUME?.summary }, { heading: "Academics", data: verified.ACADEMICS }, { heading: "Education", data: verified.EDUCATION_HISTORY },
-      { heading: "Skills", data: verified.SKILLS }, { heading: "Projects", data: verified.PROJECTS }, { heading: "Internships", data: verified.INTERNSHIPS }, { heading: "Personal details", data: verified.PERSONAL },
+      { heading: "Skills", data: verified.SKILLS }, { heading: "Projects", data: verified.PROJECTS }, { heading: "Internships", data: verified.INTERNSHIPS }, { heading: "Achievements", data: verified.ACHIEVEMENTS ? sortedAchievements(verified.ACHIEVEMENTS).map(({ title, position, issuer, level, date }) => ({ title, position, issuer, level, date })) : undefined }, { heading: "Personal details", data: verified.PERSONAL },
     ],
   });
   return { pdf, fileName: `resume-${st.enrollmentNo}.pdf` };

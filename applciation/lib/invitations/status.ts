@@ -11,7 +11,7 @@ export async function syncOnboardingStatus(tx: Tx, studentId: string) {
   const st = await tx.student.findUniqueOrThrow({ where: { id: studentId }, select: { onboardingStatus: true, stage: true } });
   if (!REVIEW_STATES.includes(st.onboardingStatus)) return;
   const [openDocs, submitted] = await Promise.all([
-    tx.studentDocument.count({ where: { studentId, status: { in: ["PENDING", "REJECTED"] } } }),
+    tx.studentDocument.count({ where: { studentId, status: { in: ["PENDING", "REJECTED"] }, archivedAt: null } }),
     tx.studentSection.count({ where: { studentId, status: "SUBMITTED" } }),
   ]);
   const fullyApproved = (st.stage === "VERIFIED" || st.stage === "ONBOARDED") && openDocs === 0;

@@ -1,9 +1,9 @@
 import { route } from "@/lib/api/handler";
 import { parseQuery } from "@/lib/api/parse";
 import { db } from "@/lib/db";
-import { ProfileSection } from "@/generated/prisma/client";
 import { expireStale } from "@/lib/invitations/service";
 import { studentFilterQuery, studentWhere } from "@/lib/studentFilters";
+import { completionFor } from "@/lib/profileCompletionLoad";
 
 type Slice = { id: string; name: string; count: number };
 
@@ -12,8 +12,7 @@ export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
   const f = parseQuery(req, studentFilterQuery);
   const where = studentWhere(s, f);
   await expireStale(s.collegeId);
-  const [settings, total, active, placed, byOnboarding, sentInvitations, byStage, byProgram, byDepartment, byBatch, pendingStudents, pendingDocs] = await Promise.all([
-    db.collegeSettings.findUnique({ where: { collegeId: s.collegeId }, select: { requiredSections: true } }),
+  const [total, active, placed, byOnboarding, sentInvitations, byStage, byProgram, byDepartment, byBatch, pendingStudents, pendingDocs] = await Promise.all([
     db.student.count({ where }),
     db.student.count({ where: { ...where, isActive: true } }),
     db.student.count({ where: { ...where, isPlaced: true } }),
@@ -23,14 +22,14 @@ export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
     db.student.groupBy({ by: ["programId"], where, _count: { _all: true } }),
     db.student.groupBy({ by: ["departmentId"], where, _count: { _all: true } }),
     db.student.groupBy({ by: ["batchId"], where, _count: { _all: true } }),
-    db.student.count({ where: { ...where, documents: { some: { status: "PENDING" } } } }),
-    db.studentDocument.count({ where: { collegeId: s.collegeId, status: "PENDING", student: where } }),
+    db.student.count({ where: { ...where, documents: { some: { status: "PENDING", archivedAt: null } } } }),
+    db.studentDocument.count({ where: { collegeId: s.collegeId, status: "PENDING", archivedAt: null, student: where } }),
   ]);
 
-  // Profile completion: how many of each student's required sections are verified, across everyone shown.
-  const required = settings?.requiredSections?.length ? settings.requiredSections : Object.values(ProfileSection);
-  const verified = total ? await db.studentSection.count({ where: { collegeId: s.collegeId, section: { in: required }, status: "VERIFIED", student: where } }) : 0;
-  const completion = total ? Math.round((verified / (total * required.length)) * 100) : 0;
+  // Profile completion: the average of each shown student's completion, worked out exactly as the student and the list see it.
+  const all = total ? [...(await completionFor(s.collegeId, (await db.student.findMany({ where, select: { id: true } })).map((x) => x.id))).values()] : [];
+  const completion = all.length ? Math.round(all.reduce((a, c) => a + c.percent, 0) / all.length) : 0;
+  const verifiedCompletion = all.length ? Math.round(all.reduce((a, c) => a + c.verifiedPercent, 0) / all.length) : 0;
 
   const [programs, departments, batches] = await Promise.all([
     db.program.findMany({ where: { collegeId: s.collegeId }, select: { id: true, name: true } }),
@@ -60,7 +59,7 @@ export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
       verified: n("VERIFIED"),
     },
     total, active, inactive: total - active, placed,
-    completion, pendingDocs, pendingDocStudents: pendingStudents,
+    completion, verifiedCompletion, pendingDocs, pendingDocStudents: pendingStudents,
     stages: Object.fromEntries(byStage.map((g) => [g.stage, g._count._all])),
     byProgram: slice(byProgram.map((g) => ({ key: g.programId, n: g._count._all })), named(programs), "No programme"),
     byDepartment: slice(byDepartment.map((g) => ({ key: g.departmentId, n: g._count._all })), named(departments), "No department"),

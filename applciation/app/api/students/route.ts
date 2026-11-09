@@ -7,9 +7,9 @@ import { audit } from "@/lib/audit";
 import { studentSelect } from "@/lib/students";
 import { resolveMapping } from "@/lib/academicMapping";
 import { educationInput } from "@/lib/api/academic";
-import { ProfileSection } from "@/generated/prisma/client";
 import { expireStale } from "@/lib/invitations/service";
 import { studentFilterQuery, studentWhere } from "@/lib/studentFilters";
+import { completionFor } from "@/lib/profileCompletionLoad";
 
 const listQuery = studentFilterQuery.extend({
   limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -36,8 +36,7 @@ const create = z.object({
 export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
   const { limit, cursor, ...filters } = parseQuery(req, listQuery);
   await expireStale(s.collegeId);
-  const [settings, rows] = await Promise.all([
-    db.collegeSettings.findUnique({ where: { collegeId: s.collegeId }, select: { requiredSections: true } }),
+  const [rows] = await Promise.all([
     db.student.findMany({
       where: studentWhere(s, filters),
       select: {
@@ -48,20 +47,21 @@ export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
         program: { select: { name: true, code: true } },
         batch: { select: { name: true, endYear: true } },
         currentSemester: { select: { name: true } },
-        sections: { where: { status: "VERIFIED" }, select: { section: true } },
-        _count: { select: { documents: { where: { status: "PENDING" } } } },
+        _count: { select: { documents: { where: { status: "PENDING", archivedAt: null } } } },
       },
       orderBy: [{ name: "asc" }, { id: "asc" }],
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     }),
   ]);
-  const required = settings?.requiredSections?.length ? settings.requiredSections : Object.values(ProfileSection);
   const hasMore = rows.length > limit;
-  const items = (hasMore ? rows.slice(0, limit) : rows).map(({ sections, _count, ...r }) => ({
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const done = await completionFor(s.collegeId, page.map((r) => r.id));
+  const items = page.map(({ _count, ...r }) => ({
     ...r,
-    // Profile completion is the share of required sections a staff member has verified.
-    completion: Math.round((sections.filter((x) => required.includes(x.section)).length / required.length) * 100),
+    // Same calculation the student sees (lib/profileCompletion): `completion` is the student's part, `verifiedPercent` the placement cell's.
+    completion: done.get(r.id)?.percent ?? 0,
+    verifiedPercent: done.get(r.id)?.verifiedPercent ?? 0,
     pendingDocs: _count.documents,
     graduationYear: r.batch.endYear,
   }));

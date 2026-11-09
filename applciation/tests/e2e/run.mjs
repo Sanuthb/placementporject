@@ -38,6 +38,8 @@ if (!only) run("unit: scoring, config, templates", ["--import", "tsx", "tests/un
 if (!only) run("unit: invitations", ["--import", "tsx", "tests/unit/invitations.test.mts"]);
 if (!only) run("unit: intelligence", ["--import", "tsx", "tests/unit/intelligence.test.mts"]);
 if (!only) run("unit: institution", ["--import", "tsx", "tests/unit/institution.test.mts"]);
+if (!only) run("unit: personal details", ["--import", "tsx", "tests/unit/personal.test.mts"]);
+if (!only) run("unit: academic records", ["--import", "tsx", "tests/unit/academic.test.mts"]);
 for (const f of ["reset.mjs"]) { const r = spawnSync(process.execPath, [...envArgs, `tests/e2e/${f}`], { encoding: "utf8", env: process.env }); if (r.status !== 0) { console.error(r.stdout + r.stderr); stop(); process.exit(1); } }
 for (const f of readdirSync("tests/e2e").filter((n) => /^\d\d-.*\.mjs$/.test(n) && (!only || only.test(n))).sort()) {
   const sec = f.startsWith("09-");

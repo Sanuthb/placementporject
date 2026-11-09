@@ -4,7 +4,7 @@ import { badRequest } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { educationInput } from "@/lib/api/academic";
-import { assertEditable } from "@/lib/invitations/guard";
+import { assertEducationEditable } from "@/lib/invitations/guard";
 
 const MAX = 12;
 
@@ -13,7 +13,7 @@ export const GET = studentRoute({ module: "ONBOARDING" }, (_req, me) => db.stude
 
 export const POST = studentRoute({ module: "ONBOARDING", limit: { name: "education-write", max: 200, windowSec: 3600 } }, async (req, me) => {
   const b = await parseBody(req, educationInput);
-  await assertEditable(me.studentId);
+  await assertEducationEditable(me.studentId);
   if ((await db.studentEducationRecord.count({ where: { studentId: me.studentId } })) >= MAX) throw badRequest(`At most ${MAX} qualifications`);
   return db.$transaction(async (tx) => {
     const r = await tx.studentEducationRecord.create({ data: { ...b, collegeId: me.collegeId, studentId: me.studentId } });

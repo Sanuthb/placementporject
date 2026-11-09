@@ -20,7 +20,7 @@ import { useLookups } from "@/lib/web/lookups"
 type Item = { id: string; section: string; submittedAt: string; isRevision: boolean; student: { id: string; name: string; enrollmentNo: string; departmentId: string; batchId: string } }
 type Page = { key: string; items: Item[]; next: string | null }
 
-const SECTIONS = ["PERSONAL", "ACADEMICS", "EDUCATION_HISTORY", "SKILLS", "PROJECTS", "INTERNSHIPS", "RESUME", "DOCUMENTS"].map((s) => ({ value: s, label: titleCase(s) }))
+const SECTIONS = ["PERSONAL", "ACADEMICS", "EDUCATION_HISTORY", "SKILLS", "PROJECTS", "INTERNSHIPS", "RESUME", "DOCUMENTS", "ACHIEVEMENTS"].map((s) => ({ value: s, label: titleCase(s) }))
 const WAITING = [{ value: "", label: "Any waiting time" }, { value: "2", label: "2+ days" }, { value: "7", label: "7+ days" }, { value: "14", label: "14+ days" }]
 const daysSince = (d: string) => Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000)
 

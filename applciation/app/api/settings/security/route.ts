@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { hasMfaFactor } from "@/lib/auth/mfa";
-import { ProfileSection } from "@/generated/prisma/client";
+import { DEFAULT_REQUIRED_SECTIONS } from "@/lib/verification";
 
 const patch = z.object({ requireMfaForAdmins: z.boolean() });
 
@@ -23,7 +23,7 @@ export const PATCH = route({ roles: ["TPO_ADMIN"] }, async (req, s) => {
   const { requireMfaForAdmins } = await parseBody(req, patch);
   if (requireMfaForAdmins && !(await hasMfaFactor(s.userId))) throw new ApiError(409, "MFA_NOT_SET_UP", "Set up your own authenticator app first, then turn this on");
   await db.$transaction(async (tx) => {
-    await tx.collegeSettings.upsert({ where: { collegeId: s.collegeId }, update: { requireMfaForAdmins }, create: { collegeId: s.collegeId, requireMfaForAdmins, approvalRequired: [], requiredSections: Object.values(ProfileSection) } });
+    await tx.collegeSettings.upsert({ where: { collegeId: s.collegeId }, update: { requireMfaForAdmins }, create: { collegeId: s.collegeId, requireMfaForAdmins, approvalRequired: [], requiredSections: DEFAULT_REQUIRED_SECTIONS } });
     await audit(s, { action: "settings.security.update", entity: "CollegeSettings", entityId: s.collegeId, after: { requireMfaForAdmins } }, tx);
   });
   return { requireMfaForAdmins };

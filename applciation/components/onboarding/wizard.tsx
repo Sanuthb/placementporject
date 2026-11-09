@@ -38,7 +38,7 @@ export type WizardData = {
 
 const STEPS = ["Assigned details", "Personal information", "Education", "Documents", "Skills and career", "Review and submit"]
 const GENDERS = ["Female", "Male", "Other", "Prefer not to say"].map((v) => ({ value: v, label: v }))
-const ASSIGNED: [string, string][] = [["institution", "Institution"], ["campus", "Campus"], ["department", "Department"], ["programme", "Programme"], ["branch", "Branch"], ["admissionNumber", "Admission number"], ["admissionYear", "Admission year"], ["batch", "Batch"], ["graduationYear", "Expected graduation year"]]
+const ASSIGNED: [string, string][] = [["institution", "Institution"], ["campus", "Campus"], ["department", "Department"], ["programme", "Programme"], ["branch", "Branch"], ["admissionNumber", "Admission number"], ["admissionYear", "Admission year"], ["batch", "Batch"], ["academicYear", "Current academic year"], ["semester", "Current semester"], ["graduationYear", "Expected graduation year"]]
 const FIXABLE = [["name", "Name"], ["department", "Department"], ["programme", "Programme"], ["branch", "Branch"], ["batch", "Batch"], ["admissionNumber", "Admission number"], ["admissionYear", "Admission year"], ["graduationYear", "Graduation year"], ["campus", "Campus"], ["email", "Email"], ["other", "Something else"]].map(([value, label]) => ({ value, label }))
 
 export function Wizard({ initial, reload }: { initial: WizardData; reload: () => Promise<WizardData | undefined> }) {

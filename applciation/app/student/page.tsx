@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
+import type { Completion } from "@/lib/profileCompletion"
 
 type Me = { onboardingStatus?: string; name: string; enrollmentNo: string; department: { name: string }; batch: { name: string }; stage: string; participationStatus: string; isPlaced: boolean; modules: string[]; unreadNotifications: number }
 type Blocks = { id: string; reason: string; endsAt: string }[]
@@ -42,6 +43,7 @@ export default function StudentHome() {
   const blocks = useApi<Blocks>(has("ATTENDANCE_BLOCKING") ? "/api/student/blocks" : null)
   const hist = useApi<{ warning: string | null }>(has("ATTENDANCE_BLOCKING") ? "/api/student/attendance/history" : null)
   const secs = useApi<Sections>(has("ONBOARDING") ? "/api/student/sections" : null)
+  const comp = useApi<Completion>(has("ONBOARDING") ? "/api/student/completion" : null)
   const drives = useApi<Drive[]>(has("DRIVES") ? "/api/student/drives" : null)
   const apps = useApi<App[]>(has("DRIVES") ? "/api/student/applications" : null)
   const offers = useApi<Offer[]>(has("DRIVES") ? "/api/student/offers" : null)
@@ -51,11 +53,7 @@ export default function StudentHome() {
   const m = me.data
 
   const required = secs.data?.sections.filter((s) => s.required) ?? []
-  const done = required.filter((s) => s.status === "SUBMITTED" || s.status === "VERIFIED").length
-  const verified = required.filter((s) => s.status === "VERIFIED").length
-  const next = required.find((s) => s.status === "DRAFT" || s.status === "CHANGES_REQUESTED")
   const fix = required.filter((s) => s.status === "CHANGES_REQUESTED")
-  const waiting = required.filter((s) => s.status === "SUBMITTED").length
 
   const upcoming = (apps.data ?? []).flatMap((a) => a.journey.filter((j) => !j.result).map((j) => ({ a, j, at: j.slot?.startsAt ?? j.scheduledAt }))).filter((x) => x.at && new Date(x.at).getTime() >= now && new Date(x.at).getTime() <= now + 7 * DAY).sort((x, y) => +new Date(x.at!) - +new Date(y.at!))
   const openDrives = (drives.data ?? []).filter((d) => d.eligibility.eligible && !d.myApplication).sort((x, y) => +new Date(x.applicationDeadline) - +new Date(y.applicationDeadline)).slice(0, 5)
@@ -95,10 +93,11 @@ export default function StudentHome() {
       <div className="grid gap-4 md:grid-cols-2">
         {has("ONBOARDING") && (
           <Card>
-            <CardHeader><CardTitle>Profile</CardTitle><CardDescription>{secs.data ? `${done} of ${required.length} required sections submitted, ${verified} verified, ${waiting} waiting for review` : "Loading"}</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Profile {comp.data ? `${comp.data.percent}% complete` : ""}</CardTitle><CardDescription>{comp.data ? `${comp.data.done} of ${comp.data.total} required items verified${comp.data.waiting ? `, ${comp.data.waiting} waiting for review` : ""}` : "Loading"}</CardDescription></CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <Progress value={required.length ? Math.round((done / required.length) * 100) : 0} />
-              {next ? <Button className="self-start" render={<Link href={`/student/profile/${next.section}`} />}>{next.status === "CHANGES_REQUESTED" ? "Fix" : "Fill in"} {titleCase(next.section)}</Button> : <Button variant="outline" className="self-start" render={<Link href="/student/profile" />}>Open profile</Button>}
+              <Progress value={comp.data?.percent ?? 0} />
+              {comp.data && <div className="text-sm"><span className="font-medium">Next: {comp.data.nextAction.title}.</span> <span className="text-muted-foreground">{comp.data.nextAction.detail}</span></div>}
+              {comp.data?.nextAction.href ? <Button className="self-start" render={<Link href={comp.data.nextAction.href} />}>{comp.data.nextAction.kind === "fix" ? "Fix it" : "Go"}</Button> : <Button variant="outline" className="self-start" render={<Link href="/student/profile" />}>Open profile</Button>}
             </CardContent>
           </Card>
         )}

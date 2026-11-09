@@ -17,7 +17,7 @@ The **Code** column is my reading of the source code, not a test result:
 
 Your own rule applies: a module counts as complete only when its screens, backend and links to other modules have been tested. The Code mark does not replace that. The one exception is the invitation and student onboarding work, which has automated tests (`tests/e2e/10-student-invitations.mjs`, `tests/e2e/11-intelligence.mjs`).
 
-Last checked against the code: 2026-11-08.
+Last checked against the code: 2026-11-08 (M3 re-checked 2026-11-09).
 
 ## Summary (generated from the lines below)
 
@@ -25,7 +25,7 @@ Last checked against the code: 2026-11-08.
 |---|---|---|---|---|---|---|
 | M1 – Authentication and User Management | 17 | 15 | 0 | 0 | 2 | [ ] |
 | M2 – Institution Management | 13 | 9 | 3 | 1 | 0 | [ ] |
-| M3 – Student Registration and Profile | 19 | 13 | 4 | 2 | 0 | [ ] |
+| M3 – Student Registration and Profile | 19 | 19 | 0 | 0 | 0 | [ ] |
 | M4 – Student Assessment and Career Profiling | 20 | 10 | 4 | 6 | 0 | [ ] |
 | M5 – Career Roadmap and Student Development | 8 | 0 | 2 | 6 | 0 | [ ] |
 | M6 – Learning Management System | 11 | 0 | 4 | 7 | 0 | [ ] |
@@ -44,7 +44,7 @@ Last checked against the code: 2026-11-08.
 | M19 – Group Discussion and Communication Simulator | 1 | 0 | 0 | 1 | 0 | [ ] |
 | M20 – Notification Centre | 9 | 5 | 3 | 1 | 0 | [ ] |
 | M21 – Dashboards and Analytics | 8 | 3 | 3 | 2 | 0 | [ ] |
-| **Total** | **199** | **83** | **47** | **67** | **2** | |
+| **Total** | **199** | **89** | **43** | **65** | **2** | |
 
 ## Cross-module findings worth reading first
 
@@ -106,30 +106,32 @@ Last checked against the code: 2026-11-08.
 
 ### M3 – Student Registration and Profile
 
+Re-checked 2026-11-09 after the seven-phase M3 build. "Tested" says how each line was checked: **unit** = `npm run test:unit` (11 suites, 164 checks, all passing), **live** = clicked through on the dev server against the real database, **E2E written** = in `tests/e2e/` but not run (the local Docker stack is not used on request). Nothing below is ticked: that is yours to do.
+
 **Placement Officer side**
-- [ ] Register/invite a student with name, institution, campus, department, programme, branch, batch, admission number, years — ✅ Built
-- [ ] View student profiles — ✅ Built: list with filters, student page with tabs
-- [ ] Verify academic details — ✅ Built: section review, "Verify profile", request corrections, reject
-- [ ] Verify documents — ✅ Built: view in page, verify, reject with reason, reopen
-- [ ] Original documents stay available to authorised users — ✅ Built: private storage with short-lived links
-- [ ] Changes to verified records are tracked — ✅ Built: edits go to a pending revision until re-approved; history and audit trail
-- [ ] Dashboard with invitation, completion and verification counts and filters — ✅ Built
+- [ ] Register/invite a student with name, institution, campus, department, programme, branch, batch, admission number, years — ✅ Built. Tested: earlier E2E (M2); wizard now also shows academic year and semester.
+- [ ] View student profiles — ✅ Built. Tested: live (student page, Education and Documents tabs).
+- [ ] Verify academic details — ✅ Built: section review, "Verify profile", request corrections, reject; semester results and backlogs are verified with the Academics section, qualifications with Education history. Tested: unit (records reach the verified snapshot only once verified); staff approval not clicked live.
+- [ ] Verify documents — ✅ Built: view in page, verify, reject with reason, reopen. Note: department coordinators may approve sections (spec rule 6) but the document review route allows only TPO admin and placement officer, so a coordinator cannot complete a student. Decide which is right.
+- [ ] Original documents stay available to authorised users — ✅ Built: private storage, short-lived links; removing or replacing a document archives it and keeps the file; staff "Show removed and replaced versions" with "Open original". Tested: live (history view), unit (upload checks); replace/archive itself E2E written, not run.
+- [ ] Changes to verified records are tracked — ✅ Built: edits to verified sections, qualifications and semesters wait as pending revisions; every change, document read and accepted AI suggestion is audited. Tested: unit.
+- [ ] Dashboard with invitation, completion and verification counts and filters — ✅ Built. "Completion" now means the student's part (submitted or verified) and counts required marksheets; `verifiedPercent` is returned beside it. Tested: unit; staff list/summary not checked live.
 
 **Student side**
-- [ ] Personal information (DOB, contact, address) — ✅ Built: onboarding step 2
-- [ ] 10th, 12th/PUC, diploma, degree details — ✅ Built: education records (step 3)
-- [ ] Semester-wise marks — 🟡 Partial: the profile "Academics" section accepts a semester list, but the onboarding wizard does not ask for it
-- [ ] Backlog history — 🟡 Partial: backlog counts per qualification and active backlogs; no per-subject backlog history in the wizard
-- [ ] Academic achievements — ❌ Missing: no field or section
-- [ ] Upload PDF/image documents, several, categorised — ✅ Built, with progress and file-content check
-- [ ] Replace a document — 🟡 Partial: the student deletes and uploads again; staff have a Replace button
-- [ ] Verification status per document — ✅ Built
-- [ ] Profile completion %, missing information, missing documents, next action — 🟡 Partial: completion % and a missing-items list exist; "recommended next action" is only implied
-- [ ] AI OCR suggests profile updates from documents — ❌ Missing
-- [ ] Save progress and continue later — ✅ Built
+- [ ] Personal information (DOB, contact, address) — ✅ Built; phone, DOB, gender and address sync to the student record on approval; name stays institution-controlled. Tested: unit.
+- [ ] 10th, 12th/PUC, diploma, degree details — ✅ Built: education records. Tested: live (staff Education tab).
+- [ ] Semester-wise marks — ✅ Built: semesters with subject marks, percentage worked out from marks, SGPA 0–10. Tested: live (invalid SGPA refused, semester saved and removed), unit.
+- [ ] Backlog history — ✅ Built: per-subject backlogs with every attempt kept, cleared-in semester required. Tested: live (add, clear, remove), unit.
+- [ ] Academic achievements — ✅ Built: optional Achievements section (category, level, date, issuer, position, link, proof upload), same staff review, on the resume and showcase once verified. Tested: live (future date refused, draft saved, student stayed verified), unit.
+- [ ] Upload PDF/image documents, several, categorised — ✅ Built; contents checked (type from bytes, PDFs with scripts or passwords refused, duplicates refused). Tested: live (script PDF and fake PDF refused), unit.
+- [ ] Replace a document — ✅ Built: one-step replace for students (also after verification) and staff; the old version is kept. Tested: unit; E2E written, not run.
+- [ ] Verification status per document — ✅ Built. Tested: live.
+- [ ] Profile completion %, missing information, missing documents, next action — ✅ Built: one calculation (`lib/profileCompletion.ts`) used everywhere; one recommended next action. Tested: live (profile page and home), unit.
+- [ ] AI OCR suggests profile updates from documents — ✅ Built on Groq (`qwen/qwen3.8-27b`): photos, text PDFs and scanned PDFs; suggestions and flags (name, document type, confidence); accepting a suggestion only fills the draft, never verifies; off until an admin switches it on. Tested: unit, and one synthetic marksheet read correctly through the real Groq pipeline; not yet clicked through in the app.
+- [ ] Save progress and continue later — ✅ Built.
 
 **Connection**
-- [ ] M3 → M4/M5: verified academic data is available to assessments, intelligence and drives — ✅ Built (intelligence reads it; drive eligibility reads verified academics)
+- [ ] M3 → M4/M5: verified academic data is available to assessments, intelligence and drives — ✅ Built: structured records regenerate the same section keys (cgpa, tenthPercentage, twelfthPercentage, activeBacklogs, semesters) only on verification, so eligibility, intelligence, resume and showcase read verified data as before.
 
 ### M4 – Student Assessment and Career Profiling
 

@@ -11,7 +11,7 @@ const staff = client(await login(process.env.SEED_ADMIN_EMAIL, process.env.SEED_
 const anon = (m, p, body) => fetch(B + p, { method: m, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined }).then(async (r) => { const j = await r.json().catch(() => null); return { s: r.status, d: j?.data, code: j?.error?.code, j }; });
 const tokenOf = (link) => new URLSearchParams(link.split("#")[1]).get("t");
 const created = { students: [], authIds: [] };
-const PDF = "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF";
+const PDF = "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n" + " ".repeat(80) + "\n%%EOF\n";
 
 try {
   // --- structure to invite into
@@ -87,11 +87,18 @@ try {
   t("documents: content that does not match its type is refused", (await me("POST", "/api/student/documents", null, fake)).s === 400);
   const txt = new FormData(); txt.append("category", "TENTH_MARKS"); txt.append("file", new Blob(["hello"], { type: "text/plain" }), "x.txt");
   t("documents: unsupported type refused", (await me("POST", "/api/student/documents", null, txt)).s === 400);
-  const up = async (cat, name) => { const f = new FormData(); f.append("category", cat); f.append("file", new Blob([PDF], { type: "application/pdf" }), name); return me("POST", "/api/student/documents", null, f); };
+  const up = async (cat, name) => { const f = new FormData(); f.append("category", cat); f.append("file", new Blob([PDF.replace("endobj", "endobj % " + cat)], { type: "application/pdf" }), name); return me("POST", "/api/student/documents", null, f); };
   const d10 = await up("TENTH_MARKS", "sslc.pdf"), d12 = await up("TWELFTH_MARKS", "puc.pdf");
   t("documents: PDFs uploaded as PENDING", d10.s === 200 && d12.s === 200 && d10.d.status === "PENDING", JSON.stringify([d10.j, d12.j]));
   const docs = (await me("GET", "/api/student/documents")).d;
   t("documents: listed with private signed links", docs.length === 2 && docs.every((d) => d.url && d.url.includes("token")));
+  t("documents: the same file again is refused as a duplicate", (await up("TENTH_MARKS", "again.pdf")).s === 409);
+  const evil = new FormData(); evil.append("category", "OTHER"); evil.append("file", new Blob([PDF.replace("endobj", "endobj /JavaScript (x)")], { type: "application/pdf" }), "evil.pdf");
+  t("documents: a PDF carrying a script is refused", (await me("POST", "/api/student/documents", null, evil)).s === 400);
+  const rep = new FormData(); rep.append("file", new Blob([PDF.replace("endobj", "endobj % replacement")], { type: "application/pdf" }), "better.pdf");
+  const repR = await me("POST", `/api/student/documents/${d10.d.id}/replace`, null, rep);
+  t("documents: replacing keeps the same category, archives the old row and keeps its file", repR.s === 200 && repR.d.category === "TENTH_MARKS" && repR.d.replacesId === d10.d.id && (await pgc.query(`select "archivedAt" a, "archiveReason" r from "StudentDocument" where id=$1`, [d10.d.id])).rows[0].r === "REPLACED");
+  t("documents: the student's list shows only the live versions", (await me("GET", "/api/student/documents")).d.length === 2);
   t("submit: still blocked until the declaration is accepted", (await me("POST", "/api/student/onboarding/submit")).s === 400);
   await me("PUT", "/api/student/onboarding", { acceptDeclaration: true });
   const sub = await me("POST", "/api/student/onboarding/submit");
@@ -135,6 +142,65 @@ try {
   t("audit: invite, accept, submit, changes, verify all recorded", ["student.invite", "student.invitation.accept", "student.onboarding.submit", "student.verification.changes", "student.verification.verify", "student.invitation.link", "student.name.review"].every((x) => acts.includes(x)), acts.join(","));
   t("verify: verifying twice is refused", (await staff("POST", `/api/students/${idA}/onboarding/verify`, {})).s === 409);
 
+  // --- 5b. M3 phase 1: personal details after verification
+  const rowA = async () => (await pgc.query(`select name,phone,"dateOfBirth"::text dob,gender,address from "Student" where id=$1`, [idA])).rows[0];
+  const secA = async () => (await pgc.query(`select status,"pendingData" p,data d from "StudentSection" where "studentId"=$1 and section='PERSONAL'`, [idA])).rows[0];
+  const before1 = await rowA();
+  const wz = await me("GET", "/api/student/onboarding");
+  t("personal: the wizard shows the current academic year and semester read-only", wz.s === 200 && "academicYear" in wz.d.assigned && "semester" in wz.d.assigned, JSON.stringify(Object.keys(wz.d?.assigned ?? {})));
+  const goodP = { fullName: "Inv Student A", dob: "2003-04-15", gender: "Female", phone: "9123456780", address: "12 MG Road", city: "Mysuru", state: "Karnataka", pincode: "570001" };
+  const bad = async (over) => (await me("PUT", "/api/student/sections/PERSONAL", { data: { ...goodP, ...over }, submit: false }));
+  t("personal: a future date of birth is refused", (await bad({ dob: "2999-01-01" })).s === 400);
+  t("personal: a day that does not exist is refused", (await bad({ dob: "2003-02-31" })).s === 400);
+  const badPhone = await bad({ phone: "98abc" });
+  t("personal: a bad mobile number is refused and the message names it", badPhone.s === 400 && /mobile|phone/i.test(JSON.stringify(badPhone.j)), JSON.stringify(badPhone.j));
+  t("personal: a bad alternate email is refused", (await bad({ alternateEmail: "nope" })).s === 400);
+  t("personal: refused edits changed nothing", JSON.stringify(await rowA()) === JSON.stringify(before1) && (await secA()).p === null);
+  const draft = await me("PUT", "/api/student/sections/PERSONAL", { data: { ...goodP, fullName: "A Different Name" }, submit: false });
+  const sd = await secA();
+  t("personal: editing a verified section waits as a pending revision", draft.s === 200 && sd.status === "VERIFIED" && sd.p?.phone === "9123456780" && sd.d.phone !== "9123456780", JSON.stringify({ draft: draft.j, status: sd.status }));
+  t("personal: the student record is untouched while the revision is pending", JSON.stringify(await rowA()) === JSON.stringify(before1));
+  t("personal: submitting sends it for review, still no change to the record", (await me("PUT", "/api/student/sections/PERSONAL", { data: { ...goodP, fullName: "A Different Name" }, submit: true })).s === 200 && (await secA()).status === "SUBMITTED" && (await rowA()).phone === before1.phone);
+  t("personal: a section under review cannot be edited", (await me("PUT", "/api/student/sections/PERSONAL", { data: goodP, submit: false })).s === 409);
+  const ap = await staff("POST", `/api/students/${idA}/sections/PERSONAL/approve`, { comment: "ok" });
+  const after1 = await rowA();
+  t("personal: approval writes the contact details onto the student record", ap.s === 200 && after1.phone === "9123456780" && after1.dob === "2003-04-15" && after1.gender === "Female" && after1.address === "12 MG Road, Mysuru, Karnataka, 570001", JSON.stringify({ ap: ap.j, after1 }));
+  t("personal: the name is not changed by a personal-details approval", after1.name === "Inv Student A");
+  const aud = (await pgc.query(`select before,after,"actorId",reason from "AuditLog" where "entityId"=$1 and action='student.personal.sync' order by "createdAt" desc limit 1`, [idA])).rows[0];
+  t("personal: the previous and new values are in the audit log with the approver", aud?.before?.phone === before1.phone && aud?.after?.phone === "9123456780" && !!aud?.actorId, JSON.stringify(aud));
+  t("personal: the verified section now holds the approved values", (await secA()).d.phone === "9123456780");
+  const ev = (await pgc.query(`select count(*)::int n from "VerificationEvent" where "studentId"=$1 and section='PERSONAL' and action='APPROVED'`, [idA])).rows[0].n;
+  t("personal: every approval is kept in the verification history", ev >= 2, String(ev));
+  const patchA = await staff("PATCH", `/api/students/${idA}`, { address: "Staff Edited Address" });
+  const audP = (await pgc.query(`select before,after from "AuditLog" where "entityId"=$1 and action='student.update' order by "createdAt" desc limit 1`, [idA])).rows[0];
+  t("personal: a staff edit records the previous values as well as the new", patchA.s === 200 && audP?.before?.address === "12 MG Road, Mysuru, Karnataka, 570001" && audP?.after?.address === "Staff Edited Address", JSON.stringify(audP));
+
+  // --- 5c. M3 phase 2: qualifications are structured records with review state
+  const eduRows = async () => (await pgc.query(`select id,level,percentage::float pct,"reviewStatus" st,"pendingData" p,"verifiedAt" va from "StudentEducationRecord" where "studentId"=$1 order by "completionYear"`, [idA])).rows;
+  const eduSec = async () => (await pgc.query(`select status,data from "StudentSection" where "studentId"=$1 and section='EDUCATION_HISTORY'`, [idA])).rows[0];
+  const e0 = await eduRows();
+  t("education: records of a verified profile are verified", e0.length === 2 && e0.every((r) => r.st === "VERIFIED" && r.va), JSON.stringify(e0));
+  const sslc = e0.find((r) => r.level === "School");
+  const eduBody = (over) => ({ level: "School", qualification: "SSLC", institution: "Govt High School", boardOrUniversity: "KSEEB", admissionYear: 2017, completionYear: 2019, percentage: 91, status: "COMPLETED", backlogs: 0, ...over });
+  t("education: a percentage that contradicts the marks is refused", (await me("PUT", `/api/student/education/${sslc.id}`, eduBody({ obtainedMarks: 300, maxMarks: 500, percentage: 91 }))).s === 400);
+  const revE = await me("PUT", `/api/student/education/${sslc.id}`, eduBody({ percentage: 93 }));
+  const e1 = (await eduRows()).find((r) => r.id === sslc.id);
+  t("education: editing a verified qualification waits as a pending revision; the verified value stays", revE.s === 200 && e1.st === "VERIFIED" && e1.pct === sslc.pct && e1.p?.percentage === 93, JSON.stringify(e1));
+  t("education: the verified section does not change before approval", JSON.stringify((await eduSec()).data) === JSON.stringify((await pgc.query(`select data from "StudentSection" where "studentId"=$1 and section='EDUCATION_HISTORY'`, [idA])).rows[0].data) && (await eduSec()).data.history.find((h) => h.level === "School").percentage === sslc.pct);
+  t("education: a verified qualification cannot be deleted by the student", (await me("DELETE", `/api/student/education/${sslc.id}`)).s === 409);
+  const extraE = await me("POST", "/api/student/education", eduBody({ level: "Diploma", qualification: "Diploma", institution: "Poly", completionYear: 2020, percentage: 70 }));
+  t("education: after verification the student can add a qualification, as a draft", extraE.s === 200 && (await eduRows()).find((r) => r.id === extraE.d.id)?.st === "DRAFT", JSON.stringify(extraE.j));
+  const resubE = await me("PUT", "/api/student/sections/EDUCATION_HISTORY", { data: {}, submit: true });
+  t("education: submitting sends the revision and the new record for review", resubE.s === 200 && resubE.d.status === "SUBMITTED" && (await eduRows()).find((r) => r.id === extraE.d.id).st === "SUBMITTED", JSON.stringify(resubE.j));
+  t("education: nothing can be edited while it is under review", (await me("PUT", `/api/student/education/${extraE.d.id}`, eduBody({ level: "Diploma", qualification: "Diploma", institution: "Poly", percentage: 71 }))).s === 409 && (await me("POST", "/api/student/education", eduBody({ institution: "Another" }))).s === 409);
+  const apE = await staff("POST", `/api/students/${idA}/sections/EDUCATION_HISTORY/approve`, { comment: "ok" });
+  const e2 = await eduRows(), eduS2 = await eduSec();
+  t("education: approval applies the pending revision and verifies the new record", apE.s === 200 && e2.find((r) => r.id === sslc.id).pct === 93 && e2.find((r) => r.id === sslc.id).p === null && e2.every((r) => r.st === "VERIFIED"), JSON.stringify(e2));
+  t("education: the verified section and the 10th percentage in ACADEMICS follow the records", eduS2.data.history.find((h) => h.level === "School").percentage === 93 && eduS2.data.history.length === 3 && (await pgc.query(`select data from "StudentSection" where "studentId"=$1 and section='ACADEMICS'`, [idA])).rows[0].data.tenthPercentage === 93);
+  const spE = await staff("PATCH", `/api/students/${idA}/education/${sslc.id}`, eduBody({ percentage: 94 }));
+  const audE = (await pgc.query(`select before,after from "AuditLog" where "entityId"=$1 and action='student.education.update' order by "createdAt" desc limit 1`, [idA])).rows[0];
+  t("education: a staff edit stays verified, is audited with old and new values, and refreshes the snapshot", spE.s === 200 && (await eduRows()).find((r) => r.id === sslc.id).st === "VERIFIED" && audE?.before?.percentage === "93" && audE?.after?.percentage === "94" && (await eduSec()).data.history.find((h) => h.level === "School").percentage === 94, JSON.stringify(audE));
+
   // --- 6. access control
   const b = await staff("POST", "/api/students/invitations", mk("B")); created.students.push(b.d.studentId);
   const lB = tokenOf((await staff("POST", `/api/students/${b.d.studentId}/invitation/link`)).d.link);
@@ -142,9 +208,14 @@ try {
   await anon("POST", "/api/invitations/accept", { token: lB, email: emailB, password: pw });
   const meB = client(await login(emailB, pw));
   t("access: another student cannot delete my documents", (await meB("DELETE", `/api/student/documents/${d10.d.id}`)).s === 404);
+  t("access: another student cannot change my qualification", (await meB("PUT", `/api/student/education/${sslc.id}`, eduBody({ percentage: 50 }))).s === 404);
   t("access: another student's list shows none of mine", (await meB("GET", "/api/student/documents")).d.length === 0 && (await meB("GET", "/api/student/education")).d.length === 0);
   t("access: a student cannot use staff verification", (await meB("POST", `/api/students/${idA}/onboarding/verify`, {})).s === 401 || (await meB("POST", `/api/students/${idA}/onboarding/verify`, {})).s === 403);
   t("access: student cannot read staff review data", [401, 403].includes((await meB("GET", `/api/students/${idA}/onboarding`)).s));
+  const beforeB = await rowA();
+  const bp = await meB("PUT", "/api/student/sections/PERSONAL", { data: { phone: "9000000001", city: "Elsewhere" }, submit: false });
+  t("access: a student's personal-details save only ever touches their own record", bp.s === 200 && JSON.stringify(await rowA()) === JSON.stringify(beforeB) && (await pgc.query(`select count(*)::int n from "StudentSection" where "studentId"=$1 and section='PERSONAL'`, [b.d.studentId])).rows[0].n === 1);
+  t("access: another student cannot approve personal details", [401, 403].includes((await meB("POST", `/api/students/${idA}/sections/PERSONAL/approve`, {})).s));
   t("access: staff cannot be used on the student onboarding api", [401, 403].includes((await staff("GET", "/api/student/onboarding")).s));
 
   // --- 7. expiry, resend, revoke

@@ -5,6 +5,7 @@ import { DownloadIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { toast } from "sonner"
 
 import { DocumentViewer } from "@/components/document-viewer"
+import { DocumentReading } from "@/components/document-reading"
 import { OptionSelect } from "@/components/option-select"
 import { ConfirmDelete } from "@/components/row-actions"
 import { Badge } from "@/components/ui/badge"
@@ -15,18 +16,19 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { DOC_CATEGORIES, EDUCATION_LEVELS } from "@/lib/academicConstants"
 import { api, toastError } from "@/lib/web/api"
-import { fmtDate, titleCase } from "@/lib/web/format"
+import { fmtDate, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
 type Edu = {
   id: string; level: string; qualification: string; specialisation: string | null; institution: string; boardOrUniversity: string | null; rollNo: string | null
   admissionYear: number | null; completionYear: number | null; percentage: string | number | null; cgpa: string | number | null
-  maxMarks: number | null; obtainedMarks: number | null; backlogs: number; status: string; isCurrent: boolean
+  maxMarks: number | null; obtainedMarks: number | null; backlogs: number; status: string; isCurrent: boolean; reviewStatus?: string; pendingData?: unknown
 }
-type Doc = { id: string; category: string; fileName: string; mimeType: string; sizeBytes: number; status: string; verifiedAt: string | null; rejectReason: string | null; createdAt: string; url: string | null; verifiedBy: { name: string } | null }
+type Doc = { id: string; category: string; fileName: string; mimeType: string; sizeBytes: number; status: string; verifiedAt: string | null; rejectReason: string | null; createdAt: string; url: string | null; verifiedBy: { name: string } | null; archivedAt?: string | null; archiveReason?: string | null; replacesId?: string | null }
 
 const LEVELS = EDUCATION_LEVELS.map((v) => ({ value: v, label: v }))
 const STATUSES = ["COMPLETED", "PURSUING", "DISCONTINUED"].map((v) => ({ value: v, label: titleCase(v) }))
@@ -62,6 +64,7 @@ export function EducationPanel({ studentId, canEdit }: { studentId: string; canE
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {r.isCurrent && <Badge>Current</Badge>}
+              {r.reviewStatus && <Badge variant={r.pendingData ? "secondary" : statusVariant(r.reviewStatus)}>{r.pendingData ? "Revision pending" : titleCase(r.reviewStatus)}</Badge>}
               <Badge variant="outline">{titleCase(r.status)}</Badge>
               {canEdit && <>
                 <Button variant="ghost" size="icon-sm" aria-label="Edit qualification" onClick={() => setEditing(r)}><PencilIcon /></Button>
@@ -149,6 +152,8 @@ const docVariant = (st: string) => (st === "VERIFIED" ? "default" : st === "REJE
 /** Academic documents with their own verification state. Staff can verify, reject, reopen, replace and remove them. */
 export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canEdit: boolean }) {
   const { data, loading, reload } = useApi<Doc[]>(`/api/students/${studentId}/documents`)
+  const [showHistory, setShowHistory] = React.useState(false)
+  const history = useApi<Doc[]>(showHistory ? `/api/students/${studentId}/documents?history=1` : null)
   const [cat, setCat] = React.useState("")
   const [busy, setBusy] = React.useState<string | null>(null)
   const [rejecting, setRejecting] = React.useState<Doc | null>(null)
@@ -158,9 +163,10 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
   const replaceFor = React.useRef<Doc | null>(null)
   const picker = React.useRef<HTMLInputElement>(null)
 
-  async function upload(file: File, category: string) {
+  async function upload(file: File, category: string, replaces?: string) {
     const fd = new FormData()
     fd.set("file", file); fd.set("category", category)
+    if (replaces) fd.set("replaces", replaces)
     await api(`/api/students/${studentId}/documents`, { method: "POST", body: fd })
   }
   async function onPick(file: File | undefined) {
@@ -171,14 +177,10 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
     if (!category) return toast.error("Choose a document category first")
     setBusy(old?.id ?? "new")
     try {
-      await upload(file, category)
-      // A replacement removes the old file only after the new one is safely stored. A verified original is reopened first.
-      if (old) {
-        if (old.status === "VERIFIED") await api(`/api/students/${studentId}/documents/${old.id}`, { method: "PATCH", body: { status: "PENDING" } })
-        await api(`/api/students/${studentId}/documents/${old.id}`, { method: "DELETE" })
-      }
-      toast.success(old ? "Document replaced" : "Document uploaded")
-      reload()
+      // The server archives the old version in the same step. The old file is kept as history, never deleted.
+      await upload(file, category, old?.id)
+      toast.success(old ? "Document replaced. The earlier version is kept in history" : "Document uploaded")
+      reload(); if (showHistory) history.reload()
     } catch (e) { toastError(e) } finally { setBusy(null) }
   }
   async function review(d: Doc, status: "VERIFIED" | "REJECTED" | "PENDING", rejectReason?: string) {
@@ -227,6 +229,7 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
               {d.status !== "VERIFIED" && <Button variant="ghost" size="sm" disabled={busy === d.id} onClick={() => setDeleting(d)}><Trash2Icon />Remove</Button>}
             </>}
           </div>
+          <DocumentReading docId={d.id} studentId={studentId} />
         </div>
       ))}
       <Dialog open={!!rejecting} onOpenChange={(o) => { if (!o) setRejecting(null) }}>
@@ -238,6 +241,54 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
       </Dialog>
       <DocumentViewer docs={(data ?? []).map((d) => ({ id: d.id, category: d.category, fileName: d.fileName, mimeType: d.mimeType, status: d.status, rejectReason: d.rejectReason, url: d.url }))} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} studentId={canEdit ? studentId : undefined} onChanged={reload} />
       <ConfirmDelete open={!!deleting} what={deleting ? deleting.fileName : "this document"} busy={busy === deleting?.id} onConfirm={remove} onClose={() => setDeleting(null)} />
+      <div className="flex flex-col gap-2">
+        <div><Button variant="ghost" size="sm" onClick={() => setShowHistory((v) => !v)}>{showHistory ? "Hide" : "Show"} removed and replaced versions</Button></div>
+        {showHistory && history.loading && !history.data && <Skeleton className="h-16 rounded-xl" />}
+        {showHistory && history.data && history.data.filter((d) => d.archivedAt).length === 0 && <p className="text-sm text-muted-foreground">No earlier versions.</p>}
+        {showHistory && history.data?.filter((d) => d.archivedAt).map((d) => (
+          <div key={d.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{catLabel(d.category)}</span>
+            <span className="min-w-0 truncate">{d.fileName} · uploaded {fmtDate(d.createdAt)} · {d.archiveReason === "REPLACED" ? "replaced" : "removed"} {fmtDate(d.archivedAt!)}</span>
+            <Badge variant={docVariant(d.status)}>{titleCase(d.status)}</Badge>
+            {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="ml-auto underline-offset-4 hover:underline">Open original</a>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+type StaffSemester = { id: string; semesterNumber: number; sgpa: number | null; resultStatus: string; reviewStatus: string; percentage: number | null; subjects: { name: string; code: string | null; marksObtained: number | null; maxMarks: number | null; grade: string | null; credits: number | null; gradePoints: number | null }[]; pending: unknown }
+type StaffBacklog = { id: string; subjectName: string; subjectCode: string | null; semesterNumber: number; status: string; attempts: { id: string; attemptNumber: number; examSession: string | null; outcome: string; clearedInSemester: number | null; reviewStatus: string }[] }
+
+/** Semester results and backlog history as the student entered them, with each record's review state. They are reviewed with the Academics section. */
+export function AcademicRecordsPanel({ studentId }: { studentId: string }) {
+  const { data, loading } = useApi<{ semesters: StaffSemester[]; backlogs: StaffBacklog[] }>(`/api/students/${studentId}/academic-records`)
+  if (loading && !data) return <Skeleton className="h-40 rounded-xl" />
+  if (!data) return null
+  return (
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-medium">Semester results</h3>
+      {data.semesters.length === 0 && <p className="rounded-xl border border-dashed py-6 text-center text-sm text-muted-foreground">No semester results entered.</p>}
+      {data.semesters.map((m) => (
+        <div key={m.id} className="flex flex-col gap-2 rounded-xl border p-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Semester {m.semesterNumber}</span>
+            <Badge variant={m.pending ? "secondary" : statusVariant(m.reviewStatus)}>{m.pending ? "Revision pending" : titleCase(m.reviewStatus)}</Badge>
+            <span className="text-muted-foreground">{[m.sgpa != null ? `SGPA ${m.sgpa}` : null, titleCase(m.resultStatus), m.percentage != null ? `${m.percentage}%` : null].filter(Boolean).join(" · ")}</span></div>
+          {m.subjects.length > 0 && (
+            <Table><TableHeader><TableRow><TableHead>Subject</TableHead><TableHead>Marks</TableHead><TableHead>Grade</TableHead><TableHead>Credits</TableHead></TableRow></TableHeader>
+              <TableBody>{m.subjects.map((x) => <TableRow key={x.name + (x.code ?? "")}><TableCell>{x.name}{x.code ? ` (${x.code})` : ""}</TableCell><TableCell>{x.marksObtained}/{x.maxMarks}</TableCell><TableCell>{x.grade ?? "—"}{x.gradePoints != null ? ` · ${x.gradePoints}` : ""}</TableCell><TableCell>{x.credits ?? "—"}</TableCell></TableRow>)}</TableBody></Table>
+          )}
+        </div>
+      ))}
+      <h3 className="pt-2 text-sm font-medium">Backlog history</h3>
+      {data.backlogs.length === 0 && <p className="rounded-xl border border-dashed py-6 text-center text-sm text-muted-foreground">No backlogs listed.</p>}
+      {data.backlogs.map((b) => (
+        <div key={b.id} className="flex flex-col gap-1 rounded-xl border p-3 text-sm">
+          <div className="font-medium">{b.subjectName}{b.subjectCode ? ` (${b.subjectCode})` : ""} <span className="font-normal text-muted-foreground">· semester {b.semesterNumber}</span> <Badge variant={b.status === "CLEARED" ? "default" : "destructive"}>{titleCase(b.status)}</Badge></div>
+          <ol className="text-xs text-muted-foreground">{b.attempts.map((a) => <li key={a.id}>Attempt {a.attemptNumber}{a.examSession ? ` (${a.examSession})` : ""}: {a.outcome === "CLEARED" ? `cleared in semester ${a.clearedInSemester}` : "not cleared"} <Badge variant={statusVariant(a.reviewStatus)}>{titleCase(a.reviewStatus)}</Badge></li>)}</ol>
+        </div>
+      ))}
     </div>
   )
 }

@@ -13,11 +13,13 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { EDUCATION_LEVELS } from "@/lib/academicConstants"
 import { api, toastError } from "@/lib/web/api"
-import { titleCase } from "@/lib/web/format"
+import { statusVariant, titleCase } from "@/lib/web/format"
 
 export type Edu = {
   id: string; level: string; qualification: string; specialisation: string | null; institution: string; boardOrUniversity: string | null; admissionYear: number | null; completionYear: number | null
   percentage: number | null; cgpa: number | null; backlogs: number; status: string
+  /** Present on records that go through staff review (the profile page); the onboarding wizard does not use them. */
+  reviewStatus?: string; reviewComment?: string | null; pendingData?: Record<string, unknown> | null
 }
 const blank = { level: "", qualification: "", specialisation: "", institution: "", boardOrUniversity: "", admissionYear: "", completionYear: "", percentage: "", cgpa: "", backlogs: "0", status: "COMPLETED" }
 const num = (v: string) => (v.trim() === "" ? null : Number(v))
@@ -26,7 +28,7 @@ const STATUS = ["COMPLETED", "PURSUING", "DISCONTINUED"].map((v) => ({ value: v,
 const SUGGEST: Record<string, string> = { School: "SSLC / 10th", "Higher Secondary": "PUC / 12th", Diploma: "Diploma", Undergraduate: "Bachelor's degree" }
 
 /** Previous qualifications. The programme the institution assigned is shown on step 1 and is not listed here. */
-export function EducationStep({ items, editable, onChanged }: { items: Edu[]; editable: boolean; onChanged: () => void }) {
+export function EducationStep({ items, editable, onChanged, showStatus = false }: { items: Edu[]; editable: boolean; onChanged: () => void; showStatus?: boolean }) {
   const [editing, setEditing] = React.useState<Edu | "new" | null>(null)
   async function remove(e: Edu) {
     try { await api(`/api/student/education/${e.id}`, { method: "DELETE" }); toast.success("Removed"); onChanged() } catch (x) { toastError(x) }
@@ -35,14 +37,15 @@ export function EducationStep({ items, editable, onChanged }: { items: Edu[]; ed
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">Add every school, college or diploma you completed before this programme, for example SSLC, PUC / 12th and your undergraduate degree. Add each one separately.</p>
       {items.length === 0 && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Nothing added yet.</p>}
-      {items.map((e) => (
+      {(showStatus ? items.map((e) => (e.pendingData ? ({ ...e, ...e.pendingData } as Edu) : e)) : items).map((e) => (
         <div key={e.id} className="flex flex-wrap items-start gap-3 rounded-lg border p-3 text-sm">
           <div className="min-w-0 flex-1">
-            <div className="font-medium">{e.qualification}{e.specialisation ? `, ${e.specialisation}` : ""} <Badge variant="outline" className="ml-1">{e.level}</Badge></div>
+            <div className="font-medium">{e.qualification}{e.specialisation ? `, ${e.specialisation}` : ""} <Badge variant="outline" className="ml-1">{e.level}</Badge>{showStatus && e.reviewStatus && e.reviewStatus !== "DRAFT" && <Badge variant={e.pendingData ? "secondary" : statusVariant(e.reviewStatus)} className="ml-1">{e.pendingData ? "Revision pending" : titleCase(e.reviewStatus)}</Badge>}</div>
             <div className="text-muted-foreground">{e.institution}{e.boardOrUniversity ? ` · ${e.boardOrUniversity}` : ""}</div>
             <div className="text-muted-foreground">{[e.admissionYear && e.completionYear ? `${e.admissionYear}–${e.completionYear}` : e.completionYear, e.percentage != null ? `${e.percentage}%` : null, e.cgpa != null ? `CGPA ${e.cgpa}` : null, e.backlogs ? `${e.backlogs} backlog${e.backlogs > 1 ? "s" : ""}` : null, titleCase(e.status)].filter(Boolean).join(" · ")}</div>
           </div>
-          {editable && <div className="flex gap-1"><Button size="icon-sm" variant="ghost" aria-label="Edit qualification" onClick={() => setEditing(e)}><PencilIcon /></Button><Button size="icon-sm" variant="ghost" aria-label="Remove qualification" onClick={() => remove(e)}><Trash2Icon /></Button></div>}
+          {showStatus && e.reviewComment && (e.reviewStatus === "CHANGES_REQUESTED" || e.pendingData) && <p className="basis-full text-xs text-destructive">{e.reviewComment}</p>}
+          {editable && <div className="flex gap-1"><Button size="icon-sm" variant="ghost" aria-label="Edit qualification" onClick={() => setEditing(e)}><PencilIcon /></Button>{!(showStatus && (e.reviewStatus === "VERIFIED" || e.reviewStatus === "SUBMITTED")) && <Button size="icon-sm" variant="ghost" aria-label="Remove qualification" onClick={() => remove(e)}><Trash2Icon /></Button>}</div>}
         </div>
       ))}
       {editable && <div><Button type="button" variant="outline" onClick={() => setEditing("new")}><PlusIcon />Add qualification</Button></div>}

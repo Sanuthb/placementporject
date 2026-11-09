@@ -3,8 +3,8 @@ import { route } from "@/lib/api/handler";
 import { parseBody } from "@/lib/api/parse";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
-import { ProfileSection } from "@/generated/prisma/client";
 import { DEFAULT_DECLARATION } from "@/lib/invitations/wizard";
+import { DEFAULT_REQUIRED_SECTIONS } from "@/lib/verification";
 
 const patch = z.object({ inviteExpiryDays: z.number().int().min(1).max(60).optional(), dataDeclaration: z.string().trim().max(2000).nullable().optional() });
 
@@ -19,7 +19,7 @@ export const PATCH = route({ roles: ["TPO_ADMIN"] }, async (req, s) => {
   const row = await db.$transaction(async (tx) => {
     const r = await tx.collegeSettings.upsert({
       where: { collegeId: s.collegeId }, update: data,
-      create: { collegeId: s.collegeId, ...data, approvalRequired: [], requiredSections: Object.values(ProfileSection) },
+      create: { collegeId: s.collegeId, ...data, approvalRequired: [], requiredSections: DEFAULT_REQUIRED_SECTIONS },
       select: { inviteExpiryDays: true, dataDeclaration: true },
     });
     await audit(s, { action: "settings.invitations.update", entity: "CollegeSettings", entityId: s.collegeId, after: data }, tx);

@@ -51,9 +51,9 @@ const num = (v: unknown) => (v == null ? null : Number(v));
 // A qualification is recognised from its level (the wizard's choices are "School" and "Higher Secondary") or from what the student typed.
 type Named = { level: string; qualification?: string }
 const text10 = /\b(10|10th|x|sslc|ssc|matric|matriculation)\b/i, text12 = /\b(12|12th|xii|puc|hsc|plus\s*two|intermediate)\b/i
-const is10 = (e: Named) => e.level === "School" || text10.test(e.level) || text10.test(e.qualification ?? "")
-const is12 = (e: Named) => !is10(e) && (e.level === "Higher Secondary" || text12.test(e.level) || text12.test(e.qualification ?? ""))
-const isDiploma = (e: Named) => /diploma/i.test(e.level) || /diploma/i.test(e.qualification ?? "")
+export const is10 = (e: Named) => e.level === "School" || text10.test(e.level) || text10.test(e.qualification ?? "")
+export const is12 = (e: Named) => !is10(e) && (e.level === "Higher Secondary" || text12.test(e.level) || text12.test(e.qualification ?? ""))
+export const isDiploma = (e: Named) => /diploma/i.test(e.level) || /diploma/i.test(e.qualification ?? "")
 
 /** A record's percentage, or worked out from marks. */
 export function percentOf(e: Pick<Edu, "percentage" | "obtainedMarks" | "maxMarks">): number | null {

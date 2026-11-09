@@ -45,6 +45,8 @@ enum ProfileSection {
   INTERNSHIPS
   RESUME
   DOCUMENTS
+  /// Optional by default: a college can make it required in settings.
+  ACHIEVEMENTS
 }
 
 enum InviteStatus {
@@ -469,6 +471,8 @@ model CollegeSettings {
   shareRoundScores           Boolean          @default(false)
   inviteExpiryDays           Int              @default(7)
   requireMfaForAdmins        Boolean          @default(false)
+  /// Lets students and staff send an uploaded marksheet to the AI provider to read it. Off until an admin switches it on.
+  aiDocumentReading          Boolean          @default(false)
   dataDeclaration            String?
   approvalRequired           ApprovalAction[]
   updatedAt                  DateTime         @updatedAt
@@ -582,6 +586,7 @@ model Semester {
   academicYear AcademicYear?        @relation(fields: [academicYearId], references: [id])
   studentsNow  Student[]
   progression  StudentProgression[]
+  results      SemesterResult[]
 
   @@unique([batchId, number])
   @@index([collegeId])
@@ -729,6 +734,8 @@ model Student {
   currentSemester       Semester?                   @relation(fields: [currentSemesterId], references: [id])
   currentAcademicYear   AcademicYear?               @relation(fields: [currentAcademicYearId], references: [id])
   educationRecords      StudentEducationRecord[]
+  semesterResults       SemesterResult[]
+  backlogs              Backlog[]
   documents             StudentDocument[]
   progression           StudentProgression[]
   sections              StudentSection[]
@@ -1973,12 +1980,111 @@ model StudentEducationRecord {
   backlogs          Int             @default(0)
   status            EducationStatus @default(COMPLETED)
   isCurrent         Boolean         @default(false)
+  // Review state, moved together with the student's EDUCATION_HISTORY section. An edit to a verified record waits in `pendingData`.
+  reviewStatus      SectionStatus   @default(DRAFT)
+  reviewComment     String?
+  pendingData       Json?
+  verifiedAt        DateTime?
+  verifiedById      String?         @db.Uuid
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([collegeId, studentId])
+}
+
+enum ResultStatus {
+  PASS
+  FAIL
+  WITHHELD
+  ONGOING
+}
+
+enum AttemptOutcome {
+  FAILED
+  CLEARED
+}
+
+/// One semester of the degree. Moves through review with the student's ACADEMICS section. The percentage is never stored: it is worked out from the subject marks.
+model SemesterResult {
+  id             String        @id @default(uuid()) @db.Uuid
+  collegeId      String        @db.Uuid
+  studentId      String        @db.Uuid
+  // The M2 semester this result belongs to, when the student's batch has one with this number.
+  semesterId     String?       @db.Uuid
+  semesterNumber Int
+  sgpa           Decimal?      @db.Decimal(4, 2)
+  resultStatus   ResultStatus  @default(PASS)
+  reviewStatus   SectionStatus @default(DRAFT)
+  reviewComment  String?
+  // A proposed change to a verified semester (same shape as the input). Applied only when staff approve.
+  pendingData    Json?
+  verifiedAt     DateTime?
+  verifiedById   String?       @db.Uuid
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  student  Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semester Semester?     @relation(fields: [semesterId], references: [id])
+  subjects SubjectMark[]
+
+  @@unique([studentId, semesterNumber])
+  @@index([collegeId, studentId])
+}
+
+model SubjectMark {
+  id               String   @id @default(uuid()) @db.Uuid
+  collegeId        String   @db.Uuid
+  semesterResultId String   @db.Uuid
+  code             String?
+  name             String
+  marksObtained    Decimal  @db.Decimal(7, 2)
+  maxMarks         Decimal  @db.Decimal(7, 2)
+  credits          Decimal? @db.Decimal(4, 1)
+  grade            String?
+  gradePoints      Decimal? @db.Decimal(4, 2)
+
+  semesterResult SemesterResult @relation(fields: [semesterResultId], references: [id], onDelete: Cascade)
+
+  @@index([semesterResultId])
+}
+
+/// A subject the student has failed. Attempts are only ever added: clearing the subject adds a CLEARED attempt, it never erases the earlier ones.
+model Backlog {
+  id             String   @id @default(uuid()) @db.Uuid
+  collegeId      String   @db.Uuid
+  studentId      String   @db.Uuid
+  subjectName    String
+  subjectCode    String?
+  semesterNumber Int
+  createdAt      DateTime @default(now())
+
+  student  Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attempts BacklogAttempt[]
+
+  @@unique([studentId, semesterNumber, subjectName])
+  @@index([collegeId, studentId])
+}
+
+model BacklogAttempt {
+  id                String         @id @default(uuid()) @db.Uuid
+  collegeId         String         @db.Uuid
+  backlogId         String         @db.Uuid
+  attemptNumber     Int
+  examSession       String?
+  marksObtained     Decimal?       @db.Decimal(7, 2)
+  outcome           AttemptOutcome
+  clearedInSemester Int?
+  reviewStatus      SectionStatus  @default(DRAFT)
+  reviewComment     String?
+  verifiedAt        DateTime?
+  verifiedById      String?        @db.Uuid
+  createdAt         DateTime       @default(now())
+
+  backlog Backlog @relation(fields: [backlogId], references: [id], onDelete: Cascade)
+
+  @@unique([backlogId, attemptNumber])
 }
 
 /// A single uploaded academic document with its own verification state.
@@ -1996,12 +2102,51 @@ model StudentDocument {
   verifiedAt   DateTime?
   rejectReason String?
   createdAt    DateTime        @default(now())
+  /// SHA-256 of the file bytes: stops the same file being uploaded twice and proves a replacement really differs.
+  sha256        String?
+  /// The document this one replaced. The older file is kept, archived, and never removed from storage.
+  replacesId    String?         @db.Uuid
+  /// Set when the document is removed or replaced. Archived rows stay for history and audit; every live view filters them out.
+  archivedAt    DateTime?
+  archivedById  String?         @db.Uuid
+  archiveReason String?
 
-  student    Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  verifiedBy User?   @relation(fields: [verifiedById], references: [id])
+  student     Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  verifiedBy  User?                @relation(fields: [verifiedById], references: [id])
+  extractions DocumentExtraction[]
 
   @@index([collegeId, studentId])
   @@index([collegeId, status])
+  @@index([studentId, sha256])
+}
+
+enum ExtractionStatus {
+  DONE
+  FAILED
+}
+
+/// What the AI read from one document, and the suggestions made from it. Never verifies anything: a suggestion only fills the student's draft
+/// when the student accepts it, and staff still check the document by eye. Rows are kept (newest wins) for audit.
+model DocumentExtraction {
+  id            String           @id @default(uuid()) @db.Uuid
+  collegeId     String           @db.Uuid
+  studentId     String           @db.Uuid
+  documentId    String           @db.Uuid
+  status        ExtractionStatus
+  model         String
+  /// The fields as read, after validation. Null when the read failed.
+  fields        Json?
+  /// Comparisons with the student's records: [{ key, kind, label, current, suggested, state }].
+  suggestions   Json             @default("[]")
+  error         String?
+  /// Null when the student asked for the read.
+  requestedById String?          @db.Uuid
+  createdAt     DateTime         @default(now())
+
+  document StudentDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, createdAt])
+  @@index([collegeId, studentId])
 }
 
 /// History of a student moving through semesters. Rows are only added, never overwritten.

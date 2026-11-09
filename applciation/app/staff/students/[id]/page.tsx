@@ -9,7 +9,7 @@ import { OptionSelect } from "@/components/option-select"
 import { StudentIntelligence } from "@/components/student-intelligence"
 import { OnboardingReview } from "@/components/onboarding-review"
 import { VerificationHistory } from "@/components/staff-extras"
-import { DocumentsPanel, EducationPanel } from "@/components/student-academic"
+import { AcademicRecordsPanel, DocumentsPanel, EducationPanel } from "@/components/student-academic"
 import { ProgressionPanel } from "@/components/student-progression"
 import { SectionReview } from "@/components/section-review"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -120,7 +120,7 @@ export default function StudentPage() {
 
         <TabsContent value="onboarding"><OnboardingReview studentId={id} name={p.name} canAct onChanged={full.reload} /></TabsContent>
         <TabsContent value="intelligence">{tab === "intelligence" && <StudentIntelligence studentId={id} />}</TabsContent>
-        <TabsContent value="education"><EducationPanel studentId={id} canEdit={canEdit} /></TabsContent>
+        <TabsContent value="education"><div className="flex flex-col gap-6"><EducationPanel studentId={id} canEdit={canEdit} /><AcademicRecordsPanel studentId={id} /></div></TabsContent>
         <TabsContent value="documents"><DocumentsPanel studentId={id} canEdit={canEdit} /></TabsContent>
         <TabsContent value="progression"><ProgressionPanel studentId={id} canEdit={canEdit} isAdmin={state.status === "ready" && hasRole(state.profile, "TPO_ADMIN")} /></TabsContent>
 

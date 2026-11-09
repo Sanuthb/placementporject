@@ -29,7 +29,7 @@ export async function gatherEvidence(collegeId: string, studentId: string): Prom
       department: { select: { name: true } }, program: { select: { name: true } }, batch: { select: { name: true, endYear: true } },
       sections: { select: { section: true, status: true, data: true, pendingData: true } },
       educationRecords: { select: { level: true, qualification: true, percentage: true, cgpa: true, backlogs: true, status: true } },
-      documents: { select: { status: true } },
+      documents: { where: { archivedAt: null }, select: { status: true } },
       psychAttempt: { select: { scores: true, completedAt: true } },
       mockInterviews: { where: { status: "COMPLETED" }, select: { role: true, feedback: true } },
       assessmentAttempts: { where: { status: { not: "IN_PROGRESS" }, score: { not: null } }, select: { score: true, maxScore: true, schedule: { select: { title: true } } }, orderBy: { submittedAt: "desc" }, take: 20 },

@@ -174,7 +174,7 @@ function RevokeDialog({ open, studentId, name, onClose, onChanged }: { open: boo
   )
 }
 
-const SECTION_CHOICES = [["PERSONAL", "Personal"], ["ACADEMICS", "Academic marks"], ["EDUCATION_HISTORY", "Education history"], ["SKILLS", "Skills"], ["PROJECTS", "Projects"], ["INTERNSHIPS", "Internships"], ["RESUME", "Summary"], ["DOCUMENTS", "Documents"]] as const
+const SECTION_CHOICES = [["PERSONAL", "Personal"], ["ACADEMICS", "Academic marks"], ["EDUCATION_HISTORY", "Education history"], ["SKILLS", "Skills"], ["PROJECTS", "Projects"], ["INTERNSHIPS", "Internships"], ["RESUME", "Summary"], ["DOCUMENTS", "Documents"], ["ACHIEVEMENTS", "Achievements"]] as const
 
 function CorrectionsDialog({ open, studentId, name, onClose, onChanged }: { open: boolean; studentId: string; name: string; onClose: () => void; onChanged: () => void }) {
   const [comment, setComment] = React.useState("")

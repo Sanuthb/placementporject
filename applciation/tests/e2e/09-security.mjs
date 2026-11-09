@@ -22,7 +22,7 @@ t("bad token is a clean 401", (await fetch(B + "/api/students", { headers: { aut
 
 // --- CORS
 const ok = await fetch(B + "/api/health", { headers: { origin: "http://localhost:5173" } });
-t("allowed origin gets CORS headers", ok.headers.get("access-control-allow-origin") === "http://localhost:5173" && ok.headers.get("vary") === "Origin");
+t("allowed origin gets CORS headers", ok.headers.get("access-control-allow-origin") === "http://localhost:5173" && /(^|,\s*)Origin(\s*,|$)/.test(ok.headers.get("vary") ?? "")); // Next adds its own Vary values (rsc, ...) after Origin, so check that Origin is listed
 const evil = await fetch(B + "/api/health", { headers: { origin: "https://evil.example" } });
 t("unknown origin gets none", !evil.headers.get("access-control-allow-origin"));
 const pre = await fetch(B + "/api/students", { method: "OPTIONS", headers: { origin: "http://localhost:5173", "access-control-request-method": "POST" } });

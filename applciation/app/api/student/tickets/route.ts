@@ -6,7 +6,7 @@ import { createTicket, ticketInput } from "@/lib/tickets";
 
 const create = z.object({
   category: z.enum(["DATA_CORRECTION", "APPLICATION_ISSUE", "OTHER"]), subject: z.string().trim().min(3).max(200), message: z.string().trim().min(3).max(5000),
-  section: z.enum(["PERSONAL", "ACADEMICS", "EDUCATION_HISTORY", "SKILLS", "PROJECTS", "INTERNSHIPS", "RESUME", "DOCUMENTS"]).optional(), data: z.record(z.string(), z.unknown()).optional(),
+  section: z.enum(["PERSONAL", "ACADEMICS", "EDUCATION_HISTORY", "SKILLS", "PROJECTS", "INTERNSHIPS", "RESUME", "DOCUMENTS", "ACHIEVEMENTS"]).optional(), data: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const GET = studentRoute({}, (_req, me) =>

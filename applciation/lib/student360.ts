@@ -3,6 +3,7 @@ import { notFound } from "@/lib/api/errors";
 import { departmentScope, type Session } from "@/lib/auth/session";
 import { listOf } from "@/lib/resume";
 import { ProfileSection, type ModuleKey } from "@/generated/prisma/client";
+import { completionOf } from "@/lib/profileCompletionLoad";
 
 type Academics = { cgpa?: number; tenthPercentage?: number; twelfthPercentage?: number; activeBacklogs?: number; semesters?: Record<string, unknown>[]; backlogHistory?: unknown[] };
 
@@ -38,6 +39,7 @@ export async function student360(s: Session, id: string) {
     academics: acad ? { verified: acad.status === "VERIFIED", ...(acad.data as Academics), pendingRevision: !!acad.pendingData } : null,
     documents: sections.flatMap((x) => x.documents.map((d) => ({ ...d, section: x.section }))),
     resume: resume ? { status: resume.status, data: resume.data } : null,
+    completion: await completionOf(s.collegeId, id),
   };
 
   if (mods.has("DRIVES")) {
@@ -131,17 +133,15 @@ export async function studentAnalysis(s: Session, id: string) {
     ? (await db.assessmentAttempt.findMany({ where: { studentId: id, status: { not: "IN_PROGRESS" }, score: { not: null } }, select: { score: true, maxScore: true, submittedAt: true, schedule: { select: { title: true, isBaseline: true } } }, orderBy: { submittedAt: "desc" }, take: 20 }))
         .map((a) => ({ title: a.schedule.title, isBaseline: a.schedule.isBaseline, percent: Number(a.maxScore) ? Math.round((Number(a.score) / Number(a.maxScore)) * 1000) / 10 : 0, at: a.submittedAt }))
     : null;
-  const [attendance, rejections, settings, apps] = await Promise.all([
+  const [attendance, rejections, apps] = await Promise.all([
     mods.has("ATTENDANCE_BLOCKING") ? db.attendanceRecord.findMany({ where: { studentId: id }, select: { status: true, excused: true } }) : Promise.resolve([]),
     db.roundResult.findMany({ where: { status: "REJECTED", application: { studentId: id } }, select: { round: { select: { type: true } }, applicationId: true } }),
-    db.collegeSettings.findUnique({ where: { collegeId: s.collegeId }, select: { requiredSections: true } }),
     db.application.count({ where: { studentId: id } }),
   ]);
   const present = attendance.filter((a) => a.status === "PRESENT").length, unexcused = attendance.filter((a) => a.status === "ABSENT" && !a.excused).length;
   const byType = new Map<string, Set<string>>();
   for (const r of rejections) (byType.get(r.round.type) ?? byType.set(r.round.type, new Set()).get(r.round.type)!).add(r.applicationId);
-  const required = settings?.requiredSections?.length ? settings.requiredSections : Object.values(ProfileSection);
-  const unfilled = required.filter((r) => { const x = sections.find((y) => y.section === r); return !x || x.status === "DRAFT" || x.status === "CHANGES_REQUESTED"; });
+  const unfilled = (await completionOf(s.collegeId, id)).missing.map((m) => m.label.toLowerCase());
   const skills = listOf(sections.find((x) => x.section === "SKILLS" && x.status === "VERIFIED")?.data, "skills");
 
   return {
@@ -165,7 +165,7 @@ export async function studentAnalysis(s: Session, id: string) {
         ...(attendance.length >= 3 && present / attendance.length < 0.5 ? [{ flag: "LOW_DRIVE_ATTENDANCE", detail: `Attended ${present} of ${attendance.length} sessions` }] : []),
         ...(unexcused >= 2 ? [{ flag: "REPEATED_ABSENCES", detail: `${unexcused} unexcused absences` }] : []),
         ...[...byType.entries()].filter(([, apps]) => apps.size >= 2).map(([type, apps]) => ({ flag: "REPEATED_REJECTION", detail: `Rejected at ${type.toLowerCase().replace("_", " ")} round in ${apps.size} drives` })),
-        ...(unfilled.length ? [{ flag: "UNFILLED_SECTIONS", detail: `Not yet submitted: ${unfilled.map((u) => u.toLowerCase().replace("_", " ")).join(", ")}` }] : []),
+        ...(unfilled.length ? [{ flag: "UNFILLED_SECTIONS", detail: `Still to do: ${unfilled.join(", ")}` }] : []),
       ],
     },
   };

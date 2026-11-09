@@ -50,7 +50,9 @@ export const educationInput = z
     isCurrent: z.boolean().default(false),
   })
   .refine((v) => v.obtainedMarks == null || v.maxMarks == null || v.obtainedMarks <= v.maxMarks, { message: "Obtained marks cannot exceed maximum marks", path: ["obtainedMarks"] })
-  .refine((v) => v.admissionYear == null || v.completionYear == null || v.completionYear >= v.admissionYear, { message: "Completion year cannot be before the admission year", path: ["completionYear"] });
+  .refine((v) => v.admissionYear == null || v.completionYear == null || v.completionYear >= v.admissionYear, { message: "Completion year cannot be before the admission year", path: ["completionYear"] })
+  // A percentage is derived from marks, so when both are given they must agree (otherwise it is two different facts).
+  .refine((v) => v.percentage == null || v.obtainedMarks == null || !v.maxMarks || Math.abs((v.obtainedMarks / v.maxMarks) * 100 - v.percentage) <= 0.5, { message: "The percentage does not match the marks entered", path: ["percentage"] });
 
 export const universityBase = z.object({
   name: z.string().trim().min(2).max(200),

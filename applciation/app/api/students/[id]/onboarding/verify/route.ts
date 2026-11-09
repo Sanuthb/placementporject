@@ -31,7 +31,7 @@ export const POST = route<{ id: string }>({ module: "ONBOARDING" }, async (req, 
       await audit(s, { action: "student.name.review", entity: "Student", entityId: id, before: { name: st.name }, after: { decision: b.nameDecision, name: b.nameDecision === "accept" ? proposed : st.name } }, tx);
     }
 
-    const open = await tx.studentDocument.count({ where: { studentId: id, status: { in: ["PENDING", "REJECTED"] } } });
+    const open = await tx.studentDocument.count({ where: { studentId: id, status: { in: ["PENDING", "REJECTED"] }, archivedAt: null } });
     if (open) throw new ApiError(409, "DOCUMENTS_OPEN", `${open} document${open > 1 ? "s are" : " is"} still waiting for review or rejected. Verify or resolve them first`);
 
     const sections = await tx.studentSection.findMany({ where: { studentId: id, status: "SUBMITTED" }, select: { id: true } });

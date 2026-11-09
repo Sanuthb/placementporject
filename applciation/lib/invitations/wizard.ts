@@ -11,11 +11,11 @@ export async function loadWizard(studentId: string, collegeId: string) {
     where: { id: studentId },
     include: {
       college: { select: { name: true, logoUrl: true, brandColor: true } },
-      campus: { select: { name: true } }, department: { select: { name: true } }, program: { select: { name: true } }, branch: { select: { name: true } }, batch: { select: { name: true, endYear: true } },
+      campus: { select: { name: true } }, department: { select: { name: true } }, program: { select: { name: true } }, branch: { select: { name: true } }, batch: { select: { name: true, endYear: true } }, currentAcademicYear: { select: { name: true } }, currentSemester: { select: { name: true } },
       invitation: { select: { invitedEmail: true, admissionYear: true, graduationYear: true } },
       onboardingProfile: true,
       educationRecords: { orderBy: [{ completionYear: "asc" }, { createdAt: "asc" }] },
-      documents: { orderBy: { createdAt: "desc" } },
+      documents: { where: { archivedAt: null }, orderBy: { createdAt: "desc" } },
       sections: { select: { section: true, status: true, reviewComment: true } },
       correctionRequests: { orderBy: { createdAt: "desc" }, take: 20 },
     },
@@ -43,7 +43,7 @@ export async function loadWizard(studentId: string, collegeId: string) {
     institution: st.college,
     assigned: {
       institution: st.college.name, campus: st.campus?.name ?? null, department: st.department.name, programme: st.program?.name ?? null, branch: st.branch?.name ?? null,
-      admissionNumber: st.enrollmentNo, admissionYear: st.invitation?.admissionYear ?? st.admissionYear, batch: st.batch.name, graduationYear: st.invitation?.graduationYear ?? st.batch.endYear,
+      academicYear: st.currentAcademicYear?.name ?? null, semester: st.currentSemester?.name ?? null, admissionNumber: st.enrollmentNo, admissionYear: st.invitation?.admissionYear ?? st.admissionYear, batch: st.batch.name, graduationYear: st.invitation?.graduationYear ?? st.batch.endYear,
       invitedName: st.name, invitedEmail: st.invitation?.invitedEmail ?? st.email,
     },
     personal, academics, career, education, documents,

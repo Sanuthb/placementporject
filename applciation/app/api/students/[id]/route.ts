@@ -82,7 +82,7 @@ export const PATCH = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFF
       });
     }
     const action = data.isActive === false ? "student.deactivate" : data.isActive === true && !before.isActive ? "student.reactivate" : "student.update";
-    await audit(s, { action, entity: "Student", entityId: id, before: { name: before.name, departmentId: before.departmentId, batchId: before.batchId, programId: before.programId, isActive: before.isActive, isArchived: before.isArchived }, after: { ...fields, ...mapped } as object }, tx);
+    await audit(s, { action, entity: "Student", entityId: id, before: { name: before.name, departmentId: before.departmentId, batchId: before.batchId, programId: before.programId, isActive: before.isActive, isArchived: before.isArchived, phone: before.phone, gender: before.gender, address: before.address, dateOfBirth: before.dateOfBirth ? before.dateOfBirth.toISOString().slice(0, 10) : null }, after: { ...fields, ...mapped } as object }, tx);
     return a;
   });
 

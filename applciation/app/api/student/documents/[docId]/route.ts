@@ -1,21 +1,15 @@
 import { studentRoute } from "@/lib/api/studentHandler";
 import { badRequest, notFound } from "@/lib/api/errors";
 import { db } from "@/lib/db";
-import { audit } from "@/lib/audit";
-import { supabaseAdmin } from "@/lib/supabase-admin";
 import { assertEditable } from "@/lib/invitations/guard";
-import { BUCKET } from "@/lib/invitations/wizard";
+import { archiveDocument, live } from "@/lib/documentStore";
 
-/** Remove one of my documents. Only my own, and not once staff have verified it. */
+/** Remove one of my documents from my file. Only my own, and not once staff have verified it (replace it instead). The file itself is kept. */
 export const DELETE = studentRoute<{ docId: string }>({ module: "ONBOARDING" }, async (_req, me, { docId }) => {
   await assertEditable(me.studentId);
-  const d = await db.studentDocument.findFirst({ where: { id: docId, studentId: me.studentId } });
+  const d = await db.studentDocument.findFirst({ where: { id: docId, studentId: me.studentId, ...live } });
   if (!d) throw notFound("Document not found");
-  if (d.status === "VERIFIED") throw badRequest("This document has been verified and cannot be removed");
-  await db.$transaction(async (tx) => {
-    await tx.studentDocument.delete({ where: { id: docId } });
-    await audit({ collegeId: me.collegeId, userId: null }, { action: "student.document.delete", entity: "Student", entityId: me.studentId, before: { category: d.category, fileName: d.fileName } }, tx);
-  });
-  await supabaseAdmin().storage.from(BUCKET).remove([d.storagePath]);
+  if (d.status === "VERIFIED") throw badRequest("This document has been verified and cannot be removed. Upload a replacement instead");
+  await archiveDocument({ ctx: { collegeId: me.collegeId, userId: null }, studentId: me.studentId, docId });
   return { deleted: true };
 });

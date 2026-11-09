@@ -62,7 +62,7 @@ export function studentWhere(s: Session, f: StudentFilter): Prisma.StudentWhereI
     isActive: f.isActive,
     isArchived: f.isArchived,
     ...(Object.keys(batch).length ? { batch } : {}),
-    ...(f.docStatus ? { documents: { some: { status: f.docStatus } } } : {}),
+    ...(f.docStatus ? { documents: { some: { status: f.docStatus, archivedAt: null } } } : {}),
     ...(f.q ? { OR: [{ name: { contains: f.q, mode: "insensitive" } }, { enrollmentNo: { contains: f.q, mode: "insensitive" } }, { email: { contains: f.q, mode: "insensitive" } }] } : {}),
   };
 }

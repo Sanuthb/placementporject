@@ -1,6 +1,7 @@
 import { studentRoute } from "@/lib/api/studentHandler";
 import { db } from "@/lib/db";
 import { ProfileSection } from "@/generated/prisma/client";
+import { DEFAULT_REQUIRED_SECTIONS } from "@/lib/verification";
 
 /** My profile sections and where each stands (draft, submitted, changes requested, verified). */
 export const GET = studentRoute({ module: "ONBOARDING" }, async (_req, me) => {
@@ -9,7 +10,7 @@ export const GET = studentRoute({ module: "ONBOARDING" }, async (_req, me) => {
     db.student.findUniqueOrThrow({ where: { id: me.studentId }, select: { stage: true } }),
     db.collegeSettings.findUnique({ where: { collegeId: me.collegeId }, select: { requiredSections: true } }),
   ]);
-  const required = new Set(settings?.requiredSections?.length ? settings.requiredSections : Object.values(ProfileSection));
+  const required = new Set(settings?.requiredSections?.length ? settings.requiredSections : DEFAULT_REQUIRED_SECTIONS);
   return {
     stage: st.stage,
     sections: Object.values(ProfileSection).map((section) => {

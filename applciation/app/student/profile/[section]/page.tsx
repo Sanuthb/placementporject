@@ -13,9 +13,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { OptionSelect } from "@/components/option-select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { BacklogsPanel, EducationRecordsPanel, SemesterResultsPanel } from "@/components/student-academic-records"
 import { api, toastError } from "@/lib/web/api"
 import { fmtDate, statusVariant, titleCase } from "@/lib/web/format"
 import { SECTIONS, type SField } from "@/lib/web/sections"
@@ -81,8 +83,8 @@ function Editor({ section, cfg, detail, locked, onSaved, reload }: { section: st
 
   const input = (f: SField, value: string, set: (v: string) => void, id: string) => (
     <Field key={f.name}>
-      <FieldLabel htmlFor={id}>{f.label}</FieldLabel>
-      {f.type === "textarea" ? <Textarea id={id} value={value} disabled={locked} onChange={(e) => set(e.target.value)} /> : <Input id={id} type={f.type ?? "text"} step={f.type === "number" ? "any" : undefined} value={value} disabled={locked} onChange={(e) => set(e.target.value)} />}
+      <FieldLabel htmlFor={id}>{f.label}{f.required && <span className="text-destructive"> *</span>}</FieldLabel>
+      {f.type === "select" && f.options ? (locked ? <Input id={id} value={f.options.find(([k]) => k === value)?.[1] ?? value} disabled /> : <OptionSelect className="w-full" value={value} onChange={set} options={f.options.map(([v, l]) => ({ value: v, label: l }))} placeholder={`Choose ${f.label.toLowerCase()}`} />) : f.type === "textarea" ? <Textarea id={id} value={value} disabled={locked} onChange={(e) => set(e.target.value)} /> : <Input id={id} type={f.type ?? "text"} step={f.type === "number" ? "any" : undefined} value={value} disabled={locked} onChange={(e) => set(e.target.value)} />}
     </Field>
   )
 
@@ -116,6 +118,9 @@ function Editor({ section, cfg, detail, locked, onSaved, reload }: { section: st
             </div>
           )}
 
+          {cfg.records === "academics" && <><SemesterResultsPanel locked={locked} /><BacklogsPanel locked={locked} /></>}
+          {cfg.records === "education" && <EducationRecordsPanel locked={locked} />}
+
           {(cfg.uploads || section === "ACADEMICS") && (
             <div className="flex flex-col gap-2">
               <h3 className="text-sm font-medium">Documents</h3>
@@ -142,7 +147,7 @@ function Editor({ section, cfg, detail, locked, onSaved, reload }: { section: st
       </Dialog>
       {!locked && (
         <div className="flex gap-2">
-          {!cfg.uploads && <Button variant="outline" disabled={busy !== null} onClick={() => save(false)}>{busy === "save" && <Spinner />}Save draft</Button>}
+          {(cfg.fields || cfg.list || cfg.tags || cfg.records) && <Button variant="outline" disabled={busy !== null} onClick={() => save(false)}>{busy === "save" && <Spinner />}Save draft</Button>}
           <Button disabled={busy !== null} onClick={() => save(true)}>{busy === "submit" && <Spinner />}Submit for review</Button>
         </div>
       )}

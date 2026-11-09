@@ -3,7 +3,8 @@ import { route } from "@/lib/api/handler";
 import { parseBody } from "@/lib/api/parse";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
-import { ApprovalAction, ProfileSection } from "@/generated/prisma/client";
+import { ApprovalAction } from "@/generated/prisma/client";
+import { DEFAULT_REQUIRED_SECTIONS } from "@/lib/verification";
 
 const patch = z.object({
   maxOffersPerStudent: z.number().int().min(1).max(20).nullable().optional(),
@@ -26,7 +27,7 @@ export const PATCH = route({ roles: ["TPO_ADMIN"] }, async (req, s) => {
     const after = await tx.collegeSettings.upsert({
       where: { collegeId: s.collegeId },
       update: { ...data, approvalRequired },
-      create: { collegeId: s.collegeId, ...data, approvalRequired: approvalRequired ?? [], requiredSections: Object.values(ProfileSection) },
+      create: { collegeId: s.collegeId, ...data, approvalRequired: approvalRequired ?? [], requiredSections: DEFAULT_REQUIRED_SECTIONS },
     });
     await audit(s, { action: "settings.policies.update", entity: "CollegeSettings", entityId: s.collegeId, before: before ? pick(before) : {}, after: data }, tx);
     return pick(after);

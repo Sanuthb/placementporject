@@ -7,8 +7,9 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { scopedStudent } from "@/lib/verification";
 import { tellStudent } from "@/lib/invitations/notify";
+import { requestChangesOnRecords } from "@/lib/academicRecords";
 
-const body = z.object({ comment: z.string().trim().min(3).max(1000), sections: z.array(z.enum(ProfileSection)).max(8).optional() });
+const body = z.object({ comment: z.string().trim().min(3).max(1000), sections: z.array(z.enum(ProfileSection)).max(Object.values(ProfileSection).length).optional() });
 
 /** Sends the profile back to the student with a comment. The sections named (default: all under review) are reopened for editing. */
 export const POST = route<{ id: string }>({ module: "ONBOARDING" }, async (req, s, { id }) => {
@@ -20,6 +21,7 @@ export const POST = route<{ id: string }>({ module: "ONBOARDING" }, async (req, 
     const rows = await tx.studentSection.findMany({ where: { studentId: id, status: "SUBMITTED", ...(b.sections ? { section: { in: b.sections } } : {}) }, select: { id: true, section: true } });
     if (rows.length) {
       await tx.studentSection.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data: { status: "CHANGES_REQUESTED", reviewComment: b.comment, reviewedAt: new Date() } });
+      for (const r of rows) await requestChangesOnRecords(tx, id, r.section, b.comment); // the structured records go back with their section
       await tx.verificationEvent.createMany({ data: rows.map((r) => ({ collegeId: s.collegeId, studentId: id, section: r.section, action: "CHANGES_REQUESTED" as const, actorId: s.userId, comment: b.comment })) });
     }
     await tx.studentOnboardingProfile.update({ where: { studentId: id }, data: { reviewNote: b.comment } });
