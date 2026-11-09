@@ -19,6 +19,7 @@ async function main() {
   const id = created.data.user?.id;
   if (!id) throw new Error(`Could not create the login (an existing college user's email cannot be reused): ${created.error?.message}`);
   await db.platformAdmin.create({ data: { id, email, name } });
+  await db.platformAuditLog.create({ data: { adminId: id, email, action: "platform.admin.created", detail: { by: "cli" } } });
   console.log(`Platform administrator ${email} created`);
   await db.$disconnect();
 }

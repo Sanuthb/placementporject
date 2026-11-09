@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/web/auth"
 
 /** Where administrators land to enter their authenticator code, or to set up an authenticator app when their college requires one. */
-export default function MfaPage() {
+function MfaContent() {
   const router = useRouter()
   const next = useSearchParams().get("next")
   const { refresh } = useAuth()
@@ -24,4 +24,9 @@ export default function MfaPage() {
       </Card>
     </AuthPage>
   )
+}
+
+/** useSearchParams() needs a Suspense boundary or the page cannot be prerendered; only this small part reads the address. */
+export default function MfaPage() {
+  return <React.Suspense fallback={<AuthPage><Skeleton className="h-48" /></AuthPage>}><MfaContent /></React.Suspense>
 }

@@ -2261,3 +2261,18 @@ model PlatformAdmin {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 }
+
+/// Security trail for platform administration (sign-in protection, MFA enrolment / challenges / removal / recovery). Platform admins belong to no
+/// college, so this cannot live in AuditLog. No foreign key, so history survives the removal of an administrator.
+model PlatformAuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  adminId   String?  @db.Uuid
+  email     String?
+  action    String
+  detail    Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([adminId, createdAt])
+}

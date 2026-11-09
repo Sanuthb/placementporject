@@ -130,6 +130,8 @@ t("blocked student cannot apply", (await me.D("POST", `/api/student/drives/${d2}
 // ---- psychometrics
 const ins = (await me.A("GET", "/api/student/psychometrics/instrument")).d; t("instrument has 25 + 10 questions and no answer key", ins.personality.length === 25 && ins.aptitude.length === 10 && !JSON.stringify(ins).includes('"answer"'));
 const full = (shift = 0) => ({ personality: Object.fromEntries(ins.personality.map((q, i) => [q.id, ((i + shift) % 5) + 1])), aptitude: Object.fromEntries(ins.aptitude.map((q, i) => [q.id, (i + shift) % 4])) });
+// The assessment needs the student's consent first (student privacy feature); give it for every test student.
+for (const c of Object.keys(me)) if (typeof me[c] === "function") await me[c]("POST", "/api/student/psychometrics/consent", { consent: true });
 t("incomplete answers refused", (await me.A("POST", "/api/student/psychometrics/attempt", { personality: { p1: 3 }, aptitude: {} })).s === 400);
 const high = { personality: Object.fromEntries(ins.personality.map((q) => [q.id, 5])), aptitude: { a1: 2, a2: 2, a3: 1, a4: 2, a5: 1, a6: 1, a7: 2, a8: 2, a9: 2, a10: 2 } };
 const sc = await me.A("POST", "/api/student/psychometrics/attempt", high); t("scored: aptitude 100%, traits 0-100", sc.d?.aptitude.overall === 100 && sc.d.personality.openness.score >= 0, JSON.stringify(sc.j));
@@ -142,6 +144,8 @@ const c4 = (await staff("GET", "/api/psychometrics/cohort?groupBy=none")).d; t("
 await me.E("POST", "/api/student/psychometrics/attempt", full(4));
 const c5 = (await staff("GET", "/api/psychometrics/cohort?groupBy=department")).d; t("cohort of 5 shows averages and distributions", c5.overall.hidden === false && c5.overall.personality.openness.distribution && c5.overall.aptitude.average >= 0 && c5.groups.length === 1, JSON.stringify(c5.overall).slice(0, 200));
 t("individual result needs a reason", (await staff("GET", `/api/psychometrics/students/${ids.A}/result`)).s === 400);
+// Staff may only open an individual result once the student has chosen to share it.
+await me.A("POST", "/api/student/psychometrics/sharing", { share: true });
 t("individual result with a reason", (await staff("GET", `/api/psychometrics/students/${ids.A}/result?reason=Career counselling session`)).d?.scores.aptitude.overall === 100);
 const al2 = (await staff("GET", "/api/psychometrics/access-log")).d; t("access is logged", al2[0].reason === "Career counselling session" && al2[0].student.enrollmentNo === `T${tag}A`);
 t("360 analysis shows completion, not scores", (await staff("GET", `/api/students/${ids.A}/analysis`)).d.personalityProfile.completed === true && !JSON.stringify((await staff("GET", `/api/students/${ids.A}/analysis`)).d.personalityProfile).includes("score"));

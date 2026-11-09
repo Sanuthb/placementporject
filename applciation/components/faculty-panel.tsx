@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { PencilIcon, PlusIcon, PowerIcon } from "lucide-react"
+import { HistoryIcon, PencilIcon, PlusIcon, PowerIcon, UsersIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { api, toastError } from "@/lib/web/api"
+import { fmtDateTime } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
 type Ref = { id: string; name: string; code?: string }
@@ -40,6 +41,7 @@ export function FacultyPanel() {
   const [p, setP] = React.useState<string[]>([])
   const [b, setB] = React.useState<string[]>([])
   const [busy, setBusy] = React.useState(false)
+  const [mentoring, setMentoring] = React.useState<Faculty | null>(null)
 
   function open(f?: Faculty) {
     setV({ name: f?.name ?? "", email: f?.email ?? "", employeeId: f?.profile?.employeeId ?? "", designation: f?.profile?.designation ?? "", qualification: f?.profile?.qualification ?? "", specialisation: f?.profile?.specialisation ?? "", phone: f?.profile?.phone ?? "" })
@@ -84,6 +86,7 @@ export function FacultyPanel() {
                   <TableCell>{f.menteeCount}</TableCell>
                   <TableCell><Badge variant={f.isActive ? "default" : "secondary"}>{f.isActive ? "Active" : "Inactive"}</Badge></TableCell>
                   <TableCell className="flex gap-1">
+                    <Button variant="ghost" size="icon-sm" aria-label={`Mentees of ${f.name}`} onClick={() => setMentoring(f)}><UsersIcon /></Button>
                     <Button variant="ghost" size="icon-sm" aria-label={`Edit ${f.name}`} onClick={() => open(f)}><PencilIcon /></Button>
                     <Button variant="ghost" size="icon-sm" aria-label={f.isActive ? `Deactivate ${f.name}` : `Reactivate ${f.name}`} onClick={() => setActive(f)}><PowerIcon /></Button>
                   </TableCell>
@@ -94,6 +97,7 @@ export function FacultyPanel() {
         </div>
       )}
 
+      {mentoring && <MenteeDialog faculty={mentoring} onClose={() => { setMentoring(null); reload() }} />}
       <Dialog open={!!form} onOpenChange={(o) => !o && setForm(null)}>
         <DialogContent className="max-h-[90svh] overflow-y-auto">
           <DialogHeader>
@@ -132,5 +136,50 @@ function Choice({ title, hint, items, value, onChange }: { title: string; hint?:
         )) : <span className="text-sm text-muted-foreground">Nothing to choose yet.</span>}
       </div>
     </Field>
+  )
+}
+
+type Mentee = { id: string; name: string; enrollmentNo: string; department: { name: string }; batch: { name: string } }
+type Found = { id: string; name: string; enrollmentNo: string }
+type History = { mentor: { name: string } | null; history: { at: string; by: string | null; from: string | null; to: string | null }[] }
+
+/** A faculty member's mentees: add by search, remove, and see a student's assignment history. The server enforces college and department rules. */
+function MenteeDialog({ faculty, onClose }: { faculty: Faculty; onClose: () => void }) {
+  const { data, loading, reload } = useApi<Mentee[]>("/api/settings/faculty/mentees", { facultyId: faculty.id })
+  const [q, setQ] = React.useState("")
+  const found = useApi<{ items: Found[] }>(q.trim().length >= 2 ? "/api/students" : null, { q: q.trim(), limit: 8 })
+  const [hist, setHist] = React.useState<{ id: string; h: History } | null>(null)
+  const [busy, setBusy] = React.useState(false)
+
+  async function put(studentId: string, facultyId: string | null) {
+    setBusy(true)
+    try { await api("/api/settings/faculty/mentees", { method: "PUT", body: { facultyId, studentIds: [studentId] } }); toast.success(facultyId ? "Mentor assigned" : "Mentor removed"); reload(); setHist(null) } catch (e) { toastError(e) } finally { setBusy(false) }
+  }
+  async function showHistory(id: string) {
+    if (hist?.id === id) return setHist(null)
+    try { setHist({ id, h: await api<History>("/api/settings/faculty/mentees", { query: { studentId: id } }) }) } catch (e) { toastError(e) }
+  }
+  const mine = new Set((data ?? []).map((m) => m.id))
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90svh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Mentees of {faculty.name}</DialogTitle><DialogDescription>Students must be in one of this faculty member&apos;s departments{faculty.isActive ? "" : ". This account is deactivated, so new mentees cannot be added"}.</DialogDescription></DialogHeader>
+        <Field><FieldLabel htmlFor="m-q">Find a student to assign</FieldLabel><Input id="m-q" placeholder="Name or admission number" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
+        {q.trim().length >= 2 && (found.loading ? <Skeleton className="h-10" /> : !found.data?.items.length ? <p className="text-sm text-muted-foreground">No student matches.</p> : (
+          <ul className="flex flex-col gap-1 text-sm">{found.data.items.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5"><span>{s.name} <span className="text-muted-foreground">{s.enrollmentNo}</span></span>
+              {mine.has(s.id) ? <Badge variant="secondary">Already a mentee</Badge> : <Button size="sm" disabled={busy || !faculty.isActive} onClick={() => put(s.id, faculty.id)}>Assign</Button>}</li>))}</ul>
+        ))}
+        <h3 className="pt-2 text-sm font-medium">Current mentees</h3>
+        {loading ? <Skeleton className="h-16" /> : !data?.length ? <p className="text-sm text-muted-foreground">No mentees yet.</p> : (
+          <ul className="flex flex-col gap-1 text-sm">{data.map((m) => (
+            <li key={m.id} className="rounded-md border px-2 py-1.5">
+              <div className="flex items-center justify-between gap-2"><span>{m.name} <span className="text-muted-foreground">{m.enrollmentNo} · {m.department.name} · {m.batch.name}</span></span>
+                <span className="flex gap-1"><Button variant="ghost" size="icon-sm" aria-label={`History for ${m.name}`} onClick={() => showHistory(m.id)}><HistoryIcon /></Button><Button variant="outline" size="sm" disabled={busy} onClick={() => put(m.id, null)}>Unassign</Button></span></div>
+              {hist?.id === m.id && (<ul className="mt-2 flex flex-col gap-0.5 text-xs text-muted-foreground">{hist.h.history.length ? hist.h.history.map((h, i) => <li key={i}>{fmtDateTime(h.at)}: {h.from ?? "no mentor"} → {h.to ?? "no mentor"}{h.by ? ` (by ${h.by})` : ""}</li>) : <li>No changes recorded.</li>}</ul>)}
+            </li>))}</ul>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }

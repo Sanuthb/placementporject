@@ -10,6 +10,7 @@
     "postinstall": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:platform-admin": "tsx scripts/create-platform-admin.ts",
+    "db:platform-mfa-recovery": "tsx scripts/platform-mfa-recovery.ts",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:harden": "prisma db execute --file prisma/harden.sql",

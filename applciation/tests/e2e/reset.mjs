@@ -11,7 +11,11 @@ await c.end();
 
 const staff = client(await login(process.env.SEED_ADMIN_EMAIL, process.env.SEED_ADMIN_PASSWORD));
 await staff("POST", "/api/settings/departments", { name: "Computer Science", code: "CSE" }); // 409 if it already exists: fine
-await staff("POST", "/api/settings/batches", { name: "2021-2025", startYear: 2021, endYear: 2025 });
+// Batches are created from a programme now (see app/api/settings/batches): a 4-year programme admitted in 2021 gives the "2021-2025" batch the suites use.
+const dept = (await staff("GET", "/api/settings/departments")).d.find((d) => d.code === "CSE");
+await staff("POST", "/api/settings/programs", { name: "Bachelor of Engineering", code: "BE", departmentId: dept.id, level: "UG", durationYears: 4, semesterCount: 8 });
+const prog = (await staff("GET", "/api/settings/programs")).d.find((p) => p.code === "BE");
+await staff("POST", "/api/settings/batches", { programId: prog.id, admissionYear: 2021, name: "2021-2025" });
 await staff("PATCH", "/api/settings/verification", { requiredSections: ["ACADEMICS", "PERSONAL"], requireAssessmentToOnboard: false });
 await staff("PATCH", "/api/settings/policies", { approvalRequired: [], maxOffersPerStudent: 1, enforceTierUpgrade: false });
 console.log("reset ok");

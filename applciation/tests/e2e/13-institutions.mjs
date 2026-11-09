@@ -1,13 +1,27 @@
 // M2: faculty, universities, institution provisioning, tenant isolation and academic-structure integrity. Cleans up what it creates.
-// Needs a TEST database and Supabase project (it creates auth users, and provisioning sends one invitation email).
+// Runs only against the isolated local stack (tests/e2e/stack): invitations land in its mail sink, never in a real inbox.
+import { createHmac } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 import pg from "pg";
 import { checker, client, login, tag } from "./lib.mjs";
 
 const { t, done } = checker();
+if (!/localhost|127\.0\.0\.1/.test(process.env.SUPABASE_URL ?? "")) { console.error("Refusing: SUPABASE_URL is not local"); process.exit(2); }
+/** RFC 6238 code, as an authenticator app computes it. */
+function totp(secret, offset = 0) {
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; let bits = "";
+  for (const c of secret.replace(/=+$/, "").toUpperCase()) bits += A.indexOf(c).toString(2).padStart(5, "0");
+  const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const ctr = Buffer.alloc(8); ctr.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + offset));
+  const h = createHmac("sha1", key).update(ctr).digest(); const o = h[19] & 15;
+  return String(((h.readUInt32BE(o) & 0x7fffffff) % 1_000_000)).padStart(6, "0");
+}
+const sink = async (to) => (await (await fetch(`${process.env.MAIL_SINK}/api/v1/search?query=${encodeURIComponent("to:" + to)}`)).json()).messages ?? [];
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const pgc = new pg.Client({ connectionString: process.env.DIRECT_URL });
 await pgc.connect();
+const sbAnon = () => createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, { auth: { persistSession: false } });
 const pw = `Inst-${tag}-pw1!`;
 const made = { auth: [], colleges: [], platform: [] };
 
@@ -83,7 +97,7 @@ try {
   const list = (await admin("GET", "/api/settings/faculty")).d;
   t("faculty: appears in the faculty list", list.some((f) => f.id === fac.id));
   t("faculty: not in another institution's list", !(await adminB.c("GET", "/api/settings/faculty")).d.some((f) => f.id === fac.id));
-  t("faculty: another institution cannot read or edit them", (await adminB.c("GET", `/api/settings/faculty/${fac.id}`)).s === 404 && (await adminB.c("PATCH", `/api/settings/faculty/${fac.id}`, { name: "X" })).s === 404);
+  { const g = await adminB.c("GET", `/api/settings/faculty/${fac.id}`), p = await adminB.c("PATCH", `/api/settings/faculty/${fac.id}`, { name: "Xy" }); t("faculty: another institution cannot read or edit them", g.s === 404 && p.s === 404, g.s + " " + p.s + JSON.stringify(p.j)); }
   const upd = await admin("PATCH", `/api/settings/faculty/${fac.id}`, { designation: "Professor", employeeId: `E${tag}`, departmentIds: [deptA.id] });
   t("faculty: profile and department saved", upd.d?.profile?.designation === "Professor" && upd.d.departments[0]?.id === deptA.id);
   t("faculty: cannot be allocated another institution's department", (await admin("PATCH", `/api/settings/faculty/${fac.id}`, { departmentIds: [deptA.id, deptB.id] })).s === 400);
@@ -126,28 +140,108 @@ try {
   const audits = (await pgc.query(`select action from "AuditLog" where "collegeId"=$1 and "entityId"=$2`, [collegeA, fac.id])).rows.map((r) => r.action);
   t("audit: faculty update, allocation and deactivation are logged", ["faculty.update", "faculty.allocate", "faculty.deactivate"].every((a) => audits.includes(a)), audits.join());
 
-  // ---- institution provisioning -------------------------------------------------------------------------------------
+  // ---- mentor assignment (UI backend) --------------------------------------------------------------------------------
+  const fac2 = await staffUser(collegeA, "fac2", "FACULTY");
+  await pgc.query(`insert into "FacultyProfile" ("userId","collegeId","updatedAt") values ($1,$2,now())`, [fac2.id, collegeA]);
+  await admin("PATCH", `/api/settings/faculty/${fac2.id}`, { departmentIds: [deptA.id] });
+  t("mentor: reassign to a second mentor", (await admin("PUT", "/api/settings/faculty/mentees", { facultyId: fac2.id, studentIds: [sid] })).s === 200);
+  t("mentor: assigning to a deactivated faculty is refused", (await admin("PUT", "/api/settings/faculty/mentees", { facultyId: fac.id, studentIds: [sid] })).s === 400);
+  const hist = (await admin("GET", `/api/settings/faculty/mentees?studentId=${sid}`)).d;
+  t("mentor: current mentor shown", hist?.mentor?.id === fac2.id);
+  t("mentor: history lists each change in order, with who made it", hist?.history?.length >= 2 && hist.history[0].to === "Inst fac2" && hist.history[0].from === "Inst fac" && !!hist.history[0].by, JSON.stringify(hist?.history));
+  t("mentor: the mentor's list shows the student", (await admin("GET", `/api/settings/faculty/mentees?facultyId=${fac2.id}`)).d.some((m) => m.id === sid));
+  t("mentor: another institution cannot read this student's mentor or history", (await adminB.c("GET", `/api/settings/faculty/mentees?studentId=${sid}`)).s === 404);
+  t("mentor: another institution cannot read this faculty's mentees", (await adminB.c("GET", `/api/settings/faculty/mentees?facultyId=${fac2.id}`)).s === 404);
+  t("mentor: needs exactly one of facultyId / studentId", (await admin("GET", "/api/settings/faculty/mentees")).s === 400);
+  t("mentor: faculty cannot manage mentors", (await f("GET", `/api/settings/faculty/mentees?studentId=${sid}`)).s === 403 && (await fac2.c("PUT", "/api/settings/faculty/mentees", { facultyId: fac2.id, studentIds: [sid] })).s === 403);
+  t("mentor: unassign", (await admin("PUT", "/api/settings/faculty/mentees", { facultyId: null, studentIds: [sid] })).s === 200 && (await admin("GET", `/api/settings/faculty/mentees?studentId=${sid}`)).d.mentor === null);
+  const sAudits = (await pgc.query(`select action from "AuditLog" where "collegeId"=$1 and entity='Student' and "entityId"=$2 and action like 'faculty.mentor.%'`, [collegeA, sid])).rows.map((r) => r.action);
+  t("mentor: every assignment change is audited per student", sAudits.filter((x) => x === "faculty.mentor.assign").length >= 2 && sAudits.includes("faculty.mentor.clear"), sAudits.join());
+
+  // ---- faculty created through the API: the invitation goes to the mail sink -------------------------------------------
+  const inv = await admin("POST", "/api/settings/faculty", { name: "Invited Faculty", email: `inst${tag}invfac@example.com`, designation: "Lecturer", departmentIds: [deptA.id] });
+  t("faculty: created through the API with an invitation", inv.s === 200 && inv.d.roles[0] === "FACULTY", JSON.stringify(inv.j).slice(0, 200));
+  if (inv.d?.id) made.auth.push(inv.d.id);
+  t("faculty: the invitation landed in the local mail sink", (await sink(`inst${tag}invfac@example.com`)).length >= 1);
+
+  // ---- institution provisioning and platform administrators ---------------------------------------------------------
   const pa = await authUser("platform");
   await pgc.query(`insert into "PlatformAdmin" (id,email,name) values ($1,$2,'Platform')`, [pa.id, pa.email]);
   made.platform.push(pa.id);
-  const plat = client(await login(pa.email, pw));
+  let plat = client(await login(pa.email, pw));
   t("platform: a platform admin has no college access", (await plat("GET", "/api/settings/departments")).s === 403 && (await plat("GET", "/api/me")).s === 403);
+  // MFA is mandatory and server-enforced
+  const noMfa = await plat("GET", "/api/platform/institutions");
+  t("platform MFA: no authenticator => institutions refused with MFA_SETUP_REQUIRED", noMfa.s === 403 && noMfa.code === "MFA_SETUP_REQUIRED");
+  t("platform MFA: provisioning refused too", (await plat("POST", "/api/platform/institutions", { name: "Sneaky Inst", admin: { name: "S", email: "s@example.com" } })).code === "MFA_SETUP_REQUIRED");
+  t("platform MFA: status route tells the screen what to do", (await plat("GET", "/api/platform/me")).d?.mfa === "setup_required");
+  t("platform MFA: this is independent of the college TPO setting (college has it off)", (await pgc.query(`select "requireMfaForAdmins" r from "CollegeSettings" where "collegeId"=$1`, [collegeA])).rows[0]?.r !== true);
+  const enr = await plat("POST", "/api/platform/mfa/enroll");
+  t("platform MFA: enrolment starts", enr.s === 200 && !!enr.d?.secret);
+  t("platform MFA: incomplete enrolment still refused", (await plat("GET", "/api/platform/institutions")).code === "MFA_SETUP_REQUIRED");
+  const badEnr = await plat("POST", "/api/platform/mfa/verify", { factorId: enr.d.factorId, code: "000000" });
+  t("platform MFA: a wrong code is rejected and enrolment stays incomplete", badEnr.s === 400 && badEnr.code === "INVALID_CODE" && (await plat("GET", "/api/platform/institutions")).code === "MFA_SETUP_REQUIRED");
+  t("platform MFA: a malformed code is refused", (await plat("POST", "/api/platform/mfa/verify", { factorId: enr.d.factorId, code: "12" })).s === 400);
+  t("platform MFA: another factor id is refused", (await plat("POST", "/api/platform/mfa/verify", { factorId: crypto.randomUUID(), code: "123456" })).s === 400);
+  const okEnr = await plat("POST", "/api/platform/mfa/verify", { factorId: enr.d.factorId, code: totp(enr.d.secret) });
+  t("platform MFA: the right code completes enrolment and returns an upgraded session", okEnr.s === 200 && !!okEnr.d?.access_token, JSON.stringify(okEnr.j).slice(0, 200));
+  plat = client(okEnr.d.access_token);
+  t("platform MFA: the upgraded session can use the platform", (await plat("GET", "/api/platform/institutions")).s === 200);
+  const aal1 = client(await login(pa.email, pw));
+  t("platform MFA: a fresh password-only sign-in is refused with MFA_REQUIRED", (await aal1("GET", "/api/platform/institutions")).code === "MFA_REQUIRED" && (await aal1("GET", "/api/platform/me")).d?.mfa === "challenge");
+  t("platform MFA: an enrolled admin cannot enrol another authenticator from a password-only session", (await aal1("POST", "/api/platform/mfa/enroll")).code === "ALREADY_ENROLLED");
+  // Direct call to the Auth server (bypassing our API): must not let a password-only session add a second factor and walk in.
+  const tok1 = (await sbAnon().auth.signInWithPassword({ email: pa.email, password: pw })).data.session.access_token;
+  const direct = await fetch(`${process.env.SUPABASE_URL}/auth/v1/factors`, { method: "POST", headers: { authorization: `Bearer ${tok1}`, apikey: process.env.SUPABASE_ANON_KEY, "content-type": "application/json" }, body: JSON.stringify({ factor_type: "totp" }) });
+  t("platform MFA: the Auth server itself refuses a second factor at password-only level", direct.status >= 400, `status ${direct.status}`);
+  const fid = (await sb.auth.admin.mfa.listFactors({ userId: pa.id })).data.factors.find((x) => x.status === "verified").id;
+  const wrong = await aal1("POST", "/api/platform/mfa/verify", { factorId: fid, code: "000000" });
+  t("platform MFA: an invalid challenge is rejected", wrong.s === 400 && wrong.code === "INVALID_CODE" && (await aal1("GET", "/api/platform/institutions")).code === "MFA_REQUIRED");
+  const good = await aal1("POST", "/api/platform/mfa/verify", { factorId: fid, code: totp(enr.d.secret, 0) });
+  const good2 = good.s === 200 ? good : await aal1("POST", "/api/platform/mfa/verify", { factorId: fid, code: totp(enr.d.secret, 1) }); // a code just used is single-use; the next window is accepted
+  t("platform MFA: the right challenge code upgrades the session", good2.s === 200 && (await client(good2.d.access_token)("GET", "/api/platform/institutions")).s === 200, JSON.stringify(good2.j).slice(0, 200));
+  plat = client(good2.d?.access_token ?? okEnr.d.access_token);
+  t("platform: college administrators and faculty cannot reach platform routes", (await admin("GET", "/api/platform/institutions")).s === 403 && (await f("GET", "/api/platform/institutions")).s === 403 && (await admin("GET", "/api/platform/me")).s === 403);
+
+  const deptCountA = (await admin("GET", "/api/settings/departments")).d.length;
   const prov = await plat("POST", "/api/platform/institutions", { name: `Provisioned ${tag}`, slug: `prov-${tag}`, admin: { name: "New Admin", email: `inst${tag}newadmin@example.com` }, departments: [{ code: "CSE", name: "Computer Science" }], academicYear: { name: "2026-27", startDate: "2026-06-01", endDate: "2027-05-31" }, modules: ["ONBOARDING", "DRIVES"] });
   t("provisioning: institution created", prov.s === 200 && !!prov.d?.college?.id, JSON.stringify(prov.j).slice(0, 200));
   if (prov.d?.college?.id) {
     const pid = prov.d.college.id; made.colleges.push(pid); made.auth.push(prov.d.admin.id);
     const q = (sql) => pgc.query(sql, [pid]).then((r) => r.rows);
+    t("provisioning: the administrator's invitation landed in the local mail sink", (await sink(`inst${tag}newadmin@example.com`)).length >= 1);
     t("provisioning: settings row created", (await q(`select 1 from "CollegeSettings" where "collegeId"=$1`)).length === 1);
-    t("provisioning: only the chosen modules enabled", (await q(`select module from "CollegeModule" where "collegeId"=$1 order by module`)).map((r) => r.module).join() === "DRIVES,ONBOARDING");
+    t("provisioning: only the chosen modules enabled", (await q(`select module from "CollegeModule" where "collegeId"=$1`)).map((r) => r.module).sort().join() === "DRIVES,ONBOARDING");
     t("provisioning: initial TPO admin created in the new college", (await q(`select role from "User" where "collegeId"=$1`)).map((r) => r.role).join() === "TPO_ADMIN");
     t("provisioning: starting department and year belong to the new college", (await q(`select 1 from "Department" where "collegeId"=$1 and code='CSE'`)).length === 1 && (await q(`select 1 from "AcademicYear" where "collegeId"=$1 and "isCurrent"`)).length === 1);
     t("provisioning: nothing else was created", (await q(`select 1 from "Program" where "collegeId"=$1`)).length === 0 && (await q(`select 1 from "Batch" where "collegeId"=$1`)).length === 0);
     const a = (await q(`select action,"actorId","platformActorId" from "AuditLog" where "collegeId"=$1`))[0];
     t("provisioning: audited as the platform admin", a?.action === "institution.provision" && a.platformActorId === pa.id && a.actorId === null);
-    t("provisioning: duplicate address refused", (await plat("POST", "/api/platform/institutions", { name: "Dup", slug: `prov-${tag}`, admin: { name: "D", email: `inst${tag}dup@example.com` } })).s === 409);
+    const dup = await plat("POST", "/api/platform/institutions", { name: "Dup Institute", slug: `prov-${tag}`, admin: { name: "Dee", email: `inst${tag}dup@example.com` } });
+    t("provisioning: duplicate address refused", dup.s === 409, dup.s + JSON.stringify(dup.j));
+    t("provisioning: the existing institution gained no records", (await admin("GET", "/api/settings/departments")).d.length === deptCountA && (await q(`select count(*)::int n from "Department" where "collegeId"=$1`))[0].n === 1);
     t("platform: deactivating an institution blocks its sign-ins", (await plat("PATCH", `/api/platform/institutions/${pid}`, { isActive: false })).s === 200);
   }
   t("platform: invalid provisioning input is refused", (await plat("POST", "/api/platform/institutions", { name: "x" })).s === 400);
+
+  // MFA removal and recovery
+  t("platform MFA: removal with a wrong code is refused", (await plat("DELETE", "/api/platform/mfa", { code: "000000" })).code === "INVALID_CODE" && (await plat("GET", "/api/platform/institutions")).s === 200);
+  t("platform MFA: removal is refused for a password-only session", (await aal1("DELETE", "/api/platform/mfa", { code: totp(enr.d.secret, 1) })).s === 403);
+  const rm = await plat("DELETE", "/api/platform/mfa", { code: totp(enr.d.secret, 1) });
+  const rm2 = rm.s === 200 ? rm : await plat("DELETE", "/api/platform/mfa", { code: totp(enr.d.secret, 2) });
+  t("platform MFA: removal with a fresh code works", rm2.s === 200, JSON.stringify(rm2.j).slice(0, 200));
+  t("platform MFA: after removal, access is blocked until a new authenticator is enrolled", (await plat("GET", "/api/platform/institutions")).code === "MFA_SETUP_REQUIRED");
+  const enr2 = await client(await login(pa.email, pw))("POST", "/api/platform/mfa/enroll");
+  const c2 = client(await login(pa.email, pw));
+  const ok2 = await c2("POST", "/api/platform/mfa/verify", { factorId: enr2.d.factorId, code: totp(enr2.d.secret) });
+  t("platform MFA: a new authenticator can be enrolled after removal", ok2.s === 200);
+  const rec = spawnSync("npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: pa.email, PLATFORM_RECOVERY_CONFIRM: pa.email } });
+  t("platform MFA recovery: the command removes the authenticator", rec.status === 0 && (await sb.auth.admin.mfa.listFactors({ userId: pa.id })).data.factors.length === 0, rec.stderr.slice(0, 200));
+  const bad = spawnSync("npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: pa.email, PLATFORM_RECOVERY_CONFIRM: "someone@else.com" } });
+  t("platform MFA recovery: refused without the matching confirmation", bad.status !== 0);
+  t("platform MFA: after recovery the old session is refused", (await client(ok2.d.access_token)("GET", "/api/platform/institutions")).code === "MFA_SETUP_REQUIRED");
+  const pl = (await pgc.query(`select action from "PlatformAuditLog" where "adminId"=$1`, [pa.id])).rows.map((r) => r.action);
+  t("platform audit: enrolment, failures, challenges, removal and recovery are all recorded", ["platform.mfa.enroll_started", "platform.mfa.enroll_failed", "platform.mfa.enrolled", "platform.mfa.challenge_failed", "platform.mfa.challenge_ok", "platform.mfa.remove_failed", "platform.mfa.removed", "platform.mfa.recovery"].every((x) => pl.includes(x)), pl.join());
 } finally {
   // Children first; every table below holds the test colleges' rows.
   for (const c of made.colleges) {
@@ -172,7 +266,7 @@ try {
     await run(`delete from "Department" where "collegeId"=$1 and code like $2`);
     await run(`delete from "User" where "collegeId"=$1 and email like $2`);
   }
-  for (const id of made.platform) await pgc.query(`delete from "PlatformAdmin" where id=$1`, [id]).catch(() => {});
+  for (const id of made.platform) { await pgc.query(`delete from "PlatformAdmin" where id=$1`, [id]).catch(() => {}); await pgc.query(`delete from "PlatformAuditLog" where "adminId"=$1`, [id]).catch(() => {}); }
   for (const id of made.auth) await sb.auth.admin.deleteUser(id).catch(() => {});
   await pgc.end();
 }

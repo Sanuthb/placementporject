@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { ShieldCheckIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -14,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { api, ApiClientError, toastError } from "@/lib/web/api"
+import { supabase } from "@/lib/supabase/browser"
 import { fmtDate } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
@@ -23,19 +25,10 @@ type Institution = { id: string; name: string; slug: string; isActive: boolean; 
  * Platform administration: creating institutions. Separate from the staff console on purpose; only identities listed as platform
  * administrators can use it, and the API refuses everyone else, including college administrators.
  */
-export default function PlatformPage() {
-  const { data, error, loading, reload } = useApi<Institution[]>("/api/platform/institutions")
+function InstitutionsView() {
+  const { data, loading, reload } = useApi<Institution[]>("/api/platform/institutions")
   const [v, setV] = React.useState({ name: "", slug: "", adminName: "", adminEmail: "", departments: "" })
   const [busy, setBusy] = React.useState(false)
-
-  if (error instanceof ApiClientError && (error.status === 401 || error.status === 403)) {
-    return (
-      <div className="mx-auto flex max-w-md flex-col gap-3 p-6">
-        <Alert variant="destructive"><AlertTitle>Platform administrators only</AlertTitle><AlertDescription>{error.status === 401 ? "Sign in to continue." : "This login is not a platform administrator."}</AlertDescription></Alert>
-        <Button render={<Link href="/login?next=/platform" />}>Sign in</Button>
-      </div>
-    )
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -88,5 +81,96 @@ export default function PlatformPage() {
         </div>
       )}
     </div>
+  )
+}
+
+type Me = { email: string; name: string; mfa: "setup_required" | "challenge" | "ok" }
+const digits = (v: string) => v.replace(/\s+/g, "")
+
+/** Hands the upgraded (two-step) session the server returned to the browser's Supabase client. */
+async function adopt(t: { access_token: string; refresh_token: string }) {
+  const { error } = await supabase().auth.setSession(t)
+  if (error) throw error
+}
+
+function CodeForm({ label, onSubmit, busy }: { label: string; onSubmit: (code: string) => void; busy: boolean }) {
+  const [code, setCode] = React.useState("")
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(digits(code)) }} className="flex max-w-sm flex-col gap-3">
+      <Field><FieldLabel htmlFor="p-code">{label}</FieldLabel><Input id="p-code" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={8} required value={code} onChange={(e) => setCode(e.target.value)} /></Field>
+      <div><Button type="submit" disabled={busy || digits(code).length < 6}>{busy && <Spinner />}Confirm</Button></div>
+    </form>
+  )
+}
+
+/** Mandatory two-step sign-in. The server refuses every platform call until this is complete; this screen only walks the person through it. */
+function MfaGate({ me, onDone }: { me: Me; onDone: () => void }) {
+  const [step, setStep] = React.useState<{ factorId: string; qr: string; secret: string } | null>(null)
+  const [factorId, setFactorId] = React.useState<string | null>(null)
+  const [busy, setBusy] = React.useState(false)
+  React.useEffect(() => {
+    if (me.mfa !== "challenge") return
+    void (async () => { const { data } = await supabase().auth.mfa.listFactors(); setFactorId(data?.totp?.[0]?.id ?? null) })()
+  }, [me.mfa])
+
+  async function begin() {
+    setBusy(true)
+    try { setStep(await api<{ factorId: string; qr: string; secret: string }>("/api/platform/mfa/enroll", { method: "POST" })) } catch (e) { toastError(e) } finally { setBusy(false) }
+  }
+  async function verify(id: string, code: string) {
+    setBusy(true)
+    try { await adopt(await api<{ access_token: string; refresh_token: string }>("/api/platform/mfa/verify", { method: "POST", body: { factorId: id, code } })); onDone() } catch (e) { toastError(e) } finally { setBusy(false) }
+  }
+  return (
+    <div className="mx-auto flex max-w-md flex-col gap-4 p-6">
+      <Alert><ShieldCheckIcon /><AlertTitle>{me.mfa === "challenge" ? "Confirm it is you" : "Set up two-step sign-in"}</AlertTitle><AlertDescription>{me.mfa === "challenge" ? "Enter the code from your authenticator app to continue." : "Platform administrators must use an authenticator app. You cannot continue until it is set up."}</AlertDescription></Alert>
+      {me.mfa === "challenge" ? (factorId ? <CodeForm label="Code from your authenticator app" busy={busy} onSubmit={(c) => verify(factorId, c)} /> : <Skeleton className="h-20" />) : !step ? (
+        <div><Button onClick={begin} disabled={busy}>{busy ? <Spinner /> : <ShieldCheckIcon />}Set up authenticator app</Button></div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm">Scan this code with an authenticator app, then enter the 6-digit code it shows.</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={step.qr} alt="QR code for your authenticator app" className="size-44 rounded-lg border bg-white p-2" />
+          <p className="text-xs text-muted-foreground">Cannot scan? Type this key: <code className="break-all select-all">{step.secret}</code></p>
+          <CodeForm label="Code from the app" busy={busy} onSubmit={(c) => verify(step.factorId, c)} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RemoveMfa({ onDone }: { onDone: () => void }) {
+  const [open, setOpen] = React.useState(false)
+  const [busy, setBusy] = React.useState(false)
+  async function remove(code: string) {
+    setBusy(true)
+    try { await api("/api/platform/mfa", { method: "DELETE", body: { code } }); toast.success("Authenticator removed. Set up a new one to continue."); onDone() } catch (e) { toastError(e) } finally { setBusy(false) }
+  }
+  return open ? (
+    <div className="flex flex-col gap-2"><p className="text-sm text-muted-foreground">Removing it locks platform access until you set up a new authenticator. Enter a current code to confirm.</p><CodeForm label="Current code" busy={busy} onSubmit={remove} /></div>
+  ) : <Button variant="outline" size="sm" onClick={() => setOpen(true)}>Remove authenticator</Button>
+}
+
+export default function PlatformPage() {
+  const [tick, setTick] = React.useState(0)
+  const { data: me, error, loading } = useApi<Me>("/api/platform/me", { t: tick })
+  const reload = () => setTick((t) => t + 1)
+  if (error instanceof ApiClientError && (error.status === 401 || error.status === 403)) {
+    return (
+      <div className="mx-auto flex max-w-md flex-col gap-3 p-6">
+        <Alert variant="destructive"><AlertTitle>Platform administrators only</AlertTitle><AlertDescription>{error.status === 401 ? "Sign in to continue." : "This login is not a platform administrator."}</AlertDescription></Alert>
+        <Button render={<Link href="/login?next=/platform" />}>Sign in</Button>
+      </div>
+    )
+  }
+  if (error) return <div className="mx-auto max-w-md p-6"><Alert variant="destructive"><AlertTitle>Could not load</AlertTitle><AlertDescription>{error instanceof Error ? error.message : "Try again"}</AlertDescription></Alert></div>
+  if (loading && !me) return <div className="mx-auto max-w-md p-6"><Skeleton className="h-32" /></div>
+  if (!me) return null
+  if (me.mfa !== "ok") return <MfaGate me={me} onDone={reload} />
+  return (
+    <>
+      <InstitutionsView />
+      <div className="mx-auto max-w-4xl px-4 pb-8 md:px-8"><RemoveMfa onDone={reload} /></div>
+    </>
   )
 }
