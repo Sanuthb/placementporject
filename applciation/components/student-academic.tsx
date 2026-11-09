@@ -4,6 +4,7 @@ import * as React from "react"
 import { DownloadIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { toast } from "sonner"
 
+import { DocumentViewer } from "@/components/document-viewer"
 import { OptionSelect } from "@/components/option-select"
 import { ConfirmDelete } from "@/components/row-actions"
 import { Badge } from "@/components/ui/badge"
@@ -153,6 +154,7 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
   const [rejecting, setRejecting] = React.useState<Doc | null>(null)
   const [reason, setReason] = React.useState("")
   const [deleting, setDeleting] = React.useState<Doc | null>(null)
+  const [viewing, setViewing] = React.useState<number | null>(null)
   const replaceFor = React.useRef<Doc | null>(null)
   const picker = React.useRef<HTMLInputElement>(null)
 
@@ -216,7 +218,7 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
             <Badge variant={docVariant(d.status)}>{titleCase(d.status)}</Badge>
           </div>
           <div className="flex flex-wrap gap-2">
-            {d.url && <Button variant="outline" size="sm" render={<a href={d.url} target="_blank" rel="noreferrer" />}><DownloadIcon />View / download</Button>}
+            {d.url && <Button variant="outline" size="sm" onClick={() => setViewing(data!.findIndex((x) => x.id === d.id))}><DownloadIcon />View</Button>}
             {canEdit && <>
               {d.status !== "VERIFIED" && <Button size="sm" disabled={busy === d.id} onClick={() => review(d, "VERIFIED")}>Verify</Button>}
               {d.status !== "REJECTED" && <Button variant="outline" size="sm" disabled={busy === d.id} onClick={() => { setRejecting(d); setReason("") }}>Reject</Button>}
@@ -234,6 +236,7 @@ export function DocumentsPanel({ studentId, canEdit }: { studentId: string; canE
           <DialogFooter><Button disabled={reason.trim().length < 3 || busy === rejecting?.id} onClick={() => rejecting && review(rejecting, "REJECTED", reason.trim())}>Reject document</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+      <DocumentViewer docs={(data ?? []).map((d) => ({ id: d.id, category: d.category, fileName: d.fileName, mimeType: d.mimeType, status: d.status, rejectReason: d.rejectReason, url: d.url }))} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} studentId={canEdit ? studentId : undefined} onChanged={reload} />
       <ConfirmDelete open={!!deleting} what={deleting ? deleting.fileName : "this document"} busy={busy === deleting?.id} onConfirm={remove} onClose={() => setDeleting(null)} />
     </div>
   )

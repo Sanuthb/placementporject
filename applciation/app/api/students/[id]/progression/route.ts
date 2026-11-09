@@ -1,3 +1,4 @@
+import { hasRole } from "@/lib/auth/session";
 import { z } from "zod";
 import { route } from "@/lib/api/handler";
 import { parseBody } from "@/lib/api/parse";
@@ -47,7 +48,7 @@ export const POST = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFI
   const st = await scopedStudent(s, id);
   const b = await parseBody(req, body);
   if (!st.isActive) throw new ApiError(409, "CONFLICT", "This student is deactivated");
-  if (b.kind === "TRANSFERRED" && s.role !== "TPO_ADMIN") throw new ApiError(403, "FORBIDDEN", "Only an administrator can transfer a student to another batch");
+  if (b.kind === "TRANSFERRED" && !hasRole(s, "TPO_ADMIN")) throw new ApiError(403, "FORBIDDEN", "Only an administrator can transfer a student to another batch");
   if ((b.kind === "TRANSFERRED" || b.kind === "DISCONTINUED" || b.kind === "ARREAR") && !b.note) throw badRequest(b.kind === "ARREAR" ? "Say which subject or semester has the arrear" : "A reason is required");
 
   const result = await db.$transaction(async (tx) => {

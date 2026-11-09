@@ -19,7 +19,7 @@ export const POST = route<{ id: string }>({ roles: ["TPO_ADMIN"] }, async (req, 
   const { decision, comment } = await parseBody(req, body);
   const r = await db.approvalRequest.findFirst({ where: { id, collegeId: s.collegeId } });
   if (!r) throw notFound("Approval request not found");
-  if (r.requestedById === s.userId && (await db.user.count({ where: { collegeId: s.collegeId, role: "TPO_ADMIN", isActive: true } })) > 1) throw forbidden("You cannot decide your own request; another admin must");
+  if (r.requestedById === s.userId && (await db.user.count({ where: { collegeId: s.collegeId, OR: [{ role: "TPO_ADMIN" }, { extraRoles: { has: "TPO_ADMIN" } }], isActive: true } })) > 1) throw forbidden("You cannot decide your own request; another admin must");
 
   const status = decision === "APPROVE" ? "APPROVED" : decision === "REJECT" ? "REJECTED" : "SENT_BACK";
   const claim = await db.approvalRequest.updateMany({ where: { id, status: "PENDING" }, data: { status, decidedById: s.userId, decisionComment: comment, decidedAt: new Date() } });

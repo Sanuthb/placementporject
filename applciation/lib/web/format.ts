@@ -7,9 +7,9 @@ type Variant = "default" | "secondary" | "outline" | "destructive"
 /** One place that decides which badge style a status gets, so a status looks the same on every screen. */
 export function statusVariant(status: string): Variant {
   switch (status) {
-    case "VERIFIED": case "ONBOARDED": case "ACTIVATED": case "ACCEPTED": case "CLEARED": case "PLACED": case "APPROVED": case "REGISTERED": return "default"
-    case "SUBMITTED": case "SENT": case "OFFERED": case "PENDING": case "PROFILE_PENDING": case "SHORTLISTED": return "secondary"
-    case "CHANGES_REQUESTED": case "REJECTED": case "DECLINED": case "REVOKED": case "ABSENT": case "OPTED_OUT": case "NOT_ELIGIBLE": return "destructive"
+    case "VERIFIED": case "INVITATION_ACCEPTED": case "ONBOARDED": case "ACTIVATED": case "ACCEPTED": case "CLEARED": case "PLACED": case "APPROVED": case "REGISTERED": return "default"
+    case "SUBMITTED": case "VERIFICATION_IN_PROGRESS": case "IN_REVIEW": case "INVITATION_SENT": case "INVITATION_PENDING": case "SENT": case "OFFERED": case "PENDING": case "PROFILE_PENDING": case "SHORTLISTED": return "secondary"
+    case "CHANGES_REQUESTED": case "REJECTED": case "EXPIRED": case "INVITATION_EXPIRED": case "DECLINED": case "REVOKED": case "ABSENT": case "OPTED_OUT": case "NOT_ELIGIBLE": return "destructive"
     default: return "outline"
   }
 }

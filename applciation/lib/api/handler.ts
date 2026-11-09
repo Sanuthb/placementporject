@@ -5,7 +5,7 @@ import { getSession, requireModule, requireRole, type Session } from "@/lib/auth
 import type { ModuleKey, Role } from "@/generated/prisma/client";
 import { rateLimit, type LimitOpt } from "@/lib/rateLimit";
 
-type Opts = { roles?: Role[]; module?: ModuleKey; limit?: LimitOpt };
+type Opts = { roles?: Role[]; module?: ModuleKey; limit?: LimitOpt; /** For the few routes a person must reach before finishing two-step sign-in. */ skipMfa?: boolean };
 type Ctx<P> = { params: Promise<P> };
 
 /** Wraps a route handler: authenticates, checks role and module, and maps errors to JSON. */
@@ -15,7 +15,7 @@ export function route<P = Record<string, string>>(
 ) {
   return async (req: NextRequest, ctx: Ctx<P>) => {
     try {
-      const session = await getSession(req);
+      const session = await getSession(req, { skipMfa: opts.skipMfa });
       if (opts.roles) requireRole(session, ...opts.roles);
       if (opts.module) await requireModule(session, opts.module);
       if (opts.limit) await rateLimit(opts.limit, session.userId);
@@ -34,7 +34,28 @@ export function toErrorResponse(e: unknown, req?: Request) {
     const retry = (e.details as { retryAfter?: number } | undefined)?.retryAfter;
     return NextResponse.json({ error: { code: e.code, message: e.message, details: e.details, requestId } }, { status: e.status, headers: retry ? { "retry-after": String(retry) } : undefined });
   }
-  if (e instanceof ZodError) return NextResponse.json({ error: { code: "VALIDATION", message: "Invalid input", details: e.issues, requestId } }, { status: 400 });
+  if (e instanceof ZodError) return NextResponse.json({ error: { code: "VALIDATION", message: validationMessage(e), details: e.issues, requestId } }, { status: 400 });
   console.error(JSON.stringify({ level: "error", requestId, path: req ? new URL(req.url).pathname : undefined, method: req?.method, message: (e as Error)?.message, stack: (e as Error)?.stack }));
   return NextResponse.json({ error: { code: "INTERNAL", message: "Something went wrong", requestId } }, { status: 500 });
+}
+
+const FIELD_LABEL: Record<string, string> = { enrollmentNo: "Admission number", dateOfBirth: "Date of birth", departmentId: "Department", programId: "Programme", batchId: "Batch", branchId: "Branch", campusId: "Campus", admissionYear: "Admission year", graduationYear: "Graduation year" };
+const humanize = (k: string) => FIELD_LABEL[k] ?? k.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+
+/** A sentence a person can act on, such as "Password: Include a number", instead of a bare "Invalid input". Zod's own generic texts are replaced with plain ones. */
+export function validationMessage(e: ZodError) {
+  const parts = e.issues.slice(0, 3).map((i) => {
+    const field = i.path.length ? humanize(String(i.path[i.path.length - 1])) : "";
+    let msg = i.message;
+    if (/^Invalid input: expected \w+, received undefined$/.test(msg)) msg = "is required";
+    else if (/^Invalid input: expected/.test(msg) || msg === "Invalid input") msg = "is not valid";
+    else if (/^Invalid email/i.test(msg)) msg = "must be a valid email address";
+    else if (/^Invalid UUID/i.test(msg)) msg = "must be chosen from the list";
+    else if (/^Too small: expected string to have >=1/.test(msg)) msg = "is required";
+    else if (/^Too small: expected string to have >=(\d+)/.test(msg)) msg = `must be at least ${/>=(\d+)/.exec(msg)![1]} characters`;
+    else if (/^Too big: expected string to have <=(\d+)/.test(msg)) msg = `must be at most ${/<=(\d+)/.exec(msg)![1]} characters`;
+    else if (/^Invalid string: must match pattern/.test(msg)) msg = "is not in the expected format";
+    return field ? (/^[A-Z]/.test(msg) ? `${field}: ${msg}` : `${field} ${msg}`) : msg;
+  });
+  return parts.join(". ") + (e.issues.length > 3 ? ` (and ${e.issues.length - 3} more)` : "");
 }

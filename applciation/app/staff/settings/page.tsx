@@ -1,10 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { BuildingIcon, CalendarRangeIcon, ClipboardCheckIcon, GitBranchIcon, GraduationCapIcon, HandshakeIcon, LayersIcon, ListOrderedIcon, UsersIcon, UsersRoundIcon, type LucideIcon } from "lucide-react"
+import { BuildingIcon, CalendarRangeIcon, ClipboardCheckIcon, GitBranchIcon, GraduationCapIcon, HandshakeIcon, LayersIcon, ListOrderedIcon, MailIcon, MapPinIcon, ShieldCheckIcon, UsersIcon, UsersRoundIcon, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { ActiveBadge, MasterTab } from "@/components/master-tab"
+import { StaffPanel } from "@/components/staff-panel"
+import { SecuritySettings } from "@/components/security-settings"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -39,10 +41,11 @@ const APPROVALS = [
   ["ELIGIBILITY_EXCEPTION", "Eligibility exceptions", "Letting a student into a drive they don't qualify for needs sign-off."],
 ] as const
 
-type TabKey = "college" | "departments" | "programs" | "branches" | "batches" | "semesters" | "years" | "staff" | "verification" | "policies"
+type TabKey = "college" | "departments" | "programs" | "branches" | "batches" | "semesters" | "years" | "staff" | "verification" | "policies" | "campuses" | "invitations" | "security"
 const GROUPS: { label: string; items: { key: TabKey; label: string; icon: LucideIcon; title: string; description: string }[] }[] = [
   { label: "Organisation", items: [
     { key: "college", label: "College profile", icon: BuildingIcon, title: "College profile", description: "The name, logo and brand colour used in reports and emails." },
+    { key: "campuses", label: "Campuses", icon: MapPinIcon, title: "Campuses", description: "The campuses of your institution. Optional; students can be assigned to one when invited." },
     { key: "departments", label: "Departments", icon: LayersIcon, title: "Departments", description: "The branches students and coordinators belong to." },
     { key: "programs", label: "Programmes", icon: GraduationCapIcon, title: "Programmes", description: "Degrees a department offers, with their duration and number of semesters." },
     { key: "branches", label: "Branches", icon: GitBranchIcon, title: "Branches", description: "Specialisations inside a programme, such as Data Science under MCA." },
@@ -51,9 +54,11 @@ const GROUPS: { label: string; items: { key: TabKey; label: string; icon: Lucide
     { key: "semesters", label: "Semesters", icon: ListOrderedIcon, title: "Semesters", description: "The terms of a batch. Students move through them while staying in the same batch." },
   ] },
   { label: "People", items: [
-    { key: "staff", label: "Staff", icon: UsersIcon, title: "Staff", description: "Invite colleagues and choose what each role can do." },
+    { key: "staff", label: "Staff", icon: UsersIcon, title: "Staff", description: "Invite colleagues, give them one or more roles, review sign-ins and reset access." },
+    { key: "security", label: "Security", icon: ShieldCheckIcon, title: "Security", description: "Two-step sign-in for administrators." },
   ] },
   { label: "Rules", items: [
+    { key: "invitations", label: "Student invitations", icon: MailIcon, title: "Student invitations", description: "How long an invitation stays valid, and the declaration students accept when they submit." },
     { key: "verification", label: "Verification", icon: ClipboardCheckIcon, title: "Verification rules", description: "What a student must complete before they count as verified." },
     { key: "policies", label: "Offers and approvals", icon: HandshakeIcon, title: "Offers and approvals", description: "Limits on offers and which actions need an admin's sign-off." },
   ] },
@@ -124,6 +129,13 @@ function Panel({ tab }: { tab: TabKey }) {
     case "college": return <CollegeForm />
     case "verification": return <VerificationForm />
     case "policies": return <PoliciesForm />
+    case "invitations": return <InvitationSettings />
+    case "security": return <SecuritySettings />
+    case "campuses": return (
+      <MasterTab<Dept> endpoint="/api/settings/campuses" addLabel="Add campus" noun="campus" editable deletePath={(r) => `/api/settings/campuses/${r.id}`} patchPath={(r) => `/api/settings/campuses/${r.id}`}
+        fields={[{ name: "name", label: "Name" }, { name: "code", label: "Short code (optional)", required: false }]}
+        columns={[{ label: "Name", cell: (r) => r.name }, { label: "Code", cell: (r) => r.code || "—" }, { label: "State", cell: (r) => <ActiveBadge active={r.isActive} /> }]} />
+    )
     case "departments": return (
       <MasterTab<Dept> endpoint="/api/settings/departments" addLabel="Add department" noun="department" editable deletePath={(r) => `/api/settings/departments/${r.id}`} patchPath={(r) => `/api/settings/departments/${r.id}`}
         fields={[{ name: "name", label: "Name" }, { name: "code", label: "Code" }]}
@@ -189,10 +201,7 @@ function Panel({ tab }: { tab: TabKey }) {
     )
     case "staff": return (
       <div className="flex flex-col gap-4">
-        <MasterTab<Staff> endpoint="/api/settings/staff" addLabel="Invite staff member" noun="staff member" editable editFields={[{ name: "name", label: "Full name" }, { name: "role", label: "Role", type: "select", options: ROLES, required: true }, { name: "departmentId", label: "Department (coordinators only)", type: "select", options: lk.departments, required: false }]} toEditBody={(v) => ({ name: v.name, role: v.role, departmentId: v.role === "DEPARTMENT_COORDINATOR" ? v.departmentId || null : null })} patchPath={(r) => `/api/settings/staff/${r.id}`}
-          fields={[{ name: "name", label: "Full name" }, { name: "email", label: "Email", type: "email" }, { name: "role", label: "Role", type: "select", options: ROLES, required: true }, { name: "departmentId", label: "Department (coordinators only)", type: "select", options: lk.departments, required: false }]}
-          toBody={(v) => ({ name: v.name, email: v.email, role: v.role, departmentId: v.role === "DEPARTMENT_COORDINATOR" ? v.departmentId || null : null })}
-          columns={[{ label: "Name", cell: (r) => r.name }, { label: "Email", cell: (r) => r.email }, { label: "Role", cell: (r) => titleCase(r.role) }, { label: "Department", cell: (r) => (r.departmentId ? lk.departmentName[r.departmentId] ?? "—" : "—") }, { label: "State", cell: (r) => <ActiveBadge active={r.isActive} /> }]} />
+        <StaffPanel />
         <dl className="grid gap-3 rounded-xl bg-muted/50 p-4 text-sm sm:grid-cols-3">
           <div><dt className="font-medium">TPO admin</dt><dd className="text-muted-foreground">Everything, including settings and approvals.</dd></div>
           <div><dt className="font-medium">Placement officer</dt><dd className="text-muted-foreground">Runs drives, students and offers day to day.</dd></div>
@@ -368,5 +377,36 @@ function SemestersPanel({ batches, years }: { batches: { value: string; label: s
           ]} />
       )}
     </div>
+  )
+}
+
+type InviteSettings = { inviteExpiryDays: number; dataDeclaration: string | null; defaultDeclaration: string }
+function InvitationSettings() {
+  const { data, reload } = useApi<InviteSettings>("/api/settings/invitations")
+  if (!data) return <Skeleton className="h-64 rounded-xl" />
+  return <InvitationSettingsInner key={JSON.stringify(data)} data={data} reload={reload} />
+}
+function InvitationSettingsInner({ data, reload }: { data: InviteSettings; reload: () => void }) {
+  const [days, setDays] = React.useState(String(data.inviteExpiryDays))
+  const [text, setText] = React.useState(data.dataDeclaration ?? "")
+  const [busy, setBusy] = React.useState(false)
+  const dirty = days !== String(data.inviteExpiryDays) || text !== (data.dataDeclaration ?? "")
+  async function save() {
+    setBusy(true)
+    try { await api("/api/settings/invitations", { method: "PATCH", body: { inviteExpiryDays: Number(days), dataDeclaration: text.trim() || null } }); toast.success("Saved"); reload() } catch (e) { toastError(e) } finally { setBusy(false) }
+  }
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader><CardTitle>Invitations</CardTitle><CardDescription>Changing the expiry affects invitations sent from now on. Existing ones keep their date until resent.</CardDescription></CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1"><label htmlFor="days" className="text-sm font-medium">Invitation valid for (days)</label><Input id="days" type="number" min={1} max={60} value={days} onChange={(e) => setDays(e.target.value)} className="w-32" /></div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="decl" className="text-sm font-medium">Data declaration</label>
+          <textarea id="decl" rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder={data.defaultDeclaration} className="w-full rounded-lg border bg-transparent p-2 text-sm" />
+          <span className="text-xs text-muted-foreground">Leave empty to use the standard wording shown above.</span>
+        </div>
+        <div><Button onClick={save} disabled={busy || !dirty || !(Number(days) >= 1)}>{busy && <Spinner />}Save</Button></div>
+      </CardContent>
+    </Card>
   )
 }

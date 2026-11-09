@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { scopedStudent } from "@/lib/verification";
+import { syncOnboardingStatus } from "@/lib/invitations/status";
 
 type P = { id: string; docId: string };
 
@@ -26,6 +27,7 @@ export const PATCH = route<P>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"], modul
       select: { id: true, status: true, verifiedAt: true, rejectReason: true },
     });
     await audit(s, { action: `student.document.${data.status.toLowerCase()}`, entity: "Student", entityId: id, before: { status: before.status }, after: { docId, status: data.status, reason: data.rejectReason ?? null } }, tx);
+    await syncOnboardingStatus(tx, id);
     return after;
   });
 });

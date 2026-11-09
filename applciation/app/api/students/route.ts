@@ -8,6 +8,7 @@ import { studentSelect } from "@/lib/students";
 import { resolveMapping } from "@/lib/academicMapping";
 import { educationInput } from "@/lib/api/academic";
 import { ProfileSection } from "@/generated/prisma/client";
+import { expireStale } from "@/lib/invitations/service";
 import { studentFilterQuery, studentWhere } from "@/lib/studentFilters";
 
 const listQuery = studentFilterQuery.extend({
@@ -34,13 +35,15 @@ const create = z.object({
 
 export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
   const { limit, cursor, ...filters } = parseQuery(req, listQuery);
+  await expireStale(s.collegeId);
   const [settings, rows] = await Promise.all([
     db.collegeSettings.findUnique({ where: { collegeId: s.collegeId }, select: { requiredSections: true } }),
     db.student.findMany({
       where: studentWhere(s, filters),
       select: {
         ...studentSelect,
-        stage: true, isPlaced: true, participationStatus: true,
+        stage: true, isPlaced: true, participationStatus: true, onboardingStatus: true, lastActivityAt: true, updatedAt: true,
+        invitation: { select: { status: true, expiresAt: true, sentAt: true, acceptedAt: true, graduationYear: true } },
         department: { select: { name: true } },
         program: { select: { name: true, code: true } },
         batch: { select: { name: true, endYear: true } },

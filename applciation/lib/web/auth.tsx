@@ -6,7 +6,11 @@ import { supabase } from "@/lib/supabase/browser"
 import { ApiClientError, api } from "@/lib/web/api"
 
 export type Kind = "staff" | "student" | "recruiter"
-export type Profile = { kind: Kind; name: string; email: string; role?: string; modules: string[] }
+export type Profile = { kind: Kind; name: string; email: string; role?: string; /** Every role, main one first (staff). */ roles: string[]; modules: string[]; /** Two-step sign-in state for administrators. */ mfa?: string }
+
+export const hasRole = (p: Pick<Profile, "roles">, ...r: string[]) => r.some((x) => p.roles.includes(x))
+/** A coordinator who is also an officer or admin is not limited to one department. */
+export const isCoordinatorOnly = (p: Pick<Profile, "roles">) => p.roles.includes("DEPARTMENT_COORDINATOR") && !hasRole(p, "TPO_ADMIN", "PLACEMENT_OFFICER")
 type State =
   | { status: "loading" }
   | { status: "anon" }
@@ -26,14 +30,27 @@ export const homeFor = (kind: Kind) => `/${kind}`
 async function resolveProfile(): Promise<Profile | null> {
   for (const { kind, path } of ENDPOINTS) {
     try {
-      const me = await api<{ name?: string; email?: string; role?: string; modules?: string[] }>(path)
-      return { kind, name: me.name ?? me.email ?? "", email: me.email ?? "", role: me.role, modules: me.modules ?? [] }
+      const me = await api<{ name?: string; email?: string; role?: string; roles?: string[]; modules?: string[]; mfa?: string }>(path)
+      return { kind, name: me.name ?? me.email ?? "", email: me.email ?? "", role: me.role, roles: me.roles ?? (me.role ? [me.role] : []), modules: me.modules ?? [], mfa: me.mfa }
     } catch (e) {
       if (e instanceof ApiClientError && (e.status === 401 || e.status === 403)) continue
       throw e
     }
   }
   return null
+}
+
+/** Tells the server about this sign-in once per session, for the sign-in history. Failure is harmless. */
+async function recordLogin() {
+  try {
+    const { data } = await supabase().auth.getSession()
+    const token = data.session?.access_token
+    if (!token) return
+    const sid = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).session_id as string | undefined
+    if (!sid || sessionStorage.getItem("login-recorded") === sid) return
+    const r = await fetch("/api/auth/login-event", { method: "POST", headers: { authorization: `Bearer ${token}` } })
+    if (r.ok) sessionStorage.setItem("login-recorded", sid)
+  } catch { /* the history is a convenience; never block sign-in on it */ }
 }
 
 const Ctx = React.createContext<{ state: State; signOut: () => Promise<void>; refresh: () => Promise<void> } | null>(null)
@@ -45,7 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const load = React.useCallback(async () => {
     try {
       const profile = await resolveProfile()
+      // Administrators finish two-step sign-in (or set it up) before anything else loads.
+      if (profile?.kind === "staff" && (profile.mfa === "challenge" || profile.mfa === "setup_required") && !window.location.pathname.startsWith("/mfa")) {
+        window.location.replace(`/mfa?next=${encodeURIComponent(window.location.pathname)}`)
+        return
+      }
       setState(profile ? { status: "ready", profile } : { status: "noaccess" })
+      if (profile && profile.mfa !== "challenge") void recordLogin()
     } catch (e) {
       setState({ status: "error", message: e instanceof Error ? e.message : "Could not load your account" })
     }

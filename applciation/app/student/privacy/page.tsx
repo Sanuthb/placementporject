@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
+import { SignInHistory } from "@/components/sign-in-history"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -69,6 +70,10 @@ export default function PrivacyPage() {
             </TableBody>
           </Table>
         </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>My recent sign-ins</CardTitle><CardDescription>If you see a sign-in you do not recognise, change your password and tell the placement office.</CardDescription></CardHeader>
+        <CardContent><SignInHistory path="/api/me/logins" /></CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle>Correction or deletion</CardTitle><CardDescription>To correct verified data, or to ask for something to be deleted, send a request to the placement office.</CardDescription></CardHeader>

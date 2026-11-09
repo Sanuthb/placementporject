@@ -37,7 +37,7 @@ export function AppSidebar({ profile, ...props }: { profile: Profile } & React.C
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain sections={visibleNav(profile.kind, profile.modules, profile.role)} />
+        <NavMain sections={visibleNav(profile.kind, profile.modules, profile.roles)} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={profile} />

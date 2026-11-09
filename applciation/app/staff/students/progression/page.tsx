@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { api, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { useApi } from "@/lib/web/use-api"
 
 type BatchRow = { id: string; name: string; isActive: boolean }
@@ -26,7 +26,7 @@ const NOT_SET = "__none"
 /** Move a whole group of a batch to its next semester. The batch stays the same; each student gets a history entry. */
 export default function ProgressionPage() {
   const { state } = useAuth()
-  const canEdit = state.status === "ready" && state.profile.role !== "DEPARTMENT_COORDINATOR"
+  const canEdit = state.status === "ready" && !isCoordinatorOnly(state.profile)
   const batches = useApi<BatchRow[]>("/api/settings/batches")
   const [batchId, setBatchId] = React.useState("")
   const [from, setFrom] = React.useState("")

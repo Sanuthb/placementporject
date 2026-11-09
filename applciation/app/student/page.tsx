@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +14,7 @@ import { useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
-type Me = { name: string; enrollmentNo: string; department: { name: string }; batch: { name: string }; stage: string; participationStatus: string; isPlaced: boolean; modules: string[]; unreadNotifications: number }
+type Me = { onboardingStatus?: string; name: string; enrollmentNo: string; department: { name: string }; batch: { name: string }; stage: string; participationStatus: string; isPlaced: boolean; modules: string[]; unreadNotifications: number }
 type Blocks = { id: string; reason: string; endsAt: string }[]
 type Sections = { stage: string; sections: { section: string; required: boolean; status: string; reviewComment: string | null }[] }
 type Drive = { id: string; role: string; applicationDeadline: string; company: { name: string }; myApplication: string | null; eligibility: { eligible: boolean } }
@@ -33,6 +34,11 @@ export default function StudentHome() {
   const has = (m: string) => mods.includes(m)
   const [now] = React.useState(() => Date.now())
   const me = useApi<Me>("/api/student/me")
+  const router = useRouter()
+  // A student who has accepted an invitation but not yet submitted goes straight to the onboarding wizard.
+  React.useEffect(() => {
+    if (me.data && ["INVITATION_ACCEPTED", "PROFILE_IN_PROGRESS", "CHANGES_REQUESTED"].includes(me.data.onboardingStatus ?? "")) router.replace("/student/onboarding")
+  }, [me.data, router])
   const blocks = useApi<Blocks>(has("ATTENDANCE_BLOCKING") ? "/api/student/blocks" : null)
   const hist = useApi<{ warning: string | null }>(has("ATTENDANCE_BLOCKING") ? "/api/student/attendance/history" : null)
   const secs = useApi<Sections>(has("ONBOARDING") ? "/api/student/sections" : null)

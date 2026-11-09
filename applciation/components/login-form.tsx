@@ -20,7 +20,13 @@ export function LoginForm() {
   const [email, setEmail] = React.useState("")
   const [sent, setSent] = React.useState(false)
   const [code, setCode] = React.useState("")
-  const go = () => router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/")
+  const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/"
+  // An administrator with an authenticator app goes on to enter the code; everyone else is signed in.
+  const go = async () => {
+    const { data } = await supabase().auth.mfa.getAuthenticatorAssuranceLevel()
+    if (data?.nextLevel === "aal2" && data.currentLevel !== "aal2") router.replace(`/mfa?next=${encodeURIComponent(dest)}`)
+    else router.replace(dest)
+  }
 
   /** Sends a one-time code and sign-in link to the address. Only existing accounts can use it; nobody is created. */
   async function sendCode(e: React.FormEvent) {
@@ -36,7 +42,7 @@ export function LoginForm() {
     setBusy(true)
     const { error } = await supabase().auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" })
     if (error) { setBusy(false); toast.error(error.message); return }
-    go()
+    void go()
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -46,7 +52,7 @@ export function LoginForm() {
     const { error } = await supabase().auth.signInWithPassword({ email: String(form.get("email")), password: String(form.get("password")) })
     if (error) { setBusy(false); toast.error(error.message); return }
     // Only follow same-site paths, never an external address.
-    go()
+    void go()
   }
 
   return (

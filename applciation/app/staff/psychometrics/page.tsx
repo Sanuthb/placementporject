@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api, toastError } from "@/lib/web/api"
 import { fmtDateTime } from "@/lib/web/format"
-import { useAuth } from "@/lib/web/auth"
+import { hasRole, useAuth } from "@/lib/web/auth"
 import { useLookups } from "@/lib/web/lookups"
 import { useApi } from "@/lib/web/use-api"
 
@@ -28,7 +28,7 @@ type Entry = { id: string; at: string; reason: string; staff: { name: string } |
 
 export default function PsychometricsPage() {
   const { state } = useAuth()
-  const isAdmin = state.status === "ready" && state.profile.role === "TPO_ADMIN"
+  const isAdmin = state.status === "ready" && hasRole(state.profile, "TPO_ADMIN")
   const log = useApi<Entry[]>(isAdmin ? "/api/psychometrics/access-log" : null)
   const [who, setWho] = React.useState<{ id: string; name: string } | null>(null)
   const [reason, setReason] = React.useState("")

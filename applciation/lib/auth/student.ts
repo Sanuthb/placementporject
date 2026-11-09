@@ -16,5 +16,7 @@ export async function getStudentSession(req: NextRequest): Promise<StudentSessio
   if (!st || !st.isActive || st.isArchived || !st.college.isActive) throw forbidden("This is not an active student account");
   // First sign-in after accepting the invite marks the account as activated.
   if (st.inviteStatus !== "ACTIVATED") await db.student.update({ where: { id: st.id }, data: { inviteStatus: "ACTIVATED" } });
+  // Last activity, written at most every ten minutes so a busy student does not cause a write per request.
+  if (!st.lastActivityAt || Date.now() - st.lastActivityAt.getTime() > 600_000) void db.student.update({ where: { id: st.id }, data: { lastActivityAt: new Date() } }).catch(() => undefined);
   return { studentId: st.id, userId: authId, collegeId: st.collegeId, departmentId: st.departmentId, batchId: st.batchId, name: st.name, email: st.email };
 }

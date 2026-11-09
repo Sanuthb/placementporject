@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { api, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { RELATIONSHIP, TIERS } from "@/lib/web/enums"
 import { statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
@@ -74,7 +74,7 @@ function CompanyForm({ initial, onClose, onSaved }: { initial: Company | null; o
 
 export default function CompaniesPage() {
   const { state } = useAuth()
-  const canEdit = state.status === "ready" && state.profile.role !== "DEPARTMENT_COORDINATOR"
+  const canEdit = state.status === "ready" && !isCoordinatorOnly(state.profile)
   const [q, setQ] = React.useState("")
   const [tier, setTier] = React.useState("")
   const search = React.useDeferredValue(q)

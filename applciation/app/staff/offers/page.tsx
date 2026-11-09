@@ -14,7 +14,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { api, download, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { OFFER_STATUS } from "@/lib/web/enums"
 import { fmtDate, fmtLpa, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
@@ -24,7 +24,7 @@ const JOINING = ["PENDING", "JOINED", "NOT_JOINED"].map((v) => ({ value: v, labe
 
 export default function OffersPage() {
   const { state } = useAuth()
-  const canEdit = state.status === "ready" && state.profile.role !== "DEPARTMENT_COORDINATOR"
+  const canEdit = state.status === "ready" && !isCoordinatorOnly(state.profile)
   const [status, setStatus] = React.useState("")
   const { data, loading, reload } = useApi<{ items: Offer[] }>("/api/offers", { status, limit: 100 })
   const [revoke, setRevoke] = React.useState<Offer | null>(null)

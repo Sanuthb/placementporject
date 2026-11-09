@@ -1,10 +1,11 @@
 import { db } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
-import type { ModuleKey } from "@/generated/prisma/client";
+import { hasRole, isCoordinatorOnly } from "@/lib/auth/session";
+import type { ModuleKey, Role } from "@/generated/prisma/client";
 
 const DAY = 86_400_000;
 
-const ACTIONS: { key: string; label: string; method: string; path: string; module?: ModuleKey; roles: string[] }[] = [
+const ACTIONS: { key: string; label: string; method: string; path: string; module?: ModuleKey; roles: Role[] }[] = [
   { key: "import_students", label: "Import students", method: "POST", path: "/api/students/import/preview", module: "ONBOARDING", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
   { key: "create_drive", label: "Create a drive", method: "POST", path: "/api/drives", module: "DRIVES", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
   { key: "verification_queue", label: "Open the verification queue", method: "GET", path: "/api/verification/queue", module: "ONBOARDING", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "DEPARTMENT_COORDINATOR"] },
@@ -20,7 +21,7 @@ const ACTIONS: { key: string; label: string; method: string; path: string; modul
 export async function dashboard(s: Session) {
   const now = new Date();
   const mods = new Set((await db.collegeModule.findMany({ where: { collegeId: s.collegeId, enabled: true }, select: { module: true } })).map((m) => m.module));
-  const scope = s.role === "DEPARTMENT_COORDINATOR" ? { departmentId: s.departmentId ?? "none" } : {};
+  const scope = isCoordinatorOnly(s) ? { departmentId: s.departmentId ?? "none" } : {};
   const base = { collegeId: s.collegeId, isActive: true, isArchived: false, ...scope };
   const registered = { ...base, participationStatus: "REGISTERED" as const };
   const out: Record<string, unknown> = { generatedAt: now };
@@ -70,7 +71,7 @@ export async function dashboard(s: Session) {
     const awaiting = await db.offer.findMany({ where: { collegeId: s.collegeId, status: "OFFERED", isHistorical: false, student: { ...scope } }, select: { expiresAt: true } });
     attention.offersAwaitingResponse = { count: awaiting.length, expiringWithin3Days: awaiting.filter((o) => o.expiresAt && o.expiresAt.getTime() <= now.getTime() + 3 * DAY).length };
   }
-  if (s.role === "TPO_ADMIN") attention.approvalsPending = await db.approvalRequest.count({ where: { collegeId: s.collegeId, status: "PENDING" } });
+  if (hasRole(s, "TPO_ADMIN")) attention.approvalsPending = await db.approvalRequest.count({ where: { collegeId: s.collegeId, status: "PENDING" } });
   attention.openTickets = await db.ticket.count({ where: { collegeId: s.collegeId, status: { not: "RESOLVED" }, ...scope } });
   out.needsAttention = attention;
 
@@ -105,6 +106,6 @@ export async function dashboard(s: Session) {
       driveStatus: driveStatus.map((d) => ({ status: d.status, count: d._count })),
     };
   }
-  out.quickActions = ACTIONS.filter((a) => a.roles.includes(s.role) && (!a.module || mods.has(a.module))).map(({ key, label, method, path }) => ({ key, label, method, path }));
+  out.quickActions = ACTIONS.filter((a) => hasRole(s, ...a.roles) && (!a.module || mods.has(a.module))).map(({ key, label, method, path }) => ({ key, label, method, path }));
   return out;
 }

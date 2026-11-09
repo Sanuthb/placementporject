@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { api, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { hasRole, isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { fmtDate, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
@@ -25,9 +25,9 @@ type Stu = { id: string; name: string; enrollmentNo: string }
 
 export default function BlockingPage() {
   const { state } = useAuth()
-  const role = state.status === "ready" ? state.profile.role : undefined
-  const canEdit = role !== "DEPARTMENT_COORDINATOR"
-  const isAdmin = role === "TPO_ADMIN"
+  const profile = state.status === "ready" ? state.profile : undefined
+  const canEdit = !profile || !isCoordinatorOnly(profile)
+  const isAdmin = !!profile && hasRole(profile, "TPO_ADMIN")
   const blocks = useApi<{ items: Block[] }>("/api/blocking/blocks", { state: "active", limit: 100 })
   const policies = useApi<Policy[]>(canEdit ? "/api/blocking/policies" : null)
   const [lift, setLift] = React.useState<Block | null>(null)

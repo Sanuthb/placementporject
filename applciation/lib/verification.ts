@@ -2,8 +2,9 @@ import { z } from "zod";
 import { Prisma, ProfileSection } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { ApiError, badRequest, notFound } from "@/lib/api/errors";
-import { departmentScope, type Session } from "@/lib/auth/session";
+import { departmentScope, type Session, isCoordinatorOnly } from "@/lib/auth/session";
 import { notifyStaff } from "@/lib/notify";
+import { syncOnboardingStatus } from "@/lib/invitations/status";
 
 type Tx = Prisma.TransactionClient;
 
@@ -59,10 +60,11 @@ export async function recomputeStage(tx: Tx, collegeId: string, studentId: strin
   const verified = new Set(sections.filter((s) => s.status === "VERIFIED").map((s) => s.section));
   const stage = required.every((r) => verified.has(r)) ? "VERIFIED" : "PROFILE_PENDING";
   if (stage !== student.stage) await tx.student.update({ where: { id: studentId }, data: { stage } });
+  await syncOnboardingStatus(tx, studentId);
 }
 
 /** Saves section content, and optionally submits it for review. Used by staff on behalf of a student today, and by the student-facing API later. */
-export async function saveSection(tx: Tx, ctx: { collegeId: string; actorId: string | null }, studentId: string, section: ProfileSection, raw: unknown, submit: boolean) {
+export async function saveSection(tx: Tx, ctx: { collegeId: string; actorId: string | null }, studentId: string, section: ProfileSection, raw: unknown, submit: boolean, quiet = false) {
   const data = sectionSchemas[section].parse(raw) as Prisma.InputJsonObject;
   if (JSON.stringify(data).length > MAX_JSON_BYTES) throw badRequest("Section content is too large");
 
@@ -86,7 +88,7 @@ export async function saveSection(tx: Tx, ctx: { collegeId: string; actorId: str
     await tx.verificationEvent.create({ data: { collegeId: ctx.collegeId, studentId, section, action: "SUBMITTED", actorId: ctx.actorId, snapshot: data } });
     await recomputeStage(tx, ctx.collegeId, studentId);
     const st = await tx.student.findUniqueOrThrow({ where: { id: studentId }, select: { name: true, departmentId: true } });
-    await notifyStaff(ctx.collegeId, { type: "section.submitted", title: `${st.name} submitted ${section.toLowerCase().replace("_", " ")} for review`, link: `/verification?student=${studentId}`, departmentId: st.departmentId, excludeUserId: ctx.actorId }, tx);
+    if (!quiet) await notifyStaff(ctx.collegeId, { type: "section.submitted", title: `${st.name} submitted ${section.toLowerCase().replace("_", " ")} for review`, link: `/verification?student=${studentId}`, departmentId: st.departmentId, excludeUserId: ctx.actorId }, tx);
   }
   return updated;
 }
@@ -95,7 +97,7 @@ export async function saveSection(tx: Tx, ctx: { collegeId: string; actorId: str
 export async function approveSection(tx: Tx, session: Session, sectionId: string, comment?: string) {
   const row = await tx.studentSection.findFirst({ where: { id: sectionId, collegeId: session.collegeId }, include: { student: { select: { departmentId: true } } } });
   if (!row) throw notFound("Section not found");
-  if (session.role === "DEPARTMENT_COORDINATOR" && row.student.departmentId !== session.departmentId) throw notFound("Section not found");
+  if (isCoordinatorOnly(session) && row.student.departmentId !== session.departmentId) throw notFound("Section not found");
 
   const accepted = (row.pendingData ?? row.data) as Prisma.InputJsonObject;
   const claim = await tx.studentSection.updateMany({

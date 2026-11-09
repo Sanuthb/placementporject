@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { api, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { DRIVE_STATUS } from "@/lib/web/enums"
 import { fmtDate, fmtLpa, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
@@ -23,7 +23,7 @@ const StatusBadge = ({ s }: { s: string }) => <Badge variant={s === "PUBLISHED" 
 
 export default function DrivesPage() {
   const { state } = useAuth()
-  const canEdit = state.status === "ready" && state.profile.role !== "DEPARTMENT_COORDINATOR"
+  const canEdit = state.status === "ready" && !isCoordinatorOnly(state.profile)
   const [status, setStatus] = React.useState("")
   const { data, loading, reload } = useApi<{ items: Drive[] }>("/api/drives", { status, limit: 100 })
   const [deleting, setDeleting] = React.useState<Drive | null>(null)

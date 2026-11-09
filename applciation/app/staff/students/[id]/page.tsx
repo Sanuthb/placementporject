@@ -6,6 +6,8 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { toast } from "sonner"
 
 import { OptionSelect } from "@/components/option-select"
+import { StudentIntelligence } from "@/components/student-intelligence"
+import { OnboardingReview } from "@/components/onboarding-review"
 import { VerificationHistory } from "@/components/staff-extras"
 import { DocumentsPanel, EducationPanel } from "@/components/student-academic"
 import { ProgressionPanel } from "@/components/student-progression"
@@ -23,7 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { api, download, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { hasRole, isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, fmtLpa, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
@@ -50,9 +52,9 @@ const chartConfig = { score: { label: "Score", color: "var(--chart-2)" } } satis
 export default function StudentPage() {
   const { id } = useParams<{ id: string }>()
   const { state } = useAuth()
-  const canEdit = state.status === "ready" && state.profile.role !== "DEPARTMENT_COORDINATOR"
+  const canEdit = state.status === "ready" && !isCoordinatorOnly(state.profile)
   const full = useApi<Full>(`/api/students/${id}/360`)
-  const [tab, setTab] = React.useState("overview")
+  const [tab, setTab] = React.useState("onboarding")
   const analysis = useApi<Analysis>(tab === "analysis" ? `/api/students/${id}/analysis` : null)
   const [review, setReview] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
@@ -103,6 +105,8 @@ export default function StudentPage() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
         <TabsList className="flex-wrap">
+          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+          <TabsTrigger value="intelligence">360° Intelligence</TabsTrigger>
           <TabsTrigger value="overview">Sections</TabsTrigger>
           <TabsTrigger value="education">Education</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -114,9 +118,11 @@ export default function StudentPage() {
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="onboarding"><OnboardingReview studentId={id} name={p.name} canAct onChanged={full.reload} /></TabsContent>
+        <TabsContent value="intelligence">{tab === "intelligence" && <StudentIntelligence studentId={id} />}</TabsContent>
         <TabsContent value="education"><EducationPanel studentId={id} canEdit={canEdit} /></TabsContent>
         <TabsContent value="documents"><DocumentsPanel studentId={id} canEdit={canEdit} /></TabsContent>
-        <TabsContent value="progression"><ProgressionPanel studentId={id} canEdit={canEdit} isAdmin={state.status === "ready" && state.profile.role === "TPO_ADMIN"} /></TabsContent>
+        <TabsContent value="progression"><ProgressionPanel studentId={id} canEdit={canEdit} isAdmin={state.status === "ready" && hasRole(state.profile, "TPO_ADMIN")} /></TabsContent>
 
         <TabsContent value="overview">
           <Table>

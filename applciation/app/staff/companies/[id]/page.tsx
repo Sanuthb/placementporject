@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { api, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { RELATIONSHIP, TIERS } from "@/lib/web/enums"
 import { fmtDate, fmtDateTime, fmtLpa, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
@@ -29,7 +29,7 @@ type Note = { id: string; kind: string; body: string; followUpDate: string | nul
 export default function CompanyPage() {
   const { id } = useParams<{ id: string }>()
   const { state } = useAuth()
-  const canEdit = state.status === "ready" && state.profile.role !== "DEPARTMENT_COORDINATOR"
+  const canEdit = state.status === "ready" && !isCoordinatorOnly(state.profile)
   const c = useApi<Company>(`/api/companies/${id}`)
   const notes = useApi<Note[]>(`/api/companies/${id}/notes`)
   const [note, setNote] = React.useState("")

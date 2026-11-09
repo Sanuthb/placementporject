@@ -31,6 +31,8 @@ const run = (label, args, env = {}) => {
   if (!passed) console.log(out.split("\n").filter((l) => /FAIL|Error|rror:/.test(l)).slice(0, 15).join("\n"));
 };
 run("unit: scoring, config, templates", ["--import", "tsx", "tests/unit/scoring.test.mts"]);
+run("unit: invitations", ["--import", "tsx", "tests/unit/invitations.test.mts"]);
+run("unit: intelligence", ["--import", "tsx", "tests/unit/intelligence.test.mts"]);
 for (const f of ["reset.mjs"]) { const r = spawnSync(process.execPath, [...envArgs, `tests/e2e/${f}`], { encoding: "utf8", env: process.env }); if (r.status !== 0) { console.error(r.stdout + r.stderr); stop(); process.exit(1); } }
 for (const f of readdirSync("tests/e2e").filter((n) => /^\d\d-.*\.mjs$/.test(n)).sort()) {
   const sec = f.startsWith("09-");

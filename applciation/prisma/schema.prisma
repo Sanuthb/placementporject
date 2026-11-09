@@ -389,6 +389,33 @@ enum ProgressionKind {
   DISCONTINUED
 }
 
+enum OnboardingStatus {
+  INVITATION_PENDING
+  INVITATION_SENT
+  INVITATION_ACCEPTED
+  PROFILE_IN_PROGRESS
+  SUBMITTED
+  VERIFICATION_IN_PROGRESS
+  CHANGES_REQUESTED
+  VERIFIED
+  REJECTED
+  INVITATION_EXPIRED
+}
+
+enum InvitationStatus {
+  PENDING
+  SENT
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum EmailLogStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
 enum ImportStatus {
   PREVIEW
   PROCESSING
@@ -415,6 +442,7 @@ model College {
   settings              CollegeSettings?
   students              Student[]
   importJobs            ImportJob[]
+  campuses              Campus[]
   sections              StudentSection[]
   sectionDocs           SectionDocument[]
   verificationEvents    VerificationEvent[]
@@ -425,6 +453,7 @@ model College {
   offers                Offer[]
   approvals             ApprovalRequest[]
   messages              MessageLog[]
+  studentInvitations    StudentInvitation[]
 }
 
 model CollegeSettings {
@@ -434,6 +463,9 @@ model CollegeSettings {
   maxOffersPerStudent        Int?             @default(1)
   enforceTierUpgrade         Boolean          @default(false)
   shareRoundScores           Boolean          @default(false)
+  inviteExpiryDays           Int              @default(7)
+  requireMfaForAdmins        Boolean          @default(false)
+  dataDeclaration            String?
   approvalRequired           ApprovalAction[]
   updatedAt                  DateTime         @updatedAt
 
@@ -581,6 +613,8 @@ model User {
   email        String
   name         String
   role         Role
+  // Further roles on top of `role` (the main one). A person can be, for example, both Placement Officer and Department Coordinator.
+  extraRoles   Role[]   @default([])
   departmentId String?  @db.Uuid
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -638,6 +672,10 @@ model Student {
   programId             String?             @db.Uuid
   batchId               String              @db.Uuid
   branchId              String?             @db.Uuid
+  campusId              String?             @db.Uuid
+  admissionYear         Int?
+  onboardingStatus      OnboardingStatus    @default(INVITATION_PENDING)
+  lastActivityAt        DateTime?
   dateOfBirth           DateTime?           @db.Date
   gender                String?
   address               String?
@@ -663,13 +701,13 @@ model Student {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  college               College                  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  department            Department               @relation(fields: [departmentId], references: [id])
-  program               Program?                 @relation(fields: [programId], references: [id])
-  batch                 Batch                    @relation(fields: [batchId], references: [id])
-  branch                ProgrammeBranch?         @relation(fields: [branchId], references: [id])
-  currentSemester       Semester?                @relation(fields: [currentSemesterId], references: [id])
-  currentAcademicYear   AcademicYear?            @relation(fields: [currentAcademicYearId], references: [id])
+  college               College                     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department            Department                  @relation(fields: [departmentId], references: [id])
+  program               Program?                    @relation(fields: [programId], references: [id])
+  batch                 Batch                       @relation(fields: [batchId], references: [id])
+  branch                ProgrammeBranch?            @relation(fields: [branchId], references: [id])
+  currentSemester       Semester?                   @relation(fields: [currentSemesterId], references: [id])
+  currentAcademicYear   AcademicYear?               @relation(fields: [currentAcademicYearId], references: [id])
   educationRecords      StudentEducationRecord[]
   documents             StudentDocument[]
   progression           StudentProgression[]
@@ -694,11 +732,18 @@ model Student {
   counsellingBookings   CounsellingSlot[]
   interviewExperiences  InterviewExperience[]
   showcase              ShowcaseProfile?
+  campus                Campus?                     @relation(fields: [campusId], references: [id])
+  invitation            StudentInvitation?
+  onboardingProfile     StudentOnboardingProfile?
+  correctionRequests    StudentCorrectionRequest[]
+  emailLogs             InvitationEmailLog[]
+  intelligenceReports   StudentIntelligenceReport[]
 
   @@unique([collegeId, enrollmentNo])
   @@unique([collegeId, email])
   @@index([collegeId, departmentId, batchId])
   @@index([collegeId, inviteStatus])
+  @@index([collegeId, onboardingStatus])
 }
 
 // Holds the raw uploaded rows between preview and confirm; cleared once the import completes.
@@ -1953,4 +1998,156 @@ model StudentProgression {
   semester Semester? @relation(fields: [semesterId], references: [id])
 
   @@index([collegeId, studentId, createdAt])
+}
+
+/// A campus of the institution. Optional: a single-campus college can leave it empty.
+model Campus {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  name      String
+  code      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  college     College             @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  students    Student[]
+  invitations StudentInvitation[]
+
+  @@unique([collegeId, name])
+}
+
+/// One invitation per student. The token itself is never stored, only its SHA-256 hash. Resending or copying a link issues a new token and
+/// invalidates the old one. The assigned academic structure is copied here so the invitation shows what the student was told.
+model StudentInvitation {
+  id              String           @id @default(uuid()) @db.Uuid
+  collegeId       String           @db.Uuid
+  studentId       String           @unique @db.Uuid
+  invitedEmail    String
+  admissionNumber String
+  campusId        String?          @db.Uuid
+  departmentId    String           @db.Uuid
+  programId       String?          @db.Uuid
+  branchId        String?          @db.Uuid
+  batchId         String           @db.Uuid
+  admissionYear   Int?
+  graduationYear  Int?
+  tokenHash       String           @unique
+  expiresAt       DateTime
+  status          InvitationStatus @default(PENDING)
+  sentAt          DateTime?
+  acceptedAt      DateTime?
+  lastResentAt    DateTime?
+  resendCount     Int              @default(0)
+  failedAttempts  Int              @default(0)
+  revokedAt       DateTime?
+  createdById     String?          @db.Uuid
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  college College              @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  student Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  campus  Campus?              @relation(fields: [campusId], references: [id])
+  emails  InvitationEmailLog[]
+
+  @@index([collegeId, status])
+  @@index([status, expiresAt])
+}
+
+/// What the student has entered in the onboarding wizard so far. Saved as a draft at every step; copied into the
+/// verified profile sections only when the student submits.
+model StudentOnboardingProfile {
+  id                    String    @id @default(uuid()) @db.Uuid
+  collegeId             String    @db.Uuid
+  studentId             String    @unique @db.Uuid
+  currentStep           Int       @default(1)
+  personal              Json      @default("{}")
+  academics             Json      @default("{}")
+  career                Json      @default("{}")
+  declarationAcceptedAt DateTime?
+  declarationText       String?
+  submittedAt           DateTime?
+  proposedName          String?
+  nameDecidedAt         DateTime?
+  reviewNote            String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+}
+
+/// A student asking staff to fix something they were assigned (department, batch...). Students never edit those fields themselves.
+model StudentCorrectionRequest {
+  id           String        @id @default(uuid()) @db.Uuid
+  collegeId    String        @db.Uuid
+  studentId    String        @db.Uuid
+  field        String
+  message      String
+  status       RequestStatus @default(PENDING)
+  resolvedById String?       @db.Uuid
+  resolvedAt   DateTime?
+  createdAt    DateTime      @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId, status])
+  @@index([studentId])
+}
+
+/// One row per invitation email attempt. Holds no token or link.
+model InvitationEmailLog {
+  id           String         @id @default(uuid()) @db.Uuid
+  collegeId    String         @db.Uuid
+  invitationId String         @db.Uuid
+  studentId    String         @db.Uuid
+  toEmail      String
+  subject      String
+  kind         String
+  status       EmailLogStatus @default(QUEUED)
+  error        String?
+  createdAt    DateTime       @default(now())
+  sentAt       DateTime?
+
+  invitation StudentInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  student    Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId, createdAt])
+  @@index([collegeId, status])
+}
+
+/// An AI-written reading of a student's evidence. The scores in `dimensions` are computed by code from records; the AI only writes
+/// `narrative`. A new row is added on every refresh, so earlier readings stay available for comparison.
+model StudentIntelligenceReport {
+  id            String   @id @default(uuid()) @db.Uuid
+  collegeId     String   @db.Uuid
+  studentId     String   @db.Uuid
+  inputHash     String
+  dimensions    Json
+  narrative     Json
+  model         String
+  generatedById String?  @db.Uuid
+  createdAt     DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@index([collegeId])
+}
+
+/// One row per sign-in session (the session id comes from the signed token), written by the app after sign-in. Staff, students and recruiters.
+model LoginEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String?  @db.Uuid
+  userId    String   @db.Uuid
+  kind      String
+  sessionId String   @unique
+  method    String?
+  mfa       Boolean  @default(false)
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([collegeId, createdAt])
 }

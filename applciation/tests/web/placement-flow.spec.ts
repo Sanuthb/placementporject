@@ -20,7 +20,7 @@ const company = `PW Company ${stamp}`
 
 const screens: [string, RegExp][] = [
   ["/staff", /Needs your attention|Students/],
-  ["/staff/students", /Add student/],
+  ["/staff/students", /Invite student/],
   ["/staff/verification", /Nothing waiting|Review/],
   ["/staff/companies", /Add company/],
   ["/staff/drives", /Create drive|No drives yet/],
@@ -92,21 +92,21 @@ test("placement officer: sign in, set up, add a student and company, visit the m
     await expect(page.getByRole("cell", { name: batch })).toBeVisible()
   })
 
-  await test.step("students: add one and find it in the list", async () => {
+  await test.step("students: invite one and find it in the list", async () => {
     await page.goto("/staff/students")
-    await page.getByRole("button", { name: "Add student" }).click()
-    const dialog = page.getByRole("dialog")
-    await dialog.getByLabel("Enrollment number").fill(student.enrollmentNo)
-    await dialog.getByLabel("Full name").fill(student.name)
-    await dialog.getByLabel("Email").fill(student.email)
-    await choose(page, dialog, "Choose a department", dept.name)
-    await choose(page, dialog, "Choose a batch", batch)
-    await dialog.getByRole("button", { name: "Add student" }).click()
-    await expect(page.getByText("Student added")).toBeVisible()
-    await page.getByPlaceholder("Search name, enrollment no, email").fill(student.enrollmentNo)
+    await page.getByRole("link", { name: "Invite student" }).click()
+    await page.getByLabel("Student full name").fill(student.name)
+    await page.getByLabel("Admission number").fill(student.enrollmentNo)
+    await page.getByLabel("College email address").fill(student.email)
+    await choose(page, page.locator("body"), "Choose a department", dept.name)
+    await choose(page, page.locator("body"), "Choose a batch", batch)
+    await page.getByRole("button", { name: "Send invitation" }).click()
+    await expect(page.getByText(/Invitation sent to|The student was added but the email could not be sent/)).toBeVisible()
+    await page.getByPlaceholder("Search name, admission no, email").fill(student.enrollmentNo)
     await expect(page.getByRole("link", { name: student.name })).toBeVisible()
+    await expect(page.getByText(/Sent|Pending/).first()).toBeVisible()
     await page.getByRole("link", { name: student.name }).click()
-    await expect(page.getByText(student.email)).toBeVisible()
+    await expect(page.getByText(student.email).first()).toBeVisible()
   })
 
   await test.step("companies: add one", async () => {

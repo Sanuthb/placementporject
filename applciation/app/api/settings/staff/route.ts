@@ -6,21 +6,19 @@ import { audit } from "@/lib/audit";
 import { ApiError, badRequest } from "@/lib/api/errors";
 import { assertDepartment } from "@/lib/api/guards";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { Role } from "@/generated/prisma/client";
+import { rolesSchema, splitRoles, withRoles } from "@/lib/api/staffRoles";
 
 const invite = z
-  .object({ email: z.email().transform((e) => e.toLowerCase()), name: z.string().trim().min(2).max(120), role: z.enum(Role), departmentId: z.uuid().nullable().optional() })
-  .refine((v) => (v.role === "DEPARTMENT_COORDINATOR") === !!v.departmentId, {
-    message: "A department is required for coordinators and not allowed for other roles",
+  .object({ email: z.email().transform((e) => e.toLowerCase()), name: z.string().trim().min(2).max(120), roles: rolesSchema, departmentId: z.uuid().nullable().optional() })
+  .refine((v) => v.roles.includes("DEPARTMENT_COORDINATOR") === !!v.departmentId, {
+    message: "A department is required when the Department Coordinator role is chosen, and not allowed otherwise",
     path: ["departmentId"],
   });
 
-export const GET = route({ roles: ["TPO_ADMIN"] }, (_req, s) =>
-  db.user.findMany({
-    where: { collegeId: s.collegeId },
-    select: { id: true, email: true, name: true, role: true, departmentId: true, isActive: true, createdAt: true },
-    orderBy: { name: "asc" },
-  }),
+const shape = { id: true, email: true, name: true, role: true, extraRoles: true, departmentId: true, isActive: true, createdAt: true } as const;
+
+export const GET = route({ roles: ["TPO_ADMIN"] }, async (_req, s) =>
+  (await db.user.findMany({ where: { collegeId: s.collegeId }, select: shape, orderBy: { name: "asc" } })).map(withRoles),
 );
 
 export const POST = route({ limit: { name: "invite", max: 30, windowSec: 3600 }, roles: ["TPO_ADMIN"] }, async (req, s) => {
@@ -37,11 +35,11 @@ export const POST = route({ limit: { name: "invite", max: 30, windowSec: 3600 },
   try {
     return await db.$transaction(async (tx) => {
       const u = await tx.user.create({
-        data: { id: invited.user.id, collegeId: s.collegeId, email: data.email, name: data.name, role: data.role, departmentId: data.departmentId ?? null },
-        select: { id: true, email: true, name: true, role: true, departmentId: true, isActive: true },
+        data: { id: invited.user.id, collegeId: s.collegeId, email: data.email, name: data.name, ...splitRoles(data.roles), departmentId: data.departmentId ?? null },
+        select: shape,
       });
-      await audit(s, { action: "staff.invite", entity: "User", entityId: u.id, after: { email: u.email, role: u.role, departmentId: u.departmentId } }, tx);
-      return u;
+      await audit(s, { action: "staff.invite", entity: "User", entityId: u.id, after: { email: u.email, roles: data.roles, departmentId: u.departmentId } }, tx);
+      return withRoles(u);
     });
   } catch (e) {
     // Don't leave an orphaned auth user behind if the app record could not be saved.

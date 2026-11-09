@@ -13,7 +13,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { api, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { hasRole, useAuth } from "@/lib/web/auth"
 import { fmtDateTime, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
@@ -22,7 +22,7 @@ const STATUS = ["PENDING", "APPROVED", "REJECTED", "SENT_BACK"].map((v) => ({ va
 
 export default function ApprovalsPage() {
   const { state } = useAuth()
-  const isAdmin = state.status === "ready" && state.profile.role === "TPO_ADMIN"
+  const isAdmin = state.status === "ready" && hasRole(state.profile, "TPO_ADMIN")
   const [status, setStatus] = React.useState("PENDING")
   const { data, loading, reload } = useApi<{ items: Req[] }>("/api/approvals", { status, limit: 100 })
   const [target, setTarget] = React.useState<Req | null>(null)

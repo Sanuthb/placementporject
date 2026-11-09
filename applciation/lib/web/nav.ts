@@ -54,10 +54,10 @@ export const NAV: Record<Kind, NavSection[]> = {
         { title: "Reports", href: "/staff/reports", icon: FileBarChartIcon, roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
       ],
     },
-    { label: "Administration", items: [{ title: "Audit log", href: "/staff/audit", icon: ScrollTextIcon, roles: ["TPO_ADMIN"] }, { title: "Approvals", href: "/staff/approvals", icon: CheckCheckIcon }, { title: "Settings", href: "/staff/settings", icon: SettingsIcon, roles: ["TPO_ADMIN"] }] },
+    { label: "Administration", items: [{ title: "Audit log", href: "/staff/audit", icon: ScrollTextIcon, roles: ["TPO_ADMIN"] }, { title: "Approvals", href: "/staff/approvals", icon: CheckCheckIcon }, { title: "My security", href: "/staff/security", icon: ShieldCheckIcon }, { title: "Settings", href: "/staff/settings", icon: SettingsIcon, roles: ["TPO_ADMIN"] }] },
   ],
   student: [
-    { label: "Placement", items: [{ title: "Home", href: "/student", icon: LayoutDashboardIcon }, { title: "My profile", href: "/student/profile", icon: UserIcon, module: "ONBOARDING" }, { title: "My full view", href: "/student/overview", icon: UserIcon, module: "ONBOARDING" }, { title: "Resume", href: "/student/resume", icon: FileTextIcon, module: "ONBOARDING" }] },
+    { label: "Placement", items: [{ title: "Home", href: "/student", icon: LayoutDashboardIcon }, { title: "Onboarding", href: "/student/onboarding", icon: UserIcon, module: "ONBOARDING" }, { title: "My profile", href: "/student/profile", icon: UserIcon, module: "ONBOARDING" }, { title: "My full view", href: "/student/overview", icon: UserIcon, module: "ONBOARDING" }, { title: "Resume", href: "/student/resume", icon: FileTextIcon, module: "ONBOARDING" }] },
     { label: "Drives", items: [{ title: "Calendar", href: "/student/calendar", icon: CalendarDaysIcon }, { title: "Blocks", href: "/student/blocks", icon: BanIcon, module: "ATTENDANCE_BLOCKING" }, { title: "Open drives", href: "/student/drives", icon: BriefcaseIcon, module: "DRIVES" }, { title: "My applications", href: "/student/applications", icon: CheckCheckIcon, module: "DRIVES" }, { title: "My offers", href: "/student/offers", icon: HandshakeIcon, module: "DRIVES" }] },
     {
       label: "Grow",
@@ -79,8 +79,8 @@ export const NAV: Record<Kind, NavSection[]> = {
 
 export const KIND_LABEL: Record<Kind, string> = { staff: "Staff console", student: "Student", recruiter: "Recruiter" }
 
-export function visibleNav(kind: Kind, modules: string[], role?: string): NavSection[] {
+export function visibleNav(kind: Kind, modules: string[], roles: string[] = []): NavSection[] {
   return NAV[kind]
-    .map((s) => ({ ...s, items: s.items.filter((i) => (!i.module || modules.includes(i.module)) && (!i.roles || (role && i.roles.includes(role)))) }))
+    .map((s) => ({ ...s, items: s.items.filter((i) => (!i.module || modules.includes(i.module)) && (!i.roles || i.roles.some((r) => roles.includes(r)))) }))
     .filter((s) => s.items.length)
 }

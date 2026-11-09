@@ -13,7 +13,7 @@ export async function assertDepartment(collegeId: string, departmentId: string, 
 /** A college must always keep at least one active TPO admin. */
 export async function assertAnotherAdmin(collegeId: string, excludeUserId: string, tx: Tx = db) {
   const others = await tx.user.count({
-    where: { collegeId, role: "TPO_ADMIN", isActive: true, id: { not: excludeUserId } },
+    where: { collegeId, OR: [{ role: "TPO_ADMIN" }, { extraRoles: { has: "TPO_ADMIN" } }], isActive: true, id: { not: excludeUserId } },
   });
   if (others === 0) throw badRequest("The college must keep at least one active TPO admin");
 }

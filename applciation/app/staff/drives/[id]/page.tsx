@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { api, download, toastError } from "@/lib/web/api"
-import { useAuth } from "@/lib/web/auth"
+import { isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { ROUND_RESULT } from "@/lib/web/enums"
 import { fmtDate, fmtDateTime, fmtLpa, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
@@ -43,7 +43,7 @@ export default function DrivePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { state } = useAuth()
-  const canEdit = state.status === "ready" && state.profile.role !== "DEPARTMENT_COORDINATOR"
+  const canEdit = state.status === "ready" && !isCoordinatorOnly(state.profile)
   const d = useApi<Drive>(`/api/drives/${id}`)
   const [tab, setTab] = React.useState("overview")
   const [confirm, setConfirm] = React.useState<"publish" | "close" | "cancel" | null>(null)

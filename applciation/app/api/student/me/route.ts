@@ -9,7 +9,7 @@ export const GET = studentRoute({}, async (_req, me) => {
   ]);
   return {
     id: st.id, name: st.name, enrollmentNo: st.enrollmentNo, email: st.email, phone: st.phone, department: st.department, batch: st.batch, program: st.program,
-    stage: st.stage, participationStatus: st.participationStatus, participationReason: st.participationReason, isPlaced: st.isPlaced,
+    stage: st.stage, onboardingStatus: st.onboardingStatus, participationStatus: st.participationStatus, participationReason: st.participationReason, isPlaced: st.isPlaced,
     modules: mods.map((m) => m.module), unreadNotifications: unread,
   };
 });

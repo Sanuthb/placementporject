@@ -13,7 +13,7 @@ export async function notifyStaff(collegeId: string, note: Note & { roles?: Role
   const users = await tx.user.findMany({
     where: {
       collegeId, isActive: true, id: note.excludeUserId ? { not: note.excludeUserId } : undefined,
-      OR: [{ role: { in: roles } }, ...(note.departmentId ? [{ role: "DEPARTMENT_COORDINATOR" as const, departmentId: note.departmentId }] : [])],
+      OR: [{ role: { in: roles } }, { extraRoles: { hasSome: roles } }, ...(note.departmentId ? [{ role: "DEPARTMENT_COORDINATOR" as const, departmentId: note.departmentId }] : [])],
     },
     select: { id: true },
   });

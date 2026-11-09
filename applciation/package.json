@@ -14,7 +14,7 @@
     "db:harden": "prisma db execute --file prisma/harden.sql",
     "db:deploy": "prisma migrate deploy",
     "check:exposure": "node scripts/check-exposure.mjs",
-    "test:unit": "tsx tests/unit/scoring.test.mts",
+    "test:unit": "tsx tests/unit/scoring.test.mts && tsx tests/unit/invitations.test.mts && tsx tests/unit/intelligence.test.mts",
     "test:e2e": "node tests/e2e/run.mjs",
     "typecheck": "tsc --noEmit",
     "docs:routes": "node scripts/list-routes.mjs",

@@ -1,3 +1,4 @@
+import { hasRole } from "@/lib/auth/session";
 import { z } from "zod";
 import { route } from "@/lib/api/handler";
 import { parseQuery } from "@/lib/api/parse";
@@ -10,7 +11,7 @@ const query = z.object({ status: z.enum(ApprovalStatus).optional(), limit: z.coe
 export const GET = route({}, async (req, s) => {
   const q = parseQuery(req, query);
   const rows = await db.approvalRequest.findMany({
-    where: { collegeId: s.collegeId, status: q.status, ...(s.role === "TPO_ADMIN" ? {} : { requestedById: s.userId }) },
+    where: { collegeId: s.collegeId, status: q.status, ...(hasRole(s, "TPO_ADMIN") ? {} : { requestedById: s.userId }) },
     select: { id: true, action: true, status: true, summary: true, createdAt: true, decidedAt: true, decisionComment: true, requestedBy: { select: { id: true, name: true } }, decidedBy: { select: { id: true, name: true } } },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     take: q.limit + 1,

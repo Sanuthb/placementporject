@@ -13,7 +13,7 @@ export function SessionSummary() {
     <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle>Welcome, {profile.name}</CardTitle>
-        <CardDescription>{profile.email}{profile.role ? ` · ${profile.role.replaceAll("_", " ").toLowerCase()}` : ""}</CardDescription>
+        <CardDescription>{profile.email}{profile.roles.length ? ` · ${profile.roles.map((r) => r.replaceAll("_", " ").toLowerCase()).join(", ")}` : ""}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
         {profile.modules.length ? profile.modules.map((m) => <Badge key={m} variant="secondary">{m.replaceAll("_", " ").toLowerCase()}</Badge>) : <span className="text-sm text-muted-foreground">No add-on modules enabled.</span>}

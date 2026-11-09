@@ -8,7 +8,7 @@ import type { Session } from "@/lib/auth/session";
 import type { ReportFrequency, ReportType } from "@/generated/prisma/client";
 
 /** Reports are college-wide, so they run as an admin-level view of the college. */
-export const systemSession = (collegeId: string): Session => ({ userId: "", collegeId, role: "TPO_ADMIN", departmentId: null, email: "", name: "Scheduled report" });
+export const systemSession = (collegeId: string): Session => ({ userId: "", collegeId, role: "TPO_ADMIN", roles: ["TPO_ADMIN"], departmentId: null, email: "", name: "Scheduled report" });
 const hex = (c?: string | null) => { const m = /^#([0-9a-f]{6})$/i.exec(c ?? ""); return m ? ([parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)] as const) : null; };
 
 /** PDF for management: headline numbers, department table, package statistics. */

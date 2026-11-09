@@ -15,6 +15,8 @@ const schema = z.object({
   SMTP_HOST: opt(z.string()), SMTP_PORT: opt(z.string()), SMTP_USER: opt(z.string()), SMTP_PASS: opt(z.string()), SMTP_FROM: opt(z.string()),
   SMTP_DRY_RUN: opt(z.enum(["true", "false"])),
   ANTHROPIC_API_KEY: opt(z.string()),
+  GROQ_API_KEY: opt(z.string()),
+  GROQ_MODEL: opt(z.string()),
   DB_POOL_MAX: opt(z.string().regex(/^\d+$/)),
 });
 
