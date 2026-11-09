@@ -29,6 +29,7 @@ import { hasRole, isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, fmtLpa, statusVariant, titleCase } from "@/lib/web/format"
 import { AssessmentHistory } from "@/components/assessment-history"
 import { CareerProfile } from "@/components/career-profile"
+import { RoadmapBoard } from "@/components/roadmap-board"
 import { useApi } from "@/lib/web/use-api"
 
 type Name = { id: string; name: string; code?: string }
@@ -116,6 +117,7 @@ export default function StudentPage() {
           {d.drives && <TabsTrigger value="drives">Drives</TabsTrigger>}
           {d.offers && <TabsTrigger value="offers">Offers</TabsTrigger>}
           <TabsTrigger value="analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
@@ -172,6 +174,7 @@ export default function StudentPage() {
           </TabsContent>
         )}
 
+        <TabsContent value="roadmap"><RoadmapBoard mode="review" base={`/api/students/${id}/roadmap`} studentName={p.name} /></TabsContent>
         <TabsContent value="analysis" className="flex flex-col gap-4">
           <CareerProfile endpoint={`/api/students/${id}/career-profile`} title="Career profile" />
           <AssessmentHistory endpoint={`/api/students/${id}/assessment-history`} title="Assessment history" />

@@ -159,6 +159,31 @@ export async function gatherEvidence(collegeId: string, studentId: string, opts:
     gaps: team ? ["Judgement in imagined situations, not observed behaviour"] : ["Teamwork and leadership scenarios not taken yet"],
   });
 
+  // --- Professional development: learning, events, achievements and roadmap progress. System records where they exist, declared otherwise.
+  const [learningSteps, eventsAttended, eventsRegistered, roadmap, achievements] = await Promise.all([
+    db.learningProgress.count({ where: { member: { studentId } } }),
+    db.eventRegistration.count({ where: { studentId, status: "ATTENDED" } }),
+    db.eventRegistration.count({ where: { studentId, status: { in: ["REGISTERED", "ATTENDED"] } } }),
+    db.studentRoadmap.findUnique({ where: { studentId }, select: { milestones: { where: { archivedAt: null, status: { not: "SKIPPED" } }, select: { status: true } } } }),
+    Promise.resolve(sec("ACHIEVEMENTS")),
+  ]);
+  const roadmapTotal = roadmap?.milestones.length ?? 0, roadmapDone = roadmap?.milestones.filter((m) => m.status === "DONE").length ?? 0;
+  const achievementList = listOf(achievements?.data, "achievements") as Record<string, unknown>[];
+  const devItems: Item[] = [
+    ...(learningSteps ? [{ label: "Learning programme steps completed", value: learningSteps, source: "Learning programmes", verified: true }] : []),
+    ...(eventsRegistered ? [{ label: "Events", value: `${eventsAttended} attended of ${eventsRegistered} registered`, source: "Events", verified: true }] : []),
+    ...(roadmapTotal ? [{ label: "Career roadmap progress", value: `${roadmapDone} of ${roadmapTotal} milestones done`, source: "Career roadmap", verified: true }] : []),
+    ...achievementList.slice(0, 8).map((a) => ({ label: `Achievement: ${String(a.title ?? "")}`, value: [a.position, a.level].filter(Boolean).join(", ") || null, source: "ACHIEVEMENTS section", verified: !!achievements?.verified })),
+    ...(certs.length ? [{ label: "Certifications listed", value: certs.length, source: "SKILLS section", verified: !!sk?.verified }] : []),
+  ];
+  const devSystem = !!(learningSteps || eventsRegistered || roadmapTotal);
+  dims.push({
+    key: "development", label: "Professional development", kind: devSystem ? "measured" : devItems.length ? "declared" : "none", score: null, confidence: devSystem ? "medium" : devItems.length ? "low" : "none",
+    items: devItems,
+    gaps: [...(!devItems.length ? ["No learning, events, achievements, certifications or roadmap progress recorded"] : []), ...(achievementList.length && !achievements?.verified ? ["Achievements are student-declared and not yet verified by staff"] : []), ...(!roadmapTotal ? ["The student has not opened their career roadmap yet"] : [])],
+    note: "Shows activity, not a score: what the student has done to develop beyond their coursework.",
+  });
+
   // --- Practical experience and career preferences: declared.
   dims.push({
     key: "experience", label: "Projects and internships", kind: projects.length || interns.length ? "declared" : "none", score: null, confidence: projects.length || interns.length ? "low" : "none",

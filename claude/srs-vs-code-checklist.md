@@ -17,17 +17,17 @@ The **Code** column is my reading of the source code, not a test result:
 
 Your own rule applies: a module counts as complete only when its screens, backend and links to other modules have been tested. The Code mark does not replace that. The one exception is the invitation and student onboarding work, which has automated tests (`tests/e2e/10-student-invitations.mjs`, `tests/e2e/11-intelligence.mjs`).
 
-Last checked against the code: 2026-11-08 (M3 and M4 re-checked 2026-11-09).
+Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 
 ## Summary (generated from the lines below)
 
 | Module | Lines | ✅ Built | 🟡 Partial | ❌ Missing | ⏸ On hold | You ticked it done |
 |---|---|---|---|---|---|---|
 | M1 – Authentication and User Management | 17 | 15 | 0 | 0 | 2 | [ ] |
-| M2 – Institution Management | 13 | 9 | 3 | 1 | 0 | [ ] |
+| M2 – Institution Management | 13 | 13 | 0 | 0 | 0 | [ ] |
 | M3 – Student Registration and Profile | 19 | 19 | 0 | 0 | 0 | [ ] |
 | M4 – Student Assessment and Career Profiling | 21 | 20 | 0 | 1 | 0 | [ ] |
-| M5 – Career Roadmap and Student Development | 8 | 0 | 2 | 6 | 0 | [ ] |
+| M5 – Career Roadmap and Student Development | 10 | 7 | 2 | 1 | 0 | [ ] |
 | M6 – Learning Management System | 11 | 0 | 4 | 7 | 0 | [ ] |
 | M7 – Resource Management System | 9 | 1 | 1 | 7 | 0 | [ ] |
 | M8 – Project Management and Portfolio | 7 | 0 | 2 | 5 | 0 | [ ] |
@@ -43,8 +43,8 @@ Last checked against the code: 2026-11-08 (M3 and M4 re-checked 2026-11-09).
 | M18 – Placement Management | 12 | 11 | 0 | 1 | 0 | [ ] |
 | M19 – Group Discussion and Communication Simulator | 1 | 0 | 0 | 1 | 0 | [ ] |
 | M20 – Notification Centre | 9 | 5 | 3 | 1 | 0 | [ ] |
-| M21 – Dashboards and Analytics | 8 | 3 | 3 | 2 | 0 | [ ] |
-| **Total** | **200** | **99** | **39** | **60** | **2** | |
+| M21 – Dashboards and Analytics | 8 | 3 | 4 | 1 | 0 | [ ] |
+| **Total** | **202** | **110** | **37** | **53** | **2** | |
 
 ## Cross-module findings worth reading first
 
@@ -85,24 +85,26 @@ Last checked against the code: 2026-11-08 (M3 and M4 re-checked 2026-11-09).
 
 ### M2 – Institution Management
 
+Re-checked 2026-11-09 against the SRS list (institution registration, university association, campus, department, programme, branch, academic year, batch, semester, faculty allocation, student import, institution-specific configuration, multiple institutions without mixing data, the hierarchy). "Tested": **unit** = `tests/unit/institution.test.mts` (passing); **E2E written** = `tests/e2e/13-institutions.mjs` exists but I have not run it; I have not clicked these screens through in the app. Nothing below is ticked: that is yours to do.
+
 **Placement Officer side**
-- [ ] Institution registration and profile — 🟡 Partial: name, logo, brand colour editable. There is no screen to register a new institution; there is no platform-admin portal.
-- [ ] University association — 🟡 Partial: a university name can be stored on a programme
-- [ ] Campus management — ✅ Built (`Settings → Campuses`; added with the invitation work)
-- [ ] Departments, programmes, branches — ✅ Built
-- [ ] Academic years, batches, semesters — ✅ Built, with checks that they fit together
-- [ ] Faculty allocation — ❌ Missing: only a batch coordinator can be set; no faculty/mentor assignment
-- [ ] Student import — ✅ Built
-- [ ] Institution-specific configuration — ✅ Built: required profile sections, invitation expiry, declaration text, offer rules, approvals
-- [ ] Multiple institutions without mixing data — 🟡 Partial: every record carries a college id and queries are scoped to it. There is no way to create a second college from the app.
-- [ ] Hierarchy Institution → Campus → Department → Programme → Batch → Semester → Student — ✅ Built
+- [ ] Institution registration and profile — ✅ Built: a platform administrator (separate sign-in, mandatory two-step verification) registers a new institution with its first admin, modules and settings in one audited step (`/platform`, `lib/provision.ts`); the college's own admin edits name, logo and brand colour. Tested: unit; E2E written.
+- [ ] University association — ✅ Built: managed universities per college, programmes link to one (`/api/settings/universities`, `Program.universityId`); the old free-text name is kept in step. Tested: unit.
+- [ ] Campus management — ✅ Built (`Settings → Campuses`).
+- [ ] Departments, programmes, branches — ✅ Built (branches belong to a programme).
+- [ ] Academic years, batches, semesters — ✅ Built, with checks that they fit together, and a read-only integrity report.
+- [ ] Faculty allocation — ✅ Built: a FACULTY role with a profile, allocation to departments, programmes and batches, and a mentor per student; faculty reach only their own students and are refused everywhere else by default. Tested: unit; E2E written.
+- [ ] Student import — ✅ Built (preview, column mapping, row errors, confirm, error download, template).
+- [ ] Institution-specific configuration — ✅ Built: required profile sections, invitation expiry, declaration text, offer rules, approvals, security, modules.
+- [ ] Multiple institutions without mixing data — ✅ Built: every record carries a college id, queries are scoped to it, and a second college can now be created from the platform portal. One login belongs to one college.
+- [ ] Hierarchy Institution → Campus → Department → Programme → Batch → Semester → Student — ✅ Built.
 
 **Student side**
-- [ ] Student sees their assigned institution, department, programme, batch (read-only) — ✅ Built: wizard step 1, with "Request a correction"
-- [ ] Student does not re-enter institution, programme or batch — ✅ Built
+- [ ] Student sees their assigned institution, department, programme, batch (read-only) — ✅ Built: wizard step 1, with "Request a correction".
+- [ ] Student does not re-enter institution, programme or batch — ✅ Built.
 
 **Connection**
-- [ ] M2 structure feeds M3 (invitation form, import, mapping rules) — ✅ Built
+- [ ] M2 structure feeds M3 (invitation form, import, mapping rules) — ✅ Built.
 
 ### M3 – Student Registration and Profile
 
@@ -145,7 +147,7 @@ Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each lin
 - [ ] Monitor completion — ✅ Built: completion and reminders (`/staff/psychometrics`).
 - [ ] View individual results — ✅ Built, but only if the student agrees to share, and each view is logged. The new career profile and the 360 view log shared private results too.
 - [ ] Assessment reports and historical comparison — ✅ Built: Reports tab (group results per kind of test and per career test, small groups hidden), every attempt kept, per-student history with change since the previous attempt (staff see test history; personality scores stay private). Tested: unit (retake and trend logic); not live.
-- [ ] Student 360° profile for staff — ✅ Built: 360° Intelligence and a new Career profile with recommendations in the Analysis tab. Private results appear only when the student shares them.
+- [ ] Student 360° profile for staff — ✅ Built: 360° Intelligence and a Career profile with recommendations in the Analysis tab, covering all nine areas the SRS lists (academic, personality, career interests, technical, communication, aptitude, practical experience, professional development, career preferences) plus behavioural style, digital literacy and teamwork. Professional development (learning steps, events, achievements, certifications, roadmap progress) was added after a check found it missing. Private results appear only when the student shares them.
 
 **Student side**
 - [ ] Big Five personality — ✅ Built: 25 items. Retakes now keep the earlier result.
@@ -166,19 +168,23 @@ Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each lin
 
 ### M5 – Career Roadmap and Student Development
 
+Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run test:unit` (17 suites, 233 checks, all passing), **not live** = built and type-checked but not yet clicked through in the app (migration `20261109170000_career_roadmap` was not applied when this was written). No E2E script has been run. Nothing below is ticked: that is yours to do.
+
 **Placement Officer side**
-- [ ] Monitor student development and roadmap progress — 🟡 Partial: learning programme members and progress can be tracked (`/staff/learning`); no roadmap
-- [ ] Mentor allocation — ❌ Missing
+- [ ] Monitor student development and roadmap progress — ✅ Built: Roadmaps list (`/staff/roadmaps`) with progress, students behind plan, no target role, not started; filters by department, batch and status; plus a Roadmap tab on each student. Coordinators see their department; faculty see their mentees and allocated students. Tested: unit (progress rules); not live.
+- [ ] Mentor allocation — ✅ Built in M2 (admin assigns students to a faculty mentor); M5 adds what a mentor does with it: read the mentee's roadmap, confirm milestones, leave notes the student sees. A faculty member who is not the mentor can read but not comment. Tested: unit (permission rules); not live.
+- [ ] Career roadmap report — ✅ Built: print or save as PDF from the roadmap (student, mentor and staff views). Tested: not live.
 
 **Student side**
-- [ ] Four-year personalised roadmap with yearly goals — ❌ Missing
-- [ ] Semester-wise milestones — ❌ Missing
-- [ ] Learning recommendations from assessments — ❌ Missing
-- [ ] Goal setting, career role selection, roadmap changes, achievement tracking — ❌ Missing
-- [ ] Learning journeys (a step list a programme follows) — 🟡 Partial: exists as a staff-defined journey for a training programme, not a per-student roadmap
+- [ ] Four-year personalised roadmap with yearly goals — ✅ Built, scaled to the programme: the four themes in the SRS (discover, build, specialise, prepare) are spread over the programme's own semesters, so an MCA (4 semesters, 2 years) and a B.Tech (8 semesters, 4 years) each get a sensible plan. 25 standard milestones. Tested: unit (generation for 1 to 10 semesters, determinism, placement within themes); not live.
+- [ ] Semester-wise milestones — ✅ Built: every milestone sits in a semester, with progress, what is behind from earlier semesters, and what is up next. Tested: unit.
+- [ ] Learning recommendations from assessments — 🟡 Partial: weak assessment results become suggested milestones the student can add (with the reason), but they point at practice and preparation resources in general; there are no courses or resource library to recommend from yet (M6 and M7). Tested: unit.
+- [ ] Goal setting, career role selection, roadmap changes, achievement tracking — ✅ Built: career goal sentence, goals with dates (open, achieved, dropped), target role with ideas from the student's interests and stated preferences, add, move, skip and remove milestones, and a history of every change with who made it. Many milestones tick themselves from real activity (assessments taken, achievements verified, internships completed, practice interviews, drives applied and attended, profile and resume verified). Tested: unit (auto-tracking rules, change rules); not live.
+- [ ] Learning journeys (a step list a programme follows) — 🟡 Partial: unchanged; exists as a staff-defined journey for a training programme. A step done in a learning programme now also ticks a roadmap milestone.
 
 **Connection**
-- [ ] M4 → M5 → M6/M7 (goals to courses and resources) — ❌ Missing
+- [ ] M4 → M5: assessment results feed the roadmap — ✅ Built: results tick milestones, create suggested milestones, and suggest target roles. Tested: unit; not live.
+- [ ] M5 → M6/M7 (goals to courses and resources) — ❌ Missing (no course or resource modules yet).
 
 ### M6 – Learning Management System
 
@@ -405,7 +411,7 @@ Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each lin
 
 **Student side**
 - [ ] Student dashboard: profile completion, learning progress, opportunities, applications, offers — 🟡 Partial: home page covers profile, drives, applications, offers, notifications
-- [ ] Roadmap, today's tasks, skill development, career readiness — ❌ Missing
+- [ ] Roadmap, today's tasks, skill development, career readiness — 🟡 Partial: the roadmap exists (`/student/roadmap`) but is not on the home dashboard; no daily tasks or readiness score
 - [ ] Full view of my own data — ✅ Built (`/student/overview`, privacy page and access log)
 
 ---
@@ -416,7 +422,7 @@ Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each lin
 - [ ] 1. Invite and manage students (M1, M3) — ✅ Built
 - [ ] 2. Access assigned academic structure (M2) — ✅ Built (department coordinators are limited to their department)
 - [ ] 3. Assign and monitor assessments (M4) — ✅ Built
-- [ ] 4. Monitor career roadmaps (M5) — ❌ Missing
+- [ ] 4. Monitor career roadmaps (M5) — ✅ Built (`/staff/roadmaps`)
 - [ ] 5. Monitor learning and training (M6, M7) — 🟡 Partial
 - [ ] 6. Track projects and internships (M8, M9) — 🟡 Partial: internships yes, projects no
 - [ ] 7. Monitor student resumes (M10) — ✅ Built
@@ -430,8 +436,8 @@ Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each lin
 ### Student portal
 - [ ] 1. Activate account (M1) — ✅ Built
 - [ ] 2. Complete profile and documents (M3) — ✅ Built
-- [ ] 3. Complete Student 360 assessments (M4) — 🟡 Partial: personality and aptitude only
-- [ ] 4. View career roadmap (M5) — ❌ Missing
+- [ ] 3. Complete Student 360 assessments (M4) — ✅ Built: personality, aptitude, career interests, behavioural style, technical, digital literacy, communication, teamwork
+- [ ] 4. View career roadmap (M5) — ✅ Built (`/student/roadmap`)
 - [ ] 5. Access courses and resources (M6, M7) — 🟡 Partial: programmes and a link list
 - [ ] 6. Build projects and portfolio (M8) — 🟡 Partial: text section and shareable page
 - [ ] 7. Participate in internships (M9) — ✅ Built
@@ -451,8 +457,8 @@ Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each lin
 | # | Source → destination | What should flow | Code | Tick |
 |---|---|---|---|---|
 | 1 | M3 → M4 | Verified academic and profile information | ✅ Built: intelligence reads it | [ ] |
-| 2 | M4 → M5 | Personality, aptitude, interests, career profile | ❌ No roadmap | [ ] |
-| 3 | M5 → M6 | Learning goals and recommended courses | ❌ | [ ] |
+| 2 | M4 → M5 | Personality, aptitude, interests, career profile | ✅ Built: results tick milestones, suggest milestones and target roles | [ ] |
+| 3 | M5 → M6 | Learning goals and recommended courses | ❌ No course module yet; a learning-programme step does tick a roadmap milestone | [ ] |
 | 4 | M5 → M7 | Recommended resources | ❌ | [ ] |
 | 5 | M6 → M21 | Course progress and completion | 🟡 Programme progress only | [ ] |
 | 6 | M8 → M10 | Project information and portfolio evidence | 🟡 Only the self-entered Projects text section | [ ] |

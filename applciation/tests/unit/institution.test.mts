@@ -23,9 +23,12 @@ t("roles: FACULTY is accepted as a staff role, existing roles unchanged", () => 
   assert.deepEqual(rolesSchema.parse(["PLACEMENT_OFFICER", "DEPARTMENT_COORDINATOR"]), ["PLACEMENT_OFFICER", "DEPARTMENT_COORDINATOR"]);
   assert.throws(() => rolesSchema.parse(["PLATFORM_ADMIN"]));
 });
-t("navigation: faculty-only sees only the faculty page; officers and admins never see it", () => {
-  const items = (roles: string[]) => visibleNav("staff", ["DRIVES"], roles).flatMap((s) => s.items.map((i) => i.href));
-  assert.deepEqual(items(["FACULTY"]), ["/staff/faculty"]);
+t("navigation: faculty-only sees only the faculty pages (their students and roadmaps); officers and admins never see the faculty page", () => {
+  const items = (roles: string[]) => visibleNav("staff", ["DRIVES", "ONBOARDING"], roles).flatMap((s) => s.items.map((i) => i.href));
+  assert.deepEqual(items(["FACULTY"]), ["/staff/faculty", "/staff/roadmaps"]);
+  // The roadmap list is for placement staff too, but through their own entry; a faculty-only login gets nothing else.
+  assert.ok(items(["PLACEMENT_OFFICER"]).includes("/staff/roadmaps") && items(["TPO_ADMIN"]).includes("/staff/roadmaps"));
+  assert.equal(items(["FACULTY", "PLACEMENT_OFFICER"]).filter((h) => h === "/staff/roadmaps").length, 1);
   assert.ok(!items(["PLACEMENT_OFFICER"]).includes("/staff/faculty"));
   assert.ok(!items(["TPO_ADMIN"]).includes("/staff/faculty"));
   assert.ok(items(["FACULTY", "PLACEMENT_OFFICER"]).includes("/staff/faculty") && items(["FACULTY", "PLACEMENT_OFFICER"]).includes("/staff/drives"));
