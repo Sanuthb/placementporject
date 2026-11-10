@@ -40,7 +40,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M15 – AI Mock Interview Engine | 7 | 6 | 1 | 0 | 0 | [ ] |
 | M16 – Report Generation | 5 | 5 | 0 | 0 | 0 | [ ] |
 | M17 – Job Readiness Engine | 5 | 5 | 0 | 0 | 0 | [ ] |
-| M18 – Placement Management | 12 | 11 | 0 | 1 | 0 | [ ] |
+| M18 – Placement Management | 13 | 13 | 0 | 0 | 0 | [ ] |
 | M19 – Group Discussion and Communication Simulator | 1 | 0 | 0 | 1 | 0 | [ ] |
 | M20 – Notification Centre | 9 | 5 | 3 | 1 | 0 | [ ] |
 | M21 – Dashboards and Analytics | 8 | 3 | 4 | 1 | 0 | [ ] |
@@ -388,7 +388,8 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 - [ ] Apply, withdraw, save drives — ✅ Built
 - [ ] Attend interviews, book slots, see journey per round — ✅ Built
 - [ ] Track and respond to offers, submit joining details — ✅ Built
-- [ ] Placement status steps "Preparation assigned / Mock test completed / Mock interview completed" — ❌ Missing: those statuses do not exist because campaigns do not
+- [ ] Placement status steps (job published, application received, eligibility checked, shortlisted, preparation assigned, mock test completed, mock interview completed, invited to interview, interview attended, selected, rejected, offer released, offer accepted, joined) — ✅ Built as a status worked out from the records the platform keeps (no duplicate status to drift): each step shows when it was reached and by whom; the student sees it on `/student/applications` (staff names appear as "Placement office"), staff see it per applicant under each drive > Placement status with counts per step. Limits: eligibility is checked automatically when the application is made, so it shares that time; an interview slot has no creation time so its date is its last change; steps for preparation use campaign progress and tests/interviews linked to the drive's job description
+- [ ] Readiness information for placement review — ✅ Built: the drive's Placement status tab shows each applicant's job readiness beside their eligibility (not for coordinators), as coaching information, never a filter
 
 ### M19 – Group Discussion and Communication Simulator
 
@@ -480,7 +481,7 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 | 13 | M13 → M15 | Assigned mock interview preparation | 🟡 Plans include technical and HR mock interviews using the existing AI interviewer, tracked automatically | [ ] |
 | 14 | M14 + M15 → M16 | Test and interview results | 🟡 Results exist in each module; no combined report | [ ] |
 | 15 | M3 + M4 + M6 + M8 + M9 + M14 + M15 → M17 | Career readiness evidence | 🟡 Student 360 reads M3, M4, M9 data, mock interviews and tests; no readiness score | [ ] |
-| 16 | M17 → M18 | Readiness information for placement review | ❌ | [ ] |
+| 16 | M17 → M18 | Readiness information for placement review | ✅ Drive pipeline shows job readiness beside eligibility | [ ] |
 | 17 | M18 → M20 | Placement notifications | ✅ Built | [ ] |
 | 18 | All modules → M21 | Dashboard and analytics data | 🟡 For the modules that exist | [ ] |
 | 19 | M2 → M3 | Academic structure fills the student's assigned record | ✅ Built and tested | [ ] |

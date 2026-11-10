@@ -7,6 +7,7 @@ import { toast } from "sonner"
 
 import { OptionSelect } from "@/components/option-select"
 import { DataView } from "@/components/section-review"
+import { DrivePipeline } from "@/components/drive-pipeline"
 import { DriveFeedbackTab, NonApplicantsTab, ResultsUploadButton } from "@/components/staff-extras"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -88,7 +89,7 @@ export default function DrivePage() {
       <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="eligibility">Eligibility</TabsTrigger>
-          <TabsTrigger value="applications">Applications ({drive._count.applications})</TabsTrigger>
+          <TabsTrigger value="applications">Applications ({drive._count.applications})</TabsTrigger><TabsTrigger value="pipeline">Placement status</TabsTrigger>
           {drive.status === "PUBLISHED" && <TabsTrigger value="pending">Not applied</TabsTrigger>}
           {canEdit && <TabsTrigger value="rounds">Rounds and results</TabsTrigger>}
           {canEdit && <TabsTrigger value="feedback">Company feedback</TabsTrigger>}
@@ -114,6 +115,7 @@ export default function DrivePage() {
         </TabsContent>
 
         <TabsContent value="eligibility"><EligibilityTab driveId={id} canEdit={canEdit} /></TabsContent>
+        <TabsContent value="pipeline"><DrivePipeline driveId={id} /></TabsContent>
         <TabsContent value="applications"><ApplicationsTab driveId={id} canEdit={canEdit} onChanged={d.reload} /></TabsContent>
         {drive.status === "PUBLISHED" && <TabsContent value="pending"><NonApplicantsTab driveId={id} canEdit={canEdit} /></TabsContent>}
         {canEdit && <TabsContent value="feedback"><DriveFeedbackTab driveId={id} /></TabsContent>}

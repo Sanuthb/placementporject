@@ -1,5 +1,6 @@
 "use client"
 
+import { PlacementJourney, type JourneyStatus } from "@/components/placement-journey"
 import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +11,7 @@ import { useApi } from "@/lib/web/use-api"
 
 type App = {
   id: string; status: string; appliedAt: string; drive: { id: string; role: string; driveDate: string; company: { name: string } }
+  placement?: JourneyStatus | null
   journey: { at?: string | null; score?: number | string | null; remarks?: string | null; round: number; type: string; scheduledAt: string | null; venue: string | null; result: string | null; slot: { startsAt: string; panel: { name: string; room: string | null } | null } | null }[]
 }
 
@@ -39,6 +41,7 @@ export default function ApplicationsPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
             {summary(a)}
+            {a.placement && <details className="rounded-md border p-2"><summary className="cursor-pointer text-sm font-medium">Placement status: {a.placement.label}</summary><div className="pt-3"><PlacementJourney status={a.placement} /></div></details>}
             {a.journey.map((j) => (
               <div key={j.round} className="flex flex-wrap items-center justify-between gap-2">
                 <span>Round {j.round}: {titleCase(j.type)}</span>
