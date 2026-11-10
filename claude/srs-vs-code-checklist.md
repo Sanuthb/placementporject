@@ -36,7 +36,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M11 – Job Description Management and AI Analysis | 7 | 7 | 0 | 0 | 0 | [ ] |
 | M12 – AI Candidate Matching Engine | 8 | 8 | 0 | 0 | 0 | [ ] |
 | M13 – Job-Specific Preparation Campaign | 8 | 7 | 1 | 0 | 0 | [ ] |
-| M14 – Mock Test Engine | 9 | 3 | 4 | 2 | 0 | [ ] |
+| M14 – Mock Test Engine | 10 | 10 | 0 | 0 | 0 | [ ] |
 | M15 – AI Mock Interview Engine | 7 | 1 | 2 | 4 | 0 | [ ] |
 | M16 – Report Generation | 5 | 0 | 3 | 2 | 0 | [ ] |
 | M17 – Job Readiness Engine | 5 | 0 | 2 | 3 | 0 | [ ] |
@@ -322,17 +322,18 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 ### M14 – Mock Test Engine
 
 **Placement Officer side**
-- [ ] Configure tests: duration, marks, negative marking, randomisation, start/end, attempts, result visibility — 🟡 Partial: duration, marks, negative marking, schedule window and baseline/practice flag exist; pass criteria and attempt limits are limited
-- [ ] Related JD on a test — ❌ Missing
-- [ ] Categories (aptitude, technical, programming, SQL, case study, company simulation) — 🟡 Partial: question banks with tags and difficulty; no coding or SQL execution
-- [ ] Question types — 🟡 Partial: single and multiple choice only
+- [ ] Configure tests: duration, marks, negative marking, randomisation, start/end, attempts, result visibility — ✅ Built: paper builder (pick questions by bank, topic, difficulty), overall pass mark, per-section minimums, attempts allowed per schedule, four result-visibility levels. Option shuffling is not built (question order is shuffled)
+- [ ] Related JD on a test — ✅ Built (paper links to an approved JD)
+- [ ] Categories (aptitude, technical, programming, SQL, case study, company simulation) — ✅ Built: ten test categories and sections
+- [ ] Question types — ✅ Built: single, multiple, true/false, fill blank, descriptive, coding, SQL, case study and scenario (shared context). Coding and SQL answers are marked by AI reading them against a model answer; **code is not executed**
+- [ ] Marking of open answers — ✅ Built: AI suggests marks, staff "To mark" tab confirms or corrects; score is provisional until all are marked
 - [ ] Proctoring — ✅ Built: violation counting and flagging (beyond the SRS)
 - [ ] View results by schedule — ✅ Built
 
 **Student side**
-- [ ] Attempt assigned tests and practice tests — ✅ Built (`/student/assessments`)
-- [ ] Report: overall score, correct answers, explanations — 🟡 Partial: result and explanations; no topic-wise accuracy, time analysis or weak topics
-- [ ] AI improvement engine: gaps, targeted exercises, next test — ❌ Missing
+- [ ] Attempt assigned tests and practice tests — ✅ Built (`/student/assessments`), every question type
+- [ ] Report: overall, section, topic, accuracy, time, question-wise, correct answers, explanations, weak topics — ✅ Built (time is per attempt; per-question time is not tracked). Staff-side cohort topic reports are not built
+- [ ] AI improvement engine: gaps, materials, targeted exercises, reassessment date, next test, comparison — ✅ Built: study material and courses for weak topics, personal practice set, reassess date from the retake rule, next test, comparison with previous attempt
 
 ### M15 – AI Mock Interview Engine
 

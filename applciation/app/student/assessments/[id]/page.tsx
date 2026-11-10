@@ -9,14 +9,18 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { TestReport } from "@/components/test-report"
+import type { QType } from "@/lib/mockTest"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { api, toastError } from "@/lib/web/api"
 import { useApi } from "@/lib/web/use-api"
 
-type Start = { attemptId: string; secondsLeft: number; instructions: string | null; questions: { id: string; text: string; options: string[]; marks: number }[]; savedAnswers: Record<string, number[]> | null }
-type Review = { id: string; text: string; options: string[]; correct: number[]; mine: number[]; explanation: string | null }
-type Result = { attemptNumber?: number; retakeInProgress?: boolean; review: Review[] | null; cohort: { averagePercent: number; betterThanPercent: number } | null; title: string; score: number; maxScore: number; percent: number; passed: boolean | null; status: string }
+type Start = { attemptId: string; secondsLeft: number; instructions: string | null; questions: { id: string; type: QType; text: string; context?: string | null; language?: string | null; section?: string | null; options: string[]; marks: number }[]; savedAnswers: Record<string, number[] | string> | null }
+type Result = { attemptNumber?: number; retakeInProgress?: boolean; cohort: { averagePercent: number; betterThanPercent: number } | null; title: string; score: number; maxScore: number; percent: number; passed: boolean | null; status: string }
 
 export default function TakeAssessmentPage() {
   const { id } = useParams<{ id: string }>()
@@ -48,18 +52,7 @@ export default function TakeAssessmentPage() {
             )}
           </CardContent>
         </Card>
-        {r.review?.map((q, n) => {
-          const right = q.mine.length === q.correct.length && q.mine.every((x) => q.correct.includes(x))
-          return (
-            <Card key={q.id} size="sm">
-              <CardHeader><CardTitle className="text-sm">{n + 1}. {q.text}</CardTitle><CardDescription>{q.mine.length === 0 ? "Not answered" : right ? "Correct" : "Not correct"}</CardDescription></CardHeader>
-              <CardContent className="flex flex-col gap-1 text-sm">
-                {q.options.map((o, k) => <div key={k} className="flex items-center gap-2"><span>{o}</span>{q.correct.includes(k) && <Badge>Right answer</Badge>}{q.mine.includes(k) && <Badge variant="outline">Your answer</Badge>}</div>)}
-                {q.explanation && <p className="pt-1 text-muted-foreground">{q.explanation}</p>}
-              </CardContent>
-            </Card>
-          )
-        })}
+        {!r.retakeInProgress && <TestReport id={id} />}
       </div>
     )
   }
@@ -76,7 +69,7 @@ export default function TakeAssessmentPage() {
 }
 
 function Exam({ id, exam, onDone }: { id: string; exam: Start; onDone: () => void }) {
-  const [answers, setAnswers] = React.useState<Record<string, number[]>>(exam.savedAnswers ?? {})
+  const [answers, setAnswers] = React.useState<Record<string, number[] | string>>(exam.savedAnswers ?? {})
   const [left, setLeft] = React.useState(exam.secondsLeft)
   const [busy, setBusy] = React.useState(false)
   const answersRef = React.useRef(answers)
@@ -100,22 +93,38 @@ function Exam({ id, exam, onDone }: { id: string; exam: Start; onDone: () => voi
     return () => document.removeEventListener("visibilitychange", onHide)
   }, [id])
 
-  function pick(qid: string, index: number, on: boolean) {
-    const cur = answers[qid] ?? []
-    const next = { ...answers, [qid]: on ? [...cur, index] : cur.filter((x) => x !== index) }
+  function save(next: Record<string, number[] | string>, now = true) {
     setAnswers(next)
-    void api(`/api/student/assessments/${id}/answers`, { method: "PUT", body: { answers: next } }).catch(() => {})
+    if (now) void api(`/api/student/assessments/${id}/answers`, { method: "PUT", body: { answers: next } }).catch(() => {})
   }
+  function pick(qid: string, index: number, on: boolean) {
+    const cur = Array.isArray(answers[qid]) ? (answers[qid] as number[]) : []
+    save({ ...answers, [qid]: on ? [...cur, index] : cur.filter((x) => x !== index) })
+  }
+  const filled = (v: number[] | string | undefined) => (Array.isArray(v) ? v.length > 0 : !!v?.trim())
   const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0")
   return (
     <div className="flex max-w-3xl flex-col gap-4">
-      <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border bg-background p-3"><span className="text-sm">{Object.keys(answers).filter((k) => answers[k].length).length} of {exam.questions.length} answered</span><Badge variant={left < 60 ? "destructive" : "secondary"}>{mm}:{ss} left</Badge></div>
+      <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border bg-background p-3"><span className="text-sm">{Object.keys(answers).filter((k) => filled(answers[k])).length} of {exam.questions.length} answered</span><Badge variant={left < 60 ? "destructive" : "secondary"}>{mm}:{ss} left</Badge></div>
       {exam.instructions && <Alert><AlertTitle>Instructions</AlertTitle><AlertDescription>{exam.instructions}</AlertDescription></Alert>}
       {exam.questions.map((q, i) => (
         <Card key={q.id}>
-          <CardHeader><CardTitle className="text-base">{i + 1}. {q.text}</CardTitle><CardDescription>{q.marks} mark{q.marks > 1 ? "s" : ""}</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="text-base">{i + 1}. {q.text}</CardTitle><CardDescription>{q.marks} mark{q.marks > 1 ? "s" : ""}{q.type === "MULTIPLE" ? " · choose all that apply" : ""}{q.type === "FILL_BLANK" ? " · type the missing word or value" : ""}</CardDescription></CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {q.options.map((o, j) => <label key={j} className="flex items-center gap-2 text-sm"><Checkbox checked={(answers[q.id] ?? []).includes(j)} onCheckedChange={(on) => pick(q.id, j, !!on)} />{o}</label>)}
+            {q.context && <p className="whitespace-pre-wrap rounded bg-muted p-3 text-sm">{q.context}</p>}
+            {(q.type === "SINGLE" || q.type === "TRUE_FALSE") && (
+              <RadioGroup value={Array.isArray(answers[q.id]) && (answers[q.id] as number[]).length ? String((answers[q.id] as number[])[0]) : ""} onValueChange={(v) => save({ ...answers, [q.id]: [Number(v)] })}>
+                {q.options.map((o, j) => <label key={j} className="flex items-center gap-2 text-sm"><RadioGroupItem value={String(j)} />{o}</label>)}
+              </RadioGroup>
+            )}
+            {q.type === "MULTIPLE" && q.options.map((o, j) => <label key={j} className="flex items-center gap-2 text-sm"><Checkbox checked={Array.isArray(answers[q.id]) && (answers[q.id] as number[]).includes(j)} onCheckedChange={(on) => pick(q.id, j, !!on)} />{o}</label>)}
+            {q.type === "FILL_BLANK" && <Input aria-label="Your answer" value={typeof answers[q.id] === "string" ? (answers[q.id] as string) : ""} onChange={(e) => save({ ...answers, [q.id]: e.target.value }, false)} onBlur={() => save(answers)} />}
+            {(q.type === "DESCRIPTIVE" || q.type === "CODING" || q.type === "SQL") && (
+              <>
+                <Textarea aria-label="Your answer" className={q.type === "DESCRIPTIVE" ? "min-h-32" : "min-h-48 font-mono text-xs"} placeholder={q.type === "DESCRIPTIVE" ? "Write your answer" : `Write your ${q.language ?? (q.type === "SQL" ? "SQL" : "code")} here`} value={typeof answers[q.id] === "string" ? (answers[q.id] as string) : ""} onChange={(e) => save({ ...answers, [q.id]: e.target.value }, false)} onBlur={() => save(answers)} />
+                <p className="text-xs text-muted-foreground">Marked by AI against the model answer, then checked by staff if needed. Code is read, not run.</p>
+              </>
+            )}
           </CardContent>
         </Card>
       ))}

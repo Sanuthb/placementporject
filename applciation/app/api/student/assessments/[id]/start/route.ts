@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { orderFor, paperQuestions, proctoringOf } from "@/lib/assessments";
 import { visibleSchedule } from "@/lib/studentAssessments";
+import { isOpen, typeOf } from "@/lib/mockTest";
 import { retakeDecision } from "@/lib/reassessment";
 import { ruleOf } from "@/lib/reassessmentRules";
 
@@ -14,7 +15,8 @@ export const POST = studentRoute<{ id: string }>({ limit: { name: "exam-start", 
   const sch = await visibleSchedule(me, id);
   const now = new Date();
   const past = await db.assessmentAttempt.findMany({ where: { scheduleId: id, studentId: me.studentId }, orderBy: { attemptNumber: "asc" } });
-  const d = retakeDecision({ rule: await ruleOf(me.collegeId, sch.paper.category), attempts: past, isPractice: sch.isPractice, now });
+  const baseRule = await ruleOf(me.collegeId, sch.paper.category);
+  const d = retakeDecision({ rule: sch.maxAttempts ? { ...baseRule, maxAttempts: sch.maxAttempts } : baseRule, attempts: past, isPractice: sch.isPractice, now });
   if (d.kind === "refuse") throw new ApiError(409, d.code === "COOLDOWN" ? "COOLDOWN" : "ALREADY_SUBMITTED", d.message);
   let a = past.find((x) => x.attemptNumber === d.attemptNumber) ?? null;
   if (!a) {
@@ -28,6 +30,6 @@ export const POST = studentRoute<{ id: string }>({ limit: { name: "exam-start", 
   const qs = orderFor(paperQuestions(sch.paper.questions), a.id, sch.paper.shuffle);
   return {
     attemptId: a.id, attemptNumber: a.attemptNumber, deadlineAt: a.deadlineAt, secondsLeft: Math.max(0, Math.floor((a.deadlineAt.getTime() - Date.now()) / 1000)), proctoring: proctoringOf(sch.paper.proctoring), instructions: sch.paper.instructions,
-    questions: qs.map(({ id: qid, text, options, marks }) => ({ id: qid, text, options, marks })), savedAnswers: a.answers,
+    questions: qs.map((q) => ({ id: q.id, text: q.text, options: typeOf(q) === "FILL_BLANK" || isOpen(q) ? [] : q.options, marks: q.marks, type: typeOf(q), context: q.context ?? null, language: q.language ?? null, section: q.section ?? null })), savedAnswers: a.answers,
   };
 });

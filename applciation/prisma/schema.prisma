@@ -775,6 +775,7 @@ model Student {
   mentor                 User?                       @relation("StudentMentor", fields: [mentorId], references: [id], onDelete: SetNull)
   jdShortlists           JdShortlist[]
   campaignMembers        CampaignMember[]
+  testImprovements       TestImprovement[]
 
   @@unique([collegeId, enrollmentNo])
   @@unique([collegeId, email])
@@ -1803,18 +1804,30 @@ model QuestionBank {
 }
 
 model Question {
-  id            String   @id @default(uuid()) @db.Uuid
-  collegeId     String   @db.Uuid
-  bankId        String   @db.Uuid
-  text          String
-  options       Json
-  correct       Int[]
-  marks         Int      @default(1)
-  negativeMarks Decimal  @default(0) @db.Decimal(4, 2)
-  explanation   String?
-  difficulty    String?
-  tags          String[]
-  createdAt     DateTime @default(now())
+  id              String   @id @default(uuid()) @db.Uuid
+  collegeId       String   @db.Uuid
+  bankId          String   @db.Uuid
+  text            String
+  options         Json
+  correct         Int[]
+  marks           Int      @default(1)
+  negativeMarks   Decimal  @default(0) @db.Decimal(4, 2)
+  explanation     String?
+  difficulty      String?
+  tags            String[]
+  /// CHOICE (single or multiple, by how many answers are correct), or SINGLE, MULTIPLE, TRUE_FALSE, FILL_BLANK, DESCRIPTIVE, CODING, SQL.
+  type            String   @default("CHOICE")
+  /// A passage, case study or scenario shown above the question.
+  context         String?
+  /// One of the test sections in lib/mockTest.ts (quantitative, logical, verbal, technical, programming, coding, sql, domain, company, case_study).
+  section         String?
+  /// For a fill-in-the-blank: every answer that counts as right.
+  acceptedAnswers String[]
+  /// For descriptive, coding and SQL questions: the model answer and what to look for, used to mark the student's answer.
+  modelAnswer     String?
+  rubric          String?
+  language        String?
+  createdAt       DateTime @default(now())
 
   bank QuestionBank @relation(fields: [bankId], references: [id], onDelete: Cascade)
 
@@ -1822,19 +1835,24 @@ model Question {
 }
 
 model AssessmentPaper {
-  id           String             @id @default(uuid()) @db.Uuid
-  collegeId    String             @db.Uuid
-  title        String
-  instructions String?
-  durationMin  Int
-  questions    Json
-  shuffle      Boolean            @default(true)
-  proctoring   Json
-  passPercent  Int?
+  id             String             @id @default(uuid()) @db.Uuid
+  collegeId      String             @db.Uuid
+  title          String
+  instructions   String?
+  durationMin    Int
+  questions      Json
+  shuffle        Boolean            @default(true)
+  proctoring     Json
+  passPercent    Int?
+  /// The job this test prepares for, and the SRS test category (for example "SQL" or "Company-specific simulation").
+  jdId           String?            @db.Uuid
+  testKind       String?
+  /// A minimum percentage per section: { "sql": 50 }. A student passes only if every section reaches its own mark as well as the overall pass mark.
+  sectionCutoffs Json               @default("{}")
   /// Which part of the career profile this paper measures. Its schedules and attempts inherit it.
-  category     AssessmentCategory @default(OTHER)
-  createdById  String             @db.Uuid
-  createdAt    DateTime           @default(now())
+  category       AssessmentCategory @default(OTHER)
+  createdById    String             @db.Uuid
+  createdAt      DateTime           @default(now())
 
   schedules AssessmentSchedule[]
 }
@@ -1897,6 +1915,12 @@ model AssessmentSchedule {
   targetBatchIds      String[] @db.Uuid
   isBaseline          Boolean  @default(false)
   isPractice          Boolean  @default(false)
+  /// A limit on attempts that replaces the category's retake rule when set.
+  maxAttempts         Int?
+  /// SCORE_ONLY, ANALYSIS, AFTER_END or IMMEDIATE. Empty means practice tests show everything and real tests show the score only.
+  resultVisibility    String?
+  /// When set, only these students can see and take it (a personal practice set made by the improvement engine).
+  targetStudentIds    String[] @db.Uuid
   createdById         String   @db.Uuid
   createdAt           DateTime @default(now())
 
@@ -1922,6 +1946,10 @@ model AssessmentAttempt {
   status        AttemptStatus @default(IN_PROGRESS)
   /// 1 for the first attempt; retakes (when the category's rule allows them) count up. Earlier attempts are kept.
   attemptNumber Int           @default(1)
+  /// Marks given to descriptive, coding and SQL answers: { questionId: { awarded, by: "AI" | "STAFF", comment } }.
+  marks         Json?
+  /// NONE, PENDING (an open answer is waiting for a mark; the score is provisional) or DONE.
+  reviewStatus  String        @default("NONE")
 
   schedule AssessmentSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   student  Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -3696,4 +3724,22 @@ model CampaignEvent {
   campaign PrepCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@index([campaignId, createdAt])
+}
+
+// ---------- Mock test engine (M14) ----------
+/// What the improvement engine made for a student after one attempt: weak topics, study material, the targeted practice set, and when to reassess.
+model TestImprovement {
+  id                 String   @id @default(uuid()) @db.Uuid
+  collegeId          String   @db.Uuid
+  studentId          String   @db.Uuid
+  attemptId          String   @unique @db.Uuid
+  weakTopics         Json
+  recommendations    Json
+  practiceScheduleId String?  @db.Uuid
+  reassessAt         DateTime @db.Date
+  createdAt          DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
 }

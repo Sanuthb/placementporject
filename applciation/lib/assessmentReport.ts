@@ -19,7 +19,7 @@ export async function assessmentReport(s: Session, f: Filters) {
   const student = { isArchived: false, ...scope, departmentId: scope.departmentId ?? f.departmentId, batchId: f.batchId };
   const [attempts, instr] = await Promise.all([
     db.assessmentAttempt.findMany({
-      where: { status: { not: "IN_PROGRESS" }, score: { not: null }, schedule: { collegeId: s.collegeId, isPractice: false }, student },
+      where: { status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, score: { not: null }, schedule: { collegeId: s.collegeId, isPractice: false }, student },
       select: { studentId: true, scheduleId: true, attemptNumber: true, score: true, maxScore: true, schedule: { select: { title: true, paper: { select: { category: true } } } } },
     }),
     db.instrumentAttempt.findMany({ where: { collegeId: s.collegeId, isCurrent: true, student }, select: { studentId: true, instrumentKey: true, scores: true } }),

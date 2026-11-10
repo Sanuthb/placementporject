@@ -8,6 +8,7 @@ import { assertDriveRefs } from "@/lib/drives";
 
 const create = z.object({
   paperId: z.uuid(), title: z.string().trim().min(3).max(200), startsAt: z.coerce.date(), endsAt: z.coerce.date(), isBaseline: z.boolean().default(false), isPractice: z.boolean().default(false),
+  maxAttempts: z.number().int().min(1).max(20).optional(), resultVisibility: z.enum(["SCORE_ONLY", "ANALYSIS", "AFTER_END", "IMMEDIATE"]).optional(),
   targetDepartmentIds: z.array(z.uuid()).max(100).default([]), targetBatchIds: z.array(z.uuid()).max(100).default([]),
 }).refine((v) => v.endsAt > v.startsAt, { message: "endsAt must be after startsAt", path: ["endsAt"] });
 const R = { roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] as ("TPO_ADMIN" | "PLACEMENT_OFFICER")[], module: "ASSESSMENTS" as const };

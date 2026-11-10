@@ -81,7 +81,7 @@ export async function resourceEffectiveness(collegeId: string, resourceId: strin
   const area = ({ APTITUDE: "APTITUDE", CODING: "TECHNICAL", INTERVIEW: "COMMUNICATION", SOFT_SKILLS: "COMMUNICATION" } as Record<string, string>)[category];
   let scores: { completed: number[]; others: number[] } | undefined;
   if (area && reach.size) {
-    const att = await db.assessmentAttempt.findMany({ where: { studentId: { in: [...reach] }, status: { not: "IN_PROGRESS" }, schedule: { collegeId, isPractice: false, paper: { category: area as never } } }, select: { studentId: true, score: true, maxScore: true } });
+    const att = await db.assessmentAttempt.findMany({ where: { studentId: { in: [...reach] }, status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, schedule: { collegeId, isPractice: false, paper: { category: area as never } } }, select: { studentId: true, score: true, maxScore: true } });
     const best = new Map<string, number>();
     for (const a of att) { const pct = Number(a.maxScore) > 0 ? (Number(a.score ?? 0) / Number(a.maxScore)) * 100 : 0; best.set(a.studentId, Math.max(best.get(a.studentId) ?? 0, Math.round(pct))) }
     const done = new Set(rows.filter((r) => r.completed).map((r) => r.studentId));

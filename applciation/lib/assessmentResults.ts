@@ -22,6 +22,6 @@ export async function scheduleResults(collegeId: string, scheduleId: string) {
     schedule: { id: sch.id, title: sch.title, isBaseline: sch.isBaseline, paper: sch.paper.title, passPercent: sch.paper.passPercent },
     summary: { attempted: students, attempts: attempts.length, submitted: done.length, inProgress: new Set(attempts.filter((a) => a.status === "IN_PROGRESS").map((a) => a.studentId)).size, average: percents.length ? Math.round((percents.reduce((a, b) => a + b, 0) / percents.length) * 10) / 10 : null, highest: percents.length ? Math.max(...percents) : null, flagged: attempts.filter((a) => a.flagged).length, passed: sch.paper.passPercent ? percents.filter((p) => p >= sch.paper.passPercent!).length : null },
     distribution: distribution(percents),
-    results: done.map((a) => ({ student: a.student, attemptNumber: a.attemptNumber, score: Number(a.score), maxScore: Number(a.maxScore), percent: pct(a), status: a.status, violations: a.violations, flagged: a.flagged, submittedAt: a.submittedAt })),
+    results: done.map((a) => ({ student: a.student, attemptNumber: a.attemptNumber, score: Number(a.score), maxScore: Number(a.maxScore), percent: pct(a), status: a.status, reviewStatus: a.reviewStatus, violations: a.violations, flagged: a.flagged, submittedAt: a.submittedAt })),
   };
 }

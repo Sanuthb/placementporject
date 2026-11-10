@@ -14,7 +14,7 @@ export const GET = route({ module: "ASSESSMENTS" }, async (req, s) => {
   const q = parseQuery(req, query);
   const scope = departmentScope(s);
   const attempts = await db.assessmentAttempt.findMany({
-    where: { status: { not: "IN_PROGRESS" }, score: { not: null }, schedule: { collegeId: s.collegeId, isBaseline: true }, student: { ...scope, departmentId: scope.departmentId ?? q.departmentId, batchId: q.batchId } },
+    where: { status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, score: { not: null }, schedule: { collegeId: s.collegeId, isBaseline: true }, student: { ...scope, departmentId: scope.departmentId ?? q.departmentId, batchId: q.batchId } },
     select: { score: true, maxScore: true, attemptNumber: true, scheduleId: true, studentId: true, student: { select: { departmentId: true } } },
   }).then((rows) => latestBy(rows, (r) => `${r.studentId}:${r.scheduleId}`)); // a retake replaces, never adds to, a student's figure
   const pct = (a: (typeof attempts)[number]) => (Number(a.maxScore) ? (Number(a.score) / Number(a.maxScore)) * 100 : 0);

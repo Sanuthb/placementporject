@@ -38,7 +38,7 @@ export async function gatherEvidence(collegeId: string, studentId: string, opts:
       documents: { where: { archivedAt: null }, select: { status: true } },
       psychAttempts: { where: { isCurrent: true }, select: { scores: true, completedAt: true }, take: 1 },
       mockInterviews: { where: { status: "COMPLETED" }, select: { role: true, feedback: true } },
-      assessmentAttempts: { where: { status: { not: "IN_PROGRESS" }, score: { not: null } }, select: { score: true, maxScore: true, attemptNumber: true, scheduleId: true, schedule: { select: { title: true, isPractice: true, paper: { select: { category: true } } } } }, orderBy: { submittedAt: "desc" }, take: 60 },
+      assessmentAttempts: { where: { status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, score: { not: null } }, select: { score: true, maxScore: true, attemptNumber: true, scheduleId: true, schedule: { select: { title: true, isPractice: true, paper: { select: { category: true } } } } }, orderBy: { submittedAt: "desc" }, take: 60 },
       instrumentAttempts: { where: { isCurrent: true }, select: { instrumentKey: true, scores: true, completedAt: true } },
     },
   });

@@ -130,7 +130,7 @@ export async function studentAnalysis(s: Session, id: string) {
   const mine = acad?.cgpa;
 
   const assessments = mods.has("ASSESSMENTS")
-    ? (await db.assessmentAttempt.findMany({ where: { studentId: id, status: { not: "IN_PROGRESS" }, score: { not: null } }, select: { score: true, maxScore: true, submittedAt: true, attemptNumber: true, schedule: { select: { title: true, isBaseline: true } } }, orderBy: { submittedAt: "desc" }, take: 20 }))
+    ? (await db.assessmentAttempt.findMany({ where: { studentId: id, status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, score: { not: null } }, select: { score: true, maxScore: true, submittedAt: true, attemptNumber: true, schedule: { select: { title: true, isBaseline: true } } }, orderBy: { submittedAt: "desc" }, take: 20 }))
         .map((a) => ({ title: a.schedule.title, isBaseline: a.schedule.isBaseline, attemptNumber: a.attemptNumber, percent: Number(a.maxScore) ? Math.round((Number(a.score) / Number(a.maxScore)) * 1000) / 10 : 0, at: a.submittedAt }))
     : null;
   const [attendance, rejections, apps] = await Promise.all([

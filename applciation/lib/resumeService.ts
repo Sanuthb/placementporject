@@ -27,7 +27,7 @@ export async function loadInputsMany(collegeId: string, studentIds: string[]): P
       portfolioForMany(ids, { onlyShown: true }),
       internshipRecordsMany(ids),
       db.courseEnrolment.findMany({ where: { studentId: { in: ids }, status: "COMPLETED" }, orderBy: { completedAt: "desc" }, select: { id: true, studentId: true, completedAt: true, course: { select: { title: true, skills: true } }, certificate: { select: { serial: true } } } }),
-      db.assessmentAttempt.findMany({ where: { studentId: { in: ids }, status: { not: "IN_PROGRESS" }, schedule: { collegeId, isPractice: false, paper: { category: { in: [...RESUME_CATEGORIES] } } } }, select: { studentId: true, score: true, maxScore: true, schedule: { select: { paper: { select: { id: true, title: true, category: true } } } } } }),
+      db.assessmentAttempt.findMany({ where: { studentId: { in: ids }, status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, schedule: { collegeId, isPractice: false, paper: { category: { in: [...RESUME_CATEGORIES] } } } }, select: { studentId: true, score: true, maxScore: true, schedule: { select: { paper: { select: { id: true, title: true, category: true } } } } } }),
     ]);
     const group = <T extends { studentId: string }>(xs: T[]) => { const m = new Map<string, T[]>(); for (const x of xs) m.set(x.studentId, [...(m.get(x.studentId) ?? []), x]); return m; };
     const secs = group(sections), crs = group(courses), att = group(attempts);

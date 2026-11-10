@@ -7,7 +7,7 @@ const pct = (score: unknown, max: unknown) => (Number(max) ? Math.round((Number(
 /** Every finished attempt at every scheduled test, grouped per test, oldest first, with the change between attempts. */
 export async function testHistory(collegeId: string, studentId: string) {
   const rows = await db.assessmentAttempt.findMany({
-    where: { studentId, status: { not: "IN_PROGRESS" }, score: { not: null }, schedule: { collegeId } },
+    where: { studentId, status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, score: { not: null }, schedule: { collegeId } },
     select: { attemptNumber: true, score: true, maxScore: true, submittedAt: true, status: true, scheduleId: true, schedule: { select: { title: true, isPractice: true, isBaseline: true, paper: { select: { category: true } } } } },
     orderBy: [{ submittedAt: "asc" }],
   });
