@@ -8,8 +8,12 @@ import { z } from "zod";
 export const JOB_TYPES = ["FULL_TIME", "INTERNSHIP", "INTERNSHIP_WITH_OFFER"] as const;
 export const REQ_KINDS = ["SKILL", "QUALIFICATION", "EXPERIENCE", "COMMUNICATION", "OTHER"] as const;
 export const REQ_LABEL: Record<(typeof REQ_KINDS)[number], string> = { SKILL: "Skill", QUALIFICATION: "Qualification", EXPERIENCE: "Experience", COMMUNICATION: "Communication", OTHER: "Other" };
-export const SCORE_AREAS = ["skills", "qualification", "experience", "assessments", "communication"] as const;
-export const DEFAULT_SCORING: Record<(typeof SCORE_AREAS)[number], number> = { skills: 40, qualification: 15, experience: 20, assessments: 15, communication: 10 };
+/** What a candidate is scored on, with the SRS's illustrative weights as the default. Colleges set their own per job description. */
+export const MATCH_PARAMS = ["technical", "academic", "projects", "aptitude", "communication", "internship", "certifications"] as const;
+export type MatchParam = (typeof MATCH_PARAMS)[number];
+export const MATCH_LABEL: Record<MatchParam, string> = { technical: "Technical skills", academic: "Academic profile", projects: "Projects", aptitude: "Aptitude", communication: "Communication", internship: "Internship experience", certifications: "Certifications and courses" };
+export const DEFAULT_SCORING: Record<MatchParam, number> = { technical: 30, academic: 20, projects: 15, aptitude: 10, communication: 10, internship: 10, certifications: 5 };
+export const SCORE_AREAS = MATCH_PARAMS;
 
 const pct = z.number().min(0).max(100).nullable();
 export const requirement = z.object({
@@ -42,7 +46,8 @@ export const jdData = z.object({
     branchesAsStated: z.array(z.string().max(120)).max(30),
   }),
   selectionProcess: z.array(z.string().trim().min(2).max(100)).max(12),
-  scoring: z.object({ skills: z.number().int().min(0).max(100), qualification: z.number().int().min(0).max(100), experience: z.number().int().min(0).max(100), assessments: z.number().int().min(0).max(100), communication: z.number().int().min(0).max(100) }),
+  /** Matching weights (they must add up to 100). A job description saved with the earlier five areas gets the defaults. */
+  scoring: z.preprocess((v) => (v && typeof v === "object" && "technical" in v ? v : { ...DEFAULT_SCORING }), z.object({ technical: z.number().int().min(0).max(100), academic: z.number().int().min(0).max(100), projects: z.number().int().min(0).max(100), aptitude: z.number().int().min(0).max(100), communication: z.number().int().min(0).max(100), internship: z.number().int().min(0).max(100), certifications: z.number().int().min(0).max(100) })),
   other: z.string().trim().max(2000).nullable(),
 });
 export type JdData = z.infer<typeof jdData>;

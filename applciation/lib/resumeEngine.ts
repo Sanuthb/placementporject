@@ -18,7 +18,9 @@ export type MasterProfile = {
   identity: { name: string; email: string; phone: string | null; department: string; batch: string; enrollmentNo: string; programme: string | null; college: string };
   summary: { text: string; verified: boolean } | null;
   education: MasterEducation[]; skills: MasterSkill[]; projects: MasterProject[]; internships: MasterInternship[]; courses: MasterCourse[]; achievements: MasterAchievement[];
-  assessments: { key: string; label: string; percent: number }[];
+  assessments: { key: string; label: string; percent: number; category: string }[];
+  /** The CGPA, and whether staff have verified the academics. Only a verified CGPA is trusted by the matching engine. */
+  academics: { cgpa: number | null; tenthPct: number | null; twelfthPct: number | null; activeBacklogs: number | null; verified: boolean };
 };
 
 export type Sections = Partial<Record<string, { status: string; data: Record<string, unknown> } | undefined>>;
@@ -29,12 +31,13 @@ export type Inputs = {
   collegeInternships: { key: string; company: string; role: string; from: string; to: string; certificateVerified: boolean; preplacementOffer: boolean }[];
   courses: { key: string; title: string; skills: string[]; completedOn: string; serial: string | null }[];
   /** Only categories fit for a resume (never personality or interests). Best result per paper. */
-  assessments: { key: string; title: string; percent: number }[];
+  assessments: { key: string; title: string; percent: number; category?: string }[];
 };
 
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
+const numOrNull = (v: unknown) => { const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN; return Number.isFinite(n) ? n : null; };
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const words = (s: string) => s.toLowerCase().match(/[a-z0-9][a-z0-9+#.]*/g) ?? [];
@@ -105,7 +108,8 @@ export function buildMaster(i: Inputs): MasterProfile {
   const text = str(obj(sec("RESUME")?.data).summary);
   return {
     identity: { ...i.student }, summary: text ? { text, verified: ok("RESUME") } : null, education: edu, skills, projects, internships, courses, achievements,
-    assessments: i.assessments.map((a) => ({ key: `assessment:${a.key}`, label: a.title, percent: Math.round(a.percent) })).sort((a, b) => b.percent - a.percent),
+    assessments: i.assessments.map((a) => ({ key: `assessment:${a.key}`, label: a.title, percent: Math.round(a.percent), category: a.category ?? "OTHER" })).sort((a, b) => b.percent - a.percent),
+    academics: { cgpa: Number.isFinite(cg) && cg > 0 ? cg : null, tenthPct: numOrNull(ac.tenthPercentage), twelfthPct: numOrNull(ac.twelfthPercentage), activeBacklogs: numOrNull(ac.activeBacklogs), verified: ok("ACADEMICS") },
   };
 }
 

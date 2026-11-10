@@ -122,8 +122,18 @@ export async function myInternship(me: StudentSession, id: string) {
   return i;
 }
 
-/** A student's finished internships from the college's records, for the resume and the shareable profile. Only completed ones, and whether the certificate was verified. */
+/** Finished internships from the college's records for several students, for resumes, profiles and matching. Only completed ones, and whether the certificate was verified. */
+export async function internshipRecordsMany(studentIds: string[]) {
+  const out = new Map<string, { id: string; company: string | null; role: string; from: string; to: string; certificateVerified: boolean; preplacementOffer: boolean }[]>();
+  if (!studentIds.length) return out;
+  const rows = await db.internship.findMany({ where: { studentId: { in: studentIds }, status: "COMPLETED" }, orderBy: { endDate: "desc" }, select: { id: true, studentId: true, companyName: true, role: true, startDate: true, endDate: true, certificateStatus: true, ppoStatus: true } });
+  for (const r of rows) {
+    const list = out.get(r.studentId) ?? [];
+    if (list.length < 8) list.push({ id: r.id, company: r.companyName, role: r.role, from: r.startDate.toISOString().slice(0, 10), to: r.endDate.toISOString().slice(0, 10), certificateVerified: r.certificateStatus === "VERIFIED", preplacementOffer: r.ppoStatus === "ACCEPTED" });
+    out.set(r.studentId, list);
+  }
+  return out;
+}
 export async function internshipRecords(studentId: string) {
-  const rows = await db.internship.findMany({ where: { studentId, status: "COMPLETED" }, orderBy: { endDate: "desc" }, take: 8, select: { id: true, companyName: true, role: true, startDate: true, endDate: true, certificateStatus: true, ppoStatus: true } });
-  return rows.map((r) => ({ id: r.id, company: r.companyName, role: r.role, from: r.startDate.toISOString().slice(0, 10), to: r.endDate.toISOString().slice(0, 10), certificateVerified: r.certificateStatus === "VERIFIED", preplacementOffer: r.ppoStatus === "ACCEPTED" }));
+  return (await internshipRecordsMany([studentId])).get(studentId) ?? [];
 }

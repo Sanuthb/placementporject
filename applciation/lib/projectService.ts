@@ -130,16 +130,26 @@ export const hashToken = (t: string) => createHash("sha256").update(t).digest("h
 export const newInviteToken = () => randomBytes(32).toString("base64url");
 export const mentorLink = (token: string) => `${(process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "")}/mentor-review/${token}`;
 
-/** The portfolio of one student: finished project work with their own role and, once published, their own result. */
-export async function portfolioFor(studentId: string, opts: { onlyShown?: boolean } = {}) {
+/** The portfolio of several students at once: finished project work with each student's own role and, once published, their own result. */
+export async function portfolioForMany(studentIds: string[], opts: { onlyShown?: boolean } = {}) {
+  const out = new Map<string, ReturnType<typeof shape>[]>();
+  if (!studentIds.length) return out;
   const ms = await db.projectMember.findMany({
-    where: { studentId, ...(opts.onlyShown ? { showInPortfolio: true } : {}), team: { status: { in: ["SUBMITTED", "EVALUATED"] } } },
-    include: { team: { include: { project: { select: { title: true, problemStatement: true, skills: true, type: true, industryPartner: true } }, members: { include: { student: { select: { name: true } } } }, reviews: true, tasks: { where: { assigneeId: studentId, status: "DONE" }, select: { id: true } } } } },
+    where: { studentId: { in: studentIds }, ...(opts.onlyShown ? { showInPortfolio: true } : {}), team: { status: { in: ["SUBMITTED", "EVALUATED"] } } },
+    include: { team: { include: { project: { select: { title: true, problemStatement: true, skills: true, type: true, industryPartner: true } }, members: { include: { student: { select: { name: true } } } }, reviews: true, tasks: { where: { status: "DONE" }, select: { id: true, assigneeId: true } } } } },
     orderBy: { joinedAt: "desc" },
   });
-  return ms.map((m) => {
-    const t = m.team;
-    const r = t.resultPublishedAt ? evaluate(t.reviews.map((x) => ({ reviewerType: x.reviewerType, percent: x.percent, isFinal: x.isFinal, individualMarks: x.individualMarks as Record<string, number> })), t.members.map((x) => x.studentId)) : null;
-    return { teamId: t.id, title: t.project.title, problem: t.project.problemStatement.slice(0, 400), type: t.project.type, skills: t.project.skills, industryPartner: t.project.industryPartner, teamName: t.name, teammates: t.members.filter((x) => x.studentId !== studentId).map((x) => x.student.name), myRole: m.role, tasksDone: t.tasks.length, summary: t.summary, repoUrl: t.repoUrl, submittedAt: t.submittedAt, myResultPercent: r?.members[studentId] ?? null, showInPortfolio: m.showInPortfolio };
-  });
+  for (const m of ms) out.set(m.studentId, [...(out.get(m.studentId) ?? []), shape(m)]);
+  return out;
+}
+
+function shape(m: { studentId: string; role: string | null; showInPortfolio: boolean; team: { id: string; name: string; summary: string | null; repoUrl: string | null; submittedAt: Date | null; resultPublishedAt: Date | null; project: { title: string; problemStatement: string; skills: string[]; type: string; industryPartner: string | null }; members: { studentId: string; student: { name: string } }[]; reviews: { reviewerType: string; percent: number; isFinal: boolean; individualMarks: unknown }[]; tasks: { assigneeId: string | null }[] } }) {
+  const t = m.team, studentId = m.studentId;
+  const r = t.resultPublishedAt ? evaluate(t.reviews.map((x) => ({ reviewerType: x.reviewerType, percent: x.percent, isFinal: x.isFinal, individualMarks: x.individualMarks as Record<string, number> })), t.members.map((x) => x.studentId)) : null;
+  return { teamId: t.id, title: t.project.title, problem: t.project.problemStatement.slice(0, 400), type: t.project.type, skills: t.project.skills, industryPartner: t.project.industryPartner, teamName: t.name, teammates: t.members.filter((x) => x.studentId !== studentId).map((x) => x.student.name), myRole: m.role, tasksDone: t.tasks.filter((x) => x.assigneeId === studentId).length, summary: t.summary, repoUrl: t.repoUrl, submittedAt: t.submittedAt, myResultPercent: r?.members[studentId] ?? null, showInPortfolio: m.showInPortfolio };
+}
+
+/** The portfolio of one student. */
+export async function portfolioFor(studentId: string, opts: { onlyShown?: boolean } = {}) {
+  return (await portfolioForMany([studentId], opts)).get(studentId) ?? [];
 }

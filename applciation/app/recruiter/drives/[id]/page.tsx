@@ -4,10 +4,12 @@ import * as React from "react"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
 
+import { MatchEvidence, type Param, type Req } from "@/components/match-evidence"
 import { OptionSelect } from "@/components/option-select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
@@ -28,6 +30,8 @@ export default function RecruiterDrivePage() {
   const d = useApi<Drive>(`/api/recruiter/drives/${id}`)
   const [round, setRound] = React.useState("")
   const cands = useApi<Cand[]>(`/api/recruiter/drives/${id}/candidates`, { roundId: round })
+  const [why, setWhy] = React.useState<string | null>(null)
+  const match = useApi<{ available: boolean; score?: number; parameters?: Param[]; requirements?: Req[]; explanation?: string[]; skills?: { matched: string[]; partial: string[]; missing: string[] } }>(why ? `/api/recruiter/drives/${id}/candidates/${why}/match` : null)
   const slots = useApi<Slot[]>(`/api/recruiter/drives/${id}/schedule`)
   const fb = useApi<Fb>(`/api/recruiter/drives/${id}/feedback`)
   const [busy, setBusy] = React.useState(false)
@@ -51,7 +55,7 @@ export default function RecruiterDrivePage() {
           <Table>
             <TableHeader><TableRow><TableHead>Candidate</TableHead><TableHead>Department</TableHead><TableHead>CGPA</TableHead><TableHead>Round</TableHead><TableHead className="text-right">Resume</TableHead></TableRow></TableHeader>
             <TableBody>
-              {cands.data?.map((c) => <TableRow key={c.id}><TableCell>{c.student.name}<div className="text-xs text-muted-foreground">{c.student.email}</div></TableCell><TableCell>{c.student.department}</TableCell><TableCell>{c.student.cgpa ?? "—"}</TableCell><TableCell>{c.clearedAllRounds ? "Cleared all" : c.currentRound}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => download(`/api/recruiter/drives/${id}/candidates/${c.student.id}/resume.pdf`).catch(toastError)}>Download</Button></TableCell></TableRow>)}
+              {cands.data?.map((c) => <TableRow key={c.id}><TableCell>{c.student.name}<div className="text-xs text-muted-foreground">{c.student.email}</div></TableCell><TableCell>{c.student.department}</TableCell><TableCell>{c.student.cgpa ?? "—"}</TableCell><TableCell>{c.clearedAllRounds ? "Cleared all" : c.currentRound}</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => setWhy(c.student.id)}>Why they match</Button><Button size="sm" variant="outline" onClick={() => download(`/api/recruiter/drives/${id}/candidates/${c.student.id}/resume.pdf`).catch(toastError)}>Download</Button></div></TableCell></TableRow>)}
               {cands.data?.length === 0 && <TableRow><TableCell colSpan={5} className="text-muted-foreground">No shortlisted candidates yet.</TableCell></TableRow>}
             </TableBody>
           </Table>
@@ -78,6 +82,13 @@ export default function RecruiterDrivePage() {
           )}
         </TabsContent>
       </Tabs>
+      {why && (
+        <Dialog open onOpenChange={(o) => !o && setWhy(null)}><DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle>Why this candidate matches{match.data?.score !== undefined ? `: ${match.data.score}%` : ""}</DialogTitle></DialogHeader>
+          {!match.data ? <Skeleton className="h-40" /> : !match.data.available ? <p className="text-sm text-muted-foreground">This drive has no approved job description, so there is no match to show.</p> : (
+            <div className="flex flex-col gap-4 text-sm"><p className="text-xs text-muted-foreground">A guide from the college&apos;s records. Selection stays with you and the college.</p><ul className="list-disc pl-5">{match.data.explanation?.map((e, i) => <li key={i}>{e}</li>)}</ul><MatchEvidence parameters={match.data.parameters ?? []} requirements={match.data.requirements ?? []} /></div>
+          )}
+        </DialogContent></Dialog>
+      )}
     </div>
   )
 }

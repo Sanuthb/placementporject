@@ -34,7 +34,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M9 – Internship Management | 7 | 7 | 0 | 0 | 0 | [ ] |
 | M10 – Dynamic Resume Engine | 9 | 9 | 0 | 0 | 0 | [ ] |
 | M11 – Job Description Management and AI Analysis | 7 | 7 | 0 | 0 | 0 | [ ] |
-| M12 – AI Candidate Matching Engine | 8 | 3 | 2 | 3 | 0 | [ ] |
+| M12 – AI Candidate Matching Engine | 8 | 8 | 0 | 0 | 0 | [ ] |
 | M13 – Job-Specific Preparation Campaign | 8 | 0 | 0 | 8 | 0 | [ ] |
 | M14 – Mock Test Engine | 9 | 3 | 4 | 2 | 0 | [ ] |
 | M15 – AI Mock Interview Engine | 7 | 1 | 2 | 4 | 0 | [ ] |
@@ -286,21 +286,21 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 **Connection**
 - [ ] M11 → M12 structured job requirements — ✅ Built on the M11 side: each requirement is typed, required or preferred and weighted, with its share of the score worked out, plus rules and scoring weights. M12 (candidate matching) itself is not built yet.
 
-### M12 – AI Candidate Matching Engine
+### M12 – AI Candidate Matching Engine (`/staff/job-descriptions/:id/matches`, for an approved job description)
 
 **Placement Officer side**
-- [ ] Mandatory eligibility evaluation, separate from any score — ✅ Built (rules, exceptions, blocks, reasons per student, export)
-- [ ] Matching score, ranking, configurable weights — ❌ Missing
-- [ ] Skills matched / partial / missing, explanation of the match — ❌ Missing
-- [ ] Candidate comparison — ❌ Missing
-- [ ] Shortlisting by rounds — ✅ Built (round results, shortlist export)
-- [ ] Personality not used as a filter — ✅ Built
+- [ ] Mandatory eligibility evaluation, separate from any score — ✅ Built: students who fail the rules are listed with the reason and are never scored or ranked; for a job description with a drive it is the drive's own evaluation (rules, exceptions, attendance blocks). The verdict on the job's required criteria (all met, needs review, required missing) is a third thing, also separate from the score.
+- [ ] Matching score, ranking, configurable weights — ✅ Built: 0-100 from the SRS's seven parameters (technical skills 30, academic 20, projects 15, aptitude 10, communication 10, internship 10, certifications 5), weights set per job description and required to add up to 100. A parameter the job does not use (no skills listed) is left out and the rest scaled; a student's missing evidence earns zero rather than being ignored. Ranking: eligible first, then score, then required criteria met, CGPA, name. Tested: unit.
+- [ ] Skills matched / partial / missing, explanation of the match — ✅ Built: each requirement is met, partly met, missing or needs a person, with what backs it. A skill backed by a project, course, internship, assessment or staff check earns full credit; only listed by the student earns half; named in a description 0.6; a related skill 0.4. Marks come only from staff-verified academics. The explanation is written from that evidence by rules, not by a language model, so it can be checked.
+- [ ] Candidate comparison — ✅ Built: pick two to four students and compare score, criteria, each parameter, skills and projects side by side.
+- [ ] Shortlisting by rounds — ✅ Built: existing round results, plus a shortlist from the ranking (eligible students only) that keeps each student's score and evidence at that moment, an optional notification, and an Excel export. It records and invites; selection stays with the drive's rounds and the people running them.
+- [ ] Personality not used as a filter — ✅ Built: the engine reads no personality, interest or behavioural results (tested through the master profile, which excludes them).
 
 **Student side**
-- [ ] See relevant opportunities and match information — 🟡 Partial: students see only drives they are eligible for, with the reason if not; no match score
+- [ ] See relevant opportunities and match information — ✅ Built: on a drive with an approved job description, "How you match this job": score, skills matched, partly matched and missing, each requirement with its evidence, and the college's courses and study material for the gaps.
 
 **Connection**
-- [ ] Evidence from M3, M4, M8, M9, M10 compared to requirements — 🟡 Partial: the new Student 360 page compares verified marks to open drives' thresholds as a guide only
+- [ ] Evidence from M3, M4, M8, M9, M10 compared to requirements — ✅ Built: the engine reads the master profile (profile sections, assessments, college projects, internships, courses, achievements) for every student; recruiters can open "why they match" with the same evidence for candidates the college shortlisted to their drive. Not live-tested.
 
 ### M13 – Job-Specific Preparation Campaign
 
@@ -473,7 +473,7 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 | 8 | M3 + M6 + M8 + M9 → M10 | Resume information | 🟡 M3 only (profile sections) | [ ] |
 | 9 | M11 → M12 | Structured job requirements | 🟡 Eligibility thresholds only | [ ] |
 | 10 | M3 + M4 + M8 + M9 + M10 → M12 | Student evidence for matching | 🟡 Thresholds from M3; Student 360 page shows evidence but no matching | [ ] |
-| 11 | M12 → M13 | Matched and eligible candidates | ❌ | [ ] |
+| 11 | M12 → M13 | Matched and eligible candidates | 🟡 Match results, gaps and preparation suggestions exist per student; M13 campaigns are not built | [ ] |
 | 12 | M13 → M14 | Assigned job-specific tests | ❌ | [ ] |
 | 13 | M13 → M15 | Assigned mock interview preparation | ❌ | [ ] |
 | 14 | M14 + M15 → M16 | Test and interview results | 🟡 Results exist in each module; no combined report | [ ] |

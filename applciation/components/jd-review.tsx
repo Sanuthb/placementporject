@@ -19,7 +19,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { REQ_KINDS, REQ_LABEL, SCORE_AREAS, scoringProblem, type JdData, type Requirement } from "@/lib/jd"
+import { MATCH_LABEL, MATCH_PARAMS, REQ_KINDS, REQ_LABEL, scoringProblem, type JdData, type Requirement } from "@/lib/jd"
 import { api, toastError } from "@/lib/web/api"
 import { useAuth, hasRole } from "@/lib/web/auth"
 import { fmtDateTime, titleCase } from "@/lib/web/format"
@@ -32,7 +32,6 @@ type Detail = {
   shares: { id: string; share: number }[]
 }
 const TYPES = [{ value: "", label: "Not chosen" }, { value: "FULL_TIME", label: "Full time" }, { value: "INTERNSHIP", label: "Internship" }, { value: "INTERNSHIP_WITH_OFFER", label: "Internship with a job offer" }]
-const SCORE_LABEL: Record<string, string> = { skills: "Skills", qualification: "Qualification", experience: "Experience", assessments: "Assessments", communication: "Communication" }
 const n = (s: string) => (s.trim() === "" ? null : Number(s))
 
 /** Reviewing a job description: the original text beside the structured form, requirements marked mandatory or preferred, rules, scoring weights, and approval. */
@@ -61,7 +60,7 @@ export function JdReview({ id }: { id: string }) {
   const save = () => run("save", () => api(`/api/jds/${id}`, { method: "PATCH", body: { data: form } }), "Saved")
   const act = (action: string, ok: string, note?: string) => run("act", async () => { if (dirty) await api(`/api/jds/${id}`, { method: "PATCH", body: { data: form } }); await api(`/api/jds/${id}/review`, { method: "POST", body: { action, note } }) }, ok)
   const extract = (overwrite: boolean) => run("ai", async () => { const r = await api<{ requirements: number; flagged: number }>(`/api/jds/${id}/extract`, { method: "POST", body: { overwrite } }); toast.success(`Read ${r.requirements} requirements${r.flagged ? `, ${r.flagged} to check` : ""}`) })
-  const scoreSum = SCORE_AREAS.reduce((a, k) => a + form.scoring[k], 0)
+  const scoreSum = MATCH_PARAMS.reduce((a, k) => a + form.scoring[k], 0)
   const highlighted = (() => {
     const t = d.rawText ?? ""; if (!find) return <>{t}</>
     const i = t.toLowerCase().indexOf(find.toLowerCase()); if (i < 0) return <><mark className="bg-destructive/20">Not found word for word in the document.</mark>{"\n\n"}{t}</>
@@ -79,6 +78,7 @@ export function JdReview({ id }: { id: string }) {
           {admin && (d.status === "DRAFT" || d.status === "IN_REVIEW") && <Button disabled={!!busy} onClick={() => act("APPROVE", "Approved")}>Approve</Button>}
           {admin && d.status === "IN_REVIEW" && <Button variant="outline" disabled={!!busy} onClick={() => { setNote(""); setDlg("back") }}>Send back</Button>}
           {admin && d.status === "APPROVED" && <Button variant="outline" disabled={!!busy} onClick={() => act("REOPEN", "Reopened as a draft")}>Reopen</Button>}
+          {d.status === "APPROVED" && <Button variant="outline" render={<Link href={`/staff/job-descriptions/${id}/matches`} />}>Match candidates</Button>}
           {d.status === "APPROVED" && !d.drive && <Button disabled={!!busy} onClick={() => setDlg("drive")}>Create a drive</Button>}
           {d.status !== "ARCHIVED" && <Button variant="ghost" disabled={!!busy} onClick={() => act("ARCHIVE", "Archived")}>Archive</Button>}
         </div>
@@ -93,7 +93,7 @@ export function JdReview({ id }: { id: string }) {
           <CardContent className="overflow-y-auto"><pre className="whitespace-pre-wrap break-words font-sans text-xs leading-relaxed">{d.rawText ? highlighted : "There is no source text."}</pre></CardContent></Card>
 
         <Tabs defaultValue="reqs">
-          <TabsList><TabsTrigger value="details">Details</TabsTrigger><TabsTrigger value="reqs">Requirements ({form.requirements.length})</TabsTrigger><TabsTrigger value="rules">Eligibility and process</TabsTrigger><TabsTrigger value="score">Scoring</TabsTrigger></TabsList>
+          <TabsList><TabsTrigger value="details">Details</TabsTrigger><TabsTrigger value="reqs">Requirements ({form.requirements.length})</TabsTrigger><TabsTrigger value="rules">Eligibility and process</TabsTrigger><TabsTrigger value="score">Matching weights</TabsTrigger></TabsList>
 
           <TabsContent value="details"><fieldset disabled={locked} className="contents"><FieldGroup>
             <Field><FieldLabel htmlFor="j-t">Job title</FieldLabel><Input id="j-t" value={form.title} onChange={(e) => set({ title: e.target.value })} /></Field>
@@ -140,9 +140,9 @@ export function JdReview({ id }: { id: string }) {
           </FieldGroup></fieldset></TabsContent>
 
           <TabsContent value="score"><fieldset disabled={locked} className="contents"><FieldGroup>
-            <p className="text-sm text-muted-foreground">How much each area counts when students are matched to this job. They must add up to 100.</p>
-            {SCORE_AREAS.map((k) => <div key={k} className="flex items-center gap-3 text-sm"><label htmlFor={`w-${k}`} className="w-36">{SCORE_LABEL[k]}</label><Input id={`w-${k}`} className="w-24" type="number" min={0} max={100} value={form.scoring[k]} onChange={(e) => set({ scoring: { ...form.scoring, [k]: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) } })} /></div>)}
-            <p className={`text-sm ${scoringProblem(form.scoring) ? "text-destructive" : "text-muted-foreground"}`}>Total {scoreSum}{scoringProblem(form.scoring) ? " (must be 100)" : ""}. Required items count double a preferred one of the same weight, within their own area.</p>
+            <p className="text-sm text-muted-foreground">How much each area counts when students are matched to this job (the college&apos;s own choice; the defaults are the SRS&apos;s suggestions). They must add up to 100.</p>
+            {MATCH_PARAMS.map((k) => <div key={k} className="flex items-center gap-3 text-sm"><label htmlFor={`w-${k}`} className="w-36">{MATCH_LABEL[k]}</label><Input id={`w-${k}`} className="w-24" type="number" min={0} max={100} value={form.scoring[k]} onChange={(e) => set({ scoring: { ...form.scoring, [k]: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) } })} /></div>)}
+            <p className={`text-sm ${scoringProblem(form.scoring) ? "text-destructive" : "text-muted-foreground"}`}>Total {scoreSum}{scoringProblem(form.scoring) ? " (must be 100)" : ""}. Inside the technical score, a required skill counts double a preferred one of the same weight.</p>
           </FieldGroup></fieldset></TabsContent>
         </Tabs>
       </div>

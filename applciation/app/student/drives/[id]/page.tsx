@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { OptionSelect } from "@/components/option-select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { StudentMatch } from "@/components/student-match"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -91,6 +92,7 @@ export default function StudentDrivePage() {
             {d.requirements.other && <p className="whitespace-pre-wrap">{d.requirements.other}</p>}
           </CardContent></Card>
         )}
+        {d.requirements && <div className="md:col-span-2"><StudentMatch driveId={d.id} /></div>}
         <Card><CardHeader><CardTitle>Eligibility rules</CardTitle></CardHeader><CardContent className="grid grid-cols-2 gap-1 text-sm">
           <span className="text-muted-foreground">Minimum CGPA</span><span>{d.rules.minCgpa ?? "None"}</span>
           <span className="text-muted-foreground">10th / 12th</span><span>{d.rules.minTenthPct ?? "—"} / {d.rules.minTwelfthPct ?? "—"}</span>

@@ -773,6 +773,7 @@ model Student {
   emailLogs              InvitationEmailLog[]
   intelligenceReports    StudentIntelligenceReport[]
   mentor                 User?                       @relation("StudentMentor", fields: [mentorId], references: [id], onDelete: SetNull)
+  jdShortlists           JdShortlist[]
 
   @@unique([collegeId, enrollmentNo])
   @@unique([collegeId, email])
@@ -3517,7 +3518,30 @@ model JobDescription {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
 
-  drive Drive? @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  drive     Drive?        @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  shortlist JdShortlist[]
 
   @@index([collegeId, status])
+}
+
+/// A student a person chose from the match ranking for a job description. The score and the evidence at that moment are kept, so the decision can be explained later.
+/// This only invites and records; the final selection stays with the drive's rounds and the people who run them.
+model JdShortlist {
+  id              String   @id @default(uuid()) @db.Uuid
+  collegeId       String   @db.Uuid
+  jdId            String   @db.Uuid
+  studentId       String   @db.Uuid
+  score           Int
+  mandatoryStatus String
+  /// The weights, parameter scores, skills and explanation as they were when the person shortlisted the student.
+  snapshot        Json
+  note            String?
+  decidedById     String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  jd      JobDescription @relation(fields: [jdId], references: [id], onDelete: Cascade)
+  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([jdId, studentId])
+  @@index([studentId])
 }

@@ -1,41 +1,62 @@
 import { db } from "@/lib/db";
 import { badRequest, notFound } from "@/lib/api/errors";
 import type { Prisma, ResumeVersion } from "@/generated/prisma/client";
-import { internshipRecords } from "@/lib/internshipService";
-import { portfolioFor } from "@/lib/projectService";
-import { buildMaster, composeDoc, drift, profileKeys, type Edits, type Kind, type MasterProfile, type Options, type ResumeDoc, type Sections } from "@/lib/resumeEngine";
+import { internshipRecordsMany } from "@/lib/internshipService";
+import { portfolioForMany } from "@/lib/projectService";
+import { buildMaster, composeDoc, drift, profileKeys, type Edits, type Inputs, type Kind, type MasterProfile, type Options, type ResumeDoc, type Sections } from "@/lib/resumeEngine";
 import { renderDocx, renderPdf, type Template, TEMPLATES } from "@/lib/resumeRender";
 
 /** Assessment categories that belong on a resume. Personality, interests and behavioural style are private and never appear. */
 const RESUME_CATEGORIES = ["APTITUDE", "TECHNICAL", "COMMUNICATION", "DIGITAL_LITERACY"] as const;
 export const MAX_VERSIONS = 15;
 
-/** The student's master career profile, built fresh from every record: profile sections, college projects, internships, completed courses and assessments. */
-export async function loadMaster(collegeId: string, studentId: string): Promise<MasterProfile> {
-  const [st, college, sections, projects, interns, courses, attempts] = await Promise.all([
-    db.student.findUniqueOrThrow({ where: { id: studentId }, select: { name: true, email: true, phone: true, enrollmentNo: true, department: { select: { name: true } }, batch: { select: { name: true } }, program: { select: { name: true } } } }),
-    db.college.findUniqueOrThrow({ where: { id: collegeId }, select: { name: true } }),
-    db.studentSection.findMany({ where: { studentId }, select: { section: true, status: true, data: true } }),
-    portfolioFor(studentId, { onlyShown: true }),
-    internshipRecords(studentId),
-    db.courseEnrolment.findMany({ where: { studentId, status: "COMPLETED" }, orderBy: { completedAt: "desc" }, take: 30, select: { id: true, completedAt: true, course: { select: { title: true, skills: true } }, certificate: { select: { serial: true } } } }),
-    db.assessmentAttempt.findMany({ where: { studentId, status: { not: "IN_PROGRESS" }, schedule: { collegeId, isPractice: false, paper: { category: { in: [...RESUME_CATEGORIES] } } } }, select: { score: true, maxScore: true, schedule: { select: { paper: { select: { id: true, title: true } } } } } }),
-  ]);
-  const secs: Sections = {};
-  for (const x of sections) secs[x.section] = { status: x.status, data: (x.data ?? {}) as Record<string, unknown> };
-  const best = new Map<string, { key: string; title: string; percent: number }>();
-  for (const a of attempts) {
-    const pct = Number(a.maxScore) > 0 ? (Number(a.score ?? 0) / Number(a.maxScore)) * 100 : 0, p = a.schedule.paper;
-    if (!best.has(p.id) || best.get(p.id)!.percent < pct) best.set(p.id, { key: p.id, title: p.title, percent: pct });
+const CHUNK = 250;
+
+/**
+ * The inputs for the master profile of many students, read with a few queries per batch instead of per student. The matching engine uses this for a whole
+ * cohort; `loadMaster` is the same thing for one student, so the resume and the matching always read the same facts.
+ */
+export async function loadInputsMany(collegeId: string, studentIds: string[]): Promise<Map<string, Inputs>> {
+  const result = new Map<string, Inputs>();
+  const college = await db.college.findUniqueOrThrow({ where: { id: collegeId }, select: { name: true } });
+  for (let at = 0; at < studentIds.length; at += CHUNK) {
+    const ids = studentIds.slice(at, at + CHUNK);
+    const [students, sections, projects, interns, courses, attempts] = await Promise.all([
+      db.student.findMany({ where: { id: { in: ids }, collegeId }, select: { id: true, name: true, email: true, phone: true, enrollmentNo: true, department: { select: { name: true } }, batch: { select: { name: true } }, program: { select: { name: true } } } }),
+      db.studentSection.findMany({ where: { studentId: { in: ids } }, select: { studentId: true, section: true, status: true, data: true } }),
+      portfolioForMany(ids, { onlyShown: true }),
+      internshipRecordsMany(ids),
+      db.courseEnrolment.findMany({ where: { studentId: { in: ids }, status: "COMPLETED" }, orderBy: { completedAt: "desc" }, select: { id: true, studentId: true, completedAt: true, course: { select: { title: true, skills: true } }, certificate: { select: { serial: true } } } }),
+      db.assessmentAttempt.findMany({ where: { studentId: { in: ids }, status: { not: "IN_PROGRESS" }, schedule: { collegeId, isPractice: false, paper: { category: { in: [...RESUME_CATEGORIES] } } } }, select: { studentId: true, score: true, maxScore: true, schedule: { select: { paper: { select: { id: true, title: true, category: true } } } } } }),
+    ]);
+    const group = <T extends { studentId: string }>(xs: T[]) => { const m = new Map<string, T[]>(); for (const x of xs) m.set(x.studentId, [...(m.get(x.studentId) ?? []), x]); return m; };
+    const secs = group(sections), crs = group(courses), att = group(attempts);
+    for (const st of students) {
+      const sm: Sections = {};
+      for (const x of secs.get(st.id) ?? []) sm[x.section] = { status: x.status, data: (x.data ?? {}) as Record<string, unknown> };
+      const best = new Map<string, { key: string; title: string; percent: number; category: string }>();
+      for (const a of att.get(st.id) ?? []) {
+        const pct = Number(a.maxScore) > 0 ? (Number(a.score ?? 0) / Number(a.maxScore)) * 100 : 0, p = a.schedule.paper;
+        if (!best.has(p.id) || best.get(p.id)!.percent < pct) best.set(p.id, { key: p.id, title: p.title, percent: pct, category: p.category });
+      }
+      result.set(st.id, {
+        student: { name: st.name, email: st.email, phone: st.phone, department: st.department.name, batch: st.batch.name, enrollmentNo: st.enrollmentNo, programme: st.program?.name ?? null, college: college.name },
+        sections: sm,
+        collegeProjects: (projects.get(st.id) ?? []).map((p) => ({ key: p.teamId, title: p.title, problem: p.problem, summary: p.summary, skills: p.skills, role: p.myRole, teammates: p.teammates, repo: p.repoUrl, resultPercent: p.myResultPercent })),
+        collegeInternships: (interns.get(st.id) ?? []).map((i) => ({ key: i.id, company: i.company ?? "", role: i.role, from: i.from, to: i.to, certificateVerified: i.certificateVerified, preplacementOffer: i.preplacementOffer })),
+        courses: (crs.get(st.id) ?? []).slice(0, 30).map((c) => ({ key: c.id, title: c.course.title, skills: c.course.skills, completedOn: (c.completedAt ?? new Date()).toISOString(), serial: c.certificate?.serial ?? null })),
+        assessments: [...best.values()],
+      });
+    }
   }
-  return buildMaster({
-    student: { name: st.name, email: st.email, phone: st.phone, department: st.department.name, batch: st.batch.name, enrollmentNo: st.enrollmentNo, programme: st.program?.name ?? null, college: college.name },
-    sections: secs,
-    collegeProjects: projects.map((p) => ({ key: p.teamId, title: p.title, problem: p.problem, summary: p.summary, skills: p.skills, role: p.myRole, teammates: p.teammates, repo: p.repoUrl, resultPercent: p.myResultPercent })),
-    collegeInternships: interns.map((i) => ({ key: i.id, company: i.company ?? "", role: i.role, from: i.from, to: i.to, certificateVerified: i.certificateVerified, preplacementOffer: i.preplacementOffer })),
-    courses: courses.map((c) => ({ key: c.id, title: c.course.title, skills: c.course.skills, completedOn: (c.completedAt ?? new Date()).toISOString(), serial: c.certificate?.serial ?? null })),
-    assessments: [...best.values()],
-  });
+  return result;
+}
+
+/** The student's master career profile: every record the college holds, as one structure. */
+export async function loadMaster(collegeId: string, studentId: string): Promise<MasterProfile> {
+  const i = (await loadInputsMany(collegeId, [studentId])).get(studentId);
+  if (!i) throw notFound("Student not found");
+  return buildMaster(i);
 }
 
 export const optionsOf = (v: Pick<ResumeVersion, "kind" | "targetCompany" | "targetRole" | "targetText" | "edits" | "verifiedOnly" | "markEvidence" | "template">): Options => ({

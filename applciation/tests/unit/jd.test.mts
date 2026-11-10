@@ -43,6 +43,7 @@ assert.ok(notes.some((n) => /2 requirements/.test(n)));
 assert.ok(!notes.some((n) => /CGPA/.test(n)), "a grounded rule raises no note");
 assert.ok(normalizeExtraction({ eligibility: { minCgpa: 8 } }, doc).notes.some((n) => /CGPA rule \(8\)/.test(n)), "an ungrounded rule is flagged");
 assert.deepEqual(normalizeExtraction("garbage", doc).data, blankJd(), "nonsense in, an empty JD out");
+assert.deepEqual(jdData.parse({ ...blankJd(), scoring: { skills: 40, qualification: 15, experience: 20, assessments: 15, communication: 10 } }).scoring, blankJd().scoring, "a job description saved with the old five areas gets the defaults");
 assert.equal(jdData.safeParse(data).success, true, "the cleaned result is a valid JD");
 
 // matching branch names to departments
@@ -59,7 +60,7 @@ assert.ok(reviewProblems({ ...ok, requirements: [] }).some((p) => /requirement/.
 assert.ok(reviewProblems({ ...ok, requirements: [{ ...ok.requirements[0], needsCheck: true }] }).some((p) => /still need/.test(p)));
 assert.ok(reviewProblems({ ...ok, jobType: null }).some((p) => /employment type/.test(p)));
 assert.ok(reviewProblems({ ...ok, title: "" }).length >= 1);
-assert.ok(reviewProblems({ ...ok, scoring: { skills: 50, qualification: 15, experience: 20, assessments: 15, communication: 10 } }).some((p) => /add up to 110/.test(p)));
+assert.ok(reviewProblems({ ...ok, scoring: { ...ok.scoring, technical: 40 } }).some((p) => /add up to 110/.test(p)));
 assert.equal(scoringProblem(ok.scoring), null);
 assert.ok(reviewProblems({ ...ok, eligibility: { ...ok.eligibility, branchesAsStated: ["CSE"] } }).some((p) => /Match them/.test(p)));
 assert.deepEqual(reviewProblems({ ...ok, eligibility: { ...ok.eligibility, branchesAsStated: ["CSE"], departmentIds: ["00000000-0000-4000-8000-000000000001"] } }), []);
