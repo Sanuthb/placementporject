@@ -22,7 +22,7 @@ type D = {
 }
 
 /** Public page, no account: an invited industry mentor reads the team's work and gives one review. The link works once. */
-export default function MentorReviewPage() {
+function MentorReview() {
   const { token } = useParams<{ token: string }>()
   const [d, setD] = React.useState<D | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -73,5 +73,13 @@ export default function MentorReviewPage() {
         <div><Button type="submit" disabled={busy || !ready}>{busy && <Spinner />}Submit my review</Button><p className="mt-2 text-xs text-muted-foreground">You can submit once. The college shares your comments with the students after results are published.</p></div>
       </form>
     </main>
+  )
+}
+
+export default function MentorReviewPage() {
+  return (
+    <React.Suspense fallback={<main className="mx-auto max-w-2xl p-6"><Skeleton className="h-64" /></main>}>
+      <MentorReview />
+    </React.Suspense>
   )
 }

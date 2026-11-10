@@ -42,7 +42,7 @@ export const NAV: Record<Kind, NavSection[]> = {
         { title: "Preparation", href: "/staff/prep", icon: NotebookPenIcon, module: "STUDENT_PREP", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Resource library", href: "/staff/resources", icon: LibraryIcon, module: "STUDENT_PREP", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Assessments", href: "/staff/assessments", icon: ClipboardListIcon, module: "ASSESSMENTS", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
-        { title: "Internships", href: "/staff/internships", icon: BriefcaseBusinessIcon, module: "INTERNSHIPS" },
+        { title: "Internships", href: "/staff/internships", icon: BriefcaseBusinessIcon, module: "INTERNSHIPS", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "DEPARTMENT_COORDINATOR", "FACULTY"] },
         { title: "Events and fairs", href: "/staff/events", icon: CalendarDaysIcon, module: "EVENTS", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Projects", href: "/staff/projects", icon: FolderKanbanIcon, module: "LEARNING", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "FACULTY"] },
         { title: "Courses", href: "/staff/courses", icon: GraduationCapIcon, module: "LEARNING", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },

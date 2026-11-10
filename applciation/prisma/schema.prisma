@@ -726,51 +726,52 @@ model Student {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  college               College                     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  department            Department                  @relation(fields: [departmentId], references: [id])
-  program               Program?                    @relation(fields: [programId], references: [id])
-  batch                 Batch                       @relation(fields: [batchId], references: [id])
-  branch                ProgrammeBranch?            @relation(fields: [branchId], references: [id])
-  currentSemester       Semester?                   @relation(fields: [currentSemesterId], references: [id])
-  currentAcademicYear   AcademicYear?               @relation(fields: [currentAcademicYearId], references: [id])
-  educationRecords      StudentEducationRecord[]
-  semesterResults       SemesterResult[]
-  backlogs              Backlog[]
-  documents             StudentDocument[]
-  progression           StudentProgression[]
-  sections              StudentSection[]
-  verificationEvents    VerificationEvent[]
-  participationHistory  ParticipationHistory[]
-  participationRequests ParticipationRequest[]
-  applications          Application[]
-  driveExceptions       DriveException[]
-  offers                Offer[]
-  messages              MessageLog[]
-  attendance            AttendanceRecord[]
-  blocks                Block[]
-  notifications         Notification[]
-  tickets               Ticket[]
-  notes                 StudentNote[]
-  psychAttempts         PsychAttempt[]
-  instrumentAttempts    InstrumentAttempt[]
-  roadmap               StudentRoadmap?
-  courseEnrolments      CourseEnrolment[]
-  resourceProgress      ResourceProgress[]
-  projectMemberships    ProjectMember[]
-  internships           Internship[]
-  eventRegistrations    EventRegistration[]
-  learningMemberships   LearningMember[]
-  assessmentAttempts    AssessmentAttempt[]
-  counsellingBookings   CounsellingSlot[]
-  interviewExperiences  InterviewExperience[]
-  showcase              ShowcaseProfile?
-  campus                Campus?                     @relation(fields: [campusId], references: [id])
-  invitation            StudentInvitation?
-  onboardingProfile     StudentOnboardingProfile?
-  correctionRequests    StudentCorrectionRequest[]
-  emailLogs             InvitationEmailLog[]
-  intelligenceReports   StudentIntelligenceReport[]
-  mentor                User?                       @relation("StudentMentor", fields: [mentorId], references: [id], onDelete: SetNull)
+  college                College                     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  department             Department                  @relation(fields: [departmentId], references: [id])
+  program                Program?                    @relation(fields: [programId], references: [id])
+  batch                  Batch                       @relation(fields: [batchId], references: [id])
+  branch                 ProgrammeBranch?            @relation(fields: [branchId], references: [id])
+  currentSemester        Semester?                   @relation(fields: [currentSemesterId], references: [id])
+  currentAcademicYear    AcademicYear?               @relation(fields: [currentAcademicYearId], references: [id])
+  educationRecords       StudentEducationRecord[]
+  semesterResults        SemesterResult[]
+  backlogs               Backlog[]
+  documents              StudentDocument[]
+  progression            StudentProgression[]
+  sections               StudentSection[]
+  verificationEvents     VerificationEvent[]
+  participationHistory   ParticipationHistory[]
+  participationRequests  ParticipationRequest[]
+  applications           Application[]
+  driveExceptions        DriveException[]
+  offers                 Offer[]
+  messages               MessageLog[]
+  attendance             AttendanceRecord[]
+  blocks                 Block[]
+  notifications          Notification[]
+  tickets                Ticket[]
+  notes                  StudentNote[]
+  psychAttempts          PsychAttempt[]
+  instrumentAttempts     InstrumentAttempt[]
+  roadmap                StudentRoadmap?
+  courseEnrolments       CourseEnrolment[]
+  resourceProgress       ResourceProgress[]
+  projectMemberships     ProjectMember[]
+  internshipApplications InternshipApplication[]
+  internships            Internship[]
+  eventRegistrations     EventRegistration[]
+  learningMemberships    LearningMember[]
+  assessmentAttempts     AssessmentAttempt[]
+  counsellingBookings    CounsellingSlot[]
+  interviewExperiences   InterviewExperience[]
+  showcase               ShowcaseProfile?
+  campus                 Campus?                     @relation(fields: [campusId], references: [id])
+  invitation             StudentInvitation?
+  onboardingProfile      StudentOnboardingProfile?
+  correctionRequests     StudentCorrectionRequest[]
+  emailLogs              InvitationEmailLog[]
+  intelligenceReports    StudentIntelligenceReport[]
+  mentor                 User?                       @relation("StudentMentor", fields: [mentorId], references: [id], onDelete: SetNull)
 
   @@unique([collegeId, enrollmentNo])
   @@unique([collegeId, email])
@@ -1604,24 +1605,49 @@ model ProspectActivity {
 
 // ---------- Internships ----------
 model Internship {
-  id          String           @id @default(uuid()) @db.Uuid
-  collegeId   String           @db.Uuid
-  studentId   String           @db.Uuid
-  companyId   String?          @db.Uuid
-  companyName String
-  role        String
-  startDate   DateTime         @db.Date
-  endDate     DateTime         @db.Date
-  mentorName  String?
-  mentorEmail String?
-  status      InternshipStatus @default(ALLOTTED)
-  createdById String           @db.Uuid
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                    String            @id @default(uuid()) @db.Uuid
+  collegeId             String            @db.Uuid
+  studentId             String            @db.Uuid
+  companyId             String?           @db.Uuid
+  companyName           String
+  role                  String
+  startDate             DateTime          @db.Date
+  endDate               DateTime          @db.Date
+  mentorName            String?
+  mentorEmail           String?
+  postingId             String?           @db.Uuid
+  applicationId         String?           @unique @db.Uuid
+  /// The faculty member who follows the student through the internship (the company's own mentor is mentorName / mentorEmail).
+  facultyMentorId       String?           @db.Uuid
+  /// Working days, 0 = Sunday to 6 = Saturday, and hours in a normal day.
+  workDays              Int[]             @default([1, 2, 3, 4, 5])
+  hoursPerDay           Int               @default(8)
+  scheduleNote          String?
+  stipendInr            Int?
+  certificatePath       String?
+  certificateName       String?
+  certificateMime       String?
+  certificateStatus     CertificateStatus @default(NONE)
+  certificateNote       String?
+  certificateUploadedAt DateTime?
+  ppoStatus             PpoStatus         @default(NONE)
+  ppoOfferId            String?           @db.Uuid
+  ppoNote               String?
+  completedAt           DateTime?
+  /// Set when an admin completed the internship although a required check was not met.
+  completionOverride    String?
+  status                InternshipStatus  @default(ALLOTTED)
+  createdById           String            @db.Uuid
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   student     Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
   logs        WorkLog[]
   evaluations InternshipEvaluation[]
+  attendance  InternshipAttendance[]
+  tasks       InternshipTask[]
+  feedback    InternshipFeedback[]
+  links       InternshipMentorLink[]
 
   @@index([collegeId, status])
   @@index([studentId])
@@ -3191,4 +3217,205 @@ model ProjectMentorInvite {
   team ProjectTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
+}
+
+// ---------- Internship management (M9) ----------
+enum InternshipMode {
+  ONSITE
+  REMOTE
+  HYBRID
+}
+
+enum PostingStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum InternshipApplicationStatus {
+  APPLIED
+  COLLEGE_APPROVED
+  COLLEGE_REJECTED
+  COMPANY_SELECTED
+  COMPANY_REJECTED
+  WITHDRAWN
+  ALLOTTED
+}
+
+enum AttendanceMark {
+  PRESENT
+  ABSENT
+  LEAVE
+}
+
+enum InternshipTaskStatus {
+  ASSIGNED
+  SUBMITTED
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+enum CertificateStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum PpoStatus {
+  NONE
+  EXPECTED
+  OFFERED
+  ACCEPTED
+  DECLINED
+}
+
+/// An internship a company offers through the college. Staff post it once the company has confirmed it.
+model InternshipPosting {
+  id                   String         @id @default(uuid()) @db.Uuid
+  collegeId            String         @db.Uuid
+  companyId            String?        @db.Uuid
+  companyName          String
+  title                String
+  description          String?
+  location             String?
+  mode                 InternshipMode @default(ONSITE)
+  stipendInr           Int?
+  openings             Int?
+  skills               String[]
+  startDate            DateTime       @db.Date
+  endDate              DateTime       @db.Date
+  applicationDeadline  DateTime
+  /// Whether the company has confirmed the internship; a posting cannot open without it.
+  companyConfirmed     Boolean        @default(false)
+  companyConfirmedNote String?
+  minCgpa              Decimal?       @db.Decimal(4, 2)
+  minTenthPct          Decimal?       @db.Decimal(5, 2)
+  minTwelfthPct        Decimal?       @db.Decimal(5, 2)
+  maxActiveBacklogs    Int?
+  departmentIds        String[]       @db.Uuid
+  batchIds             String[]       @db.Uuid
+  programIds           String[]       @db.Uuid
+  allowPlaced          Boolean        @default(true)
+  status               PostingStatus  @default(DRAFT)
+  createdById          String         @db.Uuid
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @default(now()) @updatedAt
+
+  applications InternshipApplication[]
+
+  @@index([collegeId, status])
+}
+
+/// A student's application to a posting, or an internship they found themselves that needs the college's approval.
+model InternshipApplication {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  collegeId          String                      @db.Uuid
+  studentId          String                      @db.Uuid
+  postingId          String?                     @db.Uuid
+  selfSourced        Boolean                     @default(false)
+  companyName        String?
+  role               String?
+  startDate          DateTime?                   @db.Date
+  endDate            DateTime?                   @db.Date
+  mentorName         String?
+  mentorEmail        String?
+  offerLetterPath    String?
+  offerLetterName    String?
+  note               String?
+  status             InternshipApplicationStatus @default(APPLIED)
+  /// Why the student did not meet the rules when they applied (staff may still approve).
+  eligibilityGaps    String[]
+  collegeDecidedById String?                     @db.Uuid
+  collegeDecidedAt   DateTime?
+  collegeNote        String?
+  companyDecidedAt   DateTime?
+  companyNote        String?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @default(now()) @updatedAt
+
+  posting InternshipPosting? @relation(fields: [postingId], references: [id], onDelete: SetNull)
+  student Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([postingId, studentId])
+  @@index([collegeId, status])
+  @@index([studentId])
+}
+
+/// A student's attendance for one working day. The student marks it; a mentor or staff verify or correct it.
+model InternshipAttendance {
+  id           String         @id @default(uuid()) @db.Uuid
+  internshipId String         @db.Uuid
+  date         DateTime       @db.Date
+  status       AttendanceMark
+  note         String?
+  markedBy     String         @default("STUDENT")
+  verified     Boolean        @default(false)
+  verifiedById String?        @db.Uuid
+  updatedAt    DateTime       @default(now()) @updatedAt
+
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@unique([internshipId, date])
+}
+
+/// Work given to the intern, handed in by them and reviewed. `isFinalReport` marks the closing report.
+model InternshipTask {
+  id               String               @id @default(uuid()) @db.Uuid
+  internshipId     String               @db.Uuid
+  title            String
+  description      String?
+  dueAt            DateTime?
+  isFinalReport    Boolean              @default(false)
+  status           InternshipTaskStatus @default(ASSIGNED)
+  assignedByName   String
+  assignedByUserId String?              @db.Uuid
+  submissionText   String?
+  submissionUrl    String?
+  filePath         String?
+  fileName         String?
+  fileMime         String?
+  submittedAt      DateTime?
+  reviewComment    String?
+  reviewedByName   String?
+  reviewedAt       DateTime?
+  createdAt        DateTime             @default(now())
+
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@index([internshipId])
+}
+
+/// Mentor feedback: from the faculty mentor, staff or the company's mentor (through a link).
+model InternshipFeedback {
+  id           String       @id @default(uuid()) @db.Uuid
+  internshipId String       @db.Uuid
+  authorType   ReviewerType
+  authorName   String
+  authorUserId String?      @db.Uuid
+  text         String
+  createdAt    DateTime     @default(now())
+
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@index([internshipId, createdAt])
+}
+
+/// A one-time link that lets the company's mentor, who has no account, give an evaluation and feedback.
+model InternshipMentorLink {
+  id           String    @id @default(uuid()) @db.Uuid
+  internshipId String    @db.Uuid
+  collegeId    String    @db.Uuid
+  name         String
+  email        String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdById  String    @db.Uuid
+  createdAt    DateTime  @default(now())
+
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@index([internshipId])
 }

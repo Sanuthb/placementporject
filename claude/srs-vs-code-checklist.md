@@ -31,7 +31,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M6 – Learning Management System | 11 | 9 | 2 | 0 | 0 | [ ] |
 | M7 – Resource Management System | 9 | 7 | 2 | 0 | 0 | [ ] |
 | M8 – Project Management and Portfolio | 7 | 6 | 1 | 0 | 0 | [ ] |
-| M9 – Internship Management | 7 | 4 | 3 | 0 | 0 | [ ] |
+| M9 – Internship Management | 7 | 7 | 0 | 0 | 0 | [ ] |
 | M10 – Dynamic Resume Engine | 9 | 3 | 2 | 4 | 0 | [ ] |
 | M11 – Job Description Management and AI Analysis | 7 | 2 | 3 | 2 | 0 | [ ] |
 | M12 – AI Candidate Matching Engine | 8 | 3 | 2 | 3 | 0 | [ ] |
@@ -239,18 +239,20 @@ Each member's recorded work (tasks finished, updates, files, commits, capped) is
 
 ### M9 – Internship Management
 
-**Placement Officer side**
-- [ ] Post internships, approve applications, track participation — ✅ Built (`/staff/internships`)
-- [ ] Mentor allocation, attendance, deliverables — 🟡 Partial: work logs are reviewed by staff; no mentor allocation or attendance
-- [ ] Performance evaluation — ✅ Built
-- [ ] Certificate upload and completion — 🟡 Partial: completion is tracked; no certificate upload
-- [ ] PPO tracking — ✅ Built (offers carry a PPO flag)
+Before this work the module was only a staff-allotted record with weekly logs and evaluations; the earlier "built" marks on posting, applications and PPO were too generous. It now covers the whole SRS flow.
 
-**Student side**
-- [ ] Apply, log weekly work, see status — ✅ Built (`/student/internships`)
+**Placement Officer, faculty mentor side** (`/staff/internships`)
+- [ ] Post internships, approve applications, track participation — ✅ Built: postings with company, mode, stipend, openings, skills, dates, deadline and eligibility rules (CGPA, 10th/12th, backlogs, department, batch, programme, placed students); a posting opens only once the company has confirmed it; applications go through college approval and then the company's decision (recorded by staff), which creates the internship. Students can also submit an internship they found themselves with the offer letter; the college approves it alone. Tested: unit (eligibility, approval steps); not live.
+- [ ] Mentor allocation, attendance, deliverables — ✅ Built: a faculty mentor (defaults to the student's own mentor) and the company mentor; schedule with working days and hours; students mark attendance for the last 7 working days and the mentor or staff verify or correct it (leave is not counted against the student); tasks with PDF/Word/PowerPoint or link deliverables, approved or sent back; a final-report task is created automatically. Faculty see only the internships they mentor.
+- [ ] Performance evaluation — ✅ Built: faculty and company evaluations out of 100, mentor feedback, and a one-time link (21 days, no account) for the company's mentor to evaluate and recommend a pre-placement offer.
+- [ ] Certificate upload and completion — ✅ Built: the student uploads the certificate (PDF/image, type read from the file) and staff verify or reject it; completing needs the end date reached, an evaluation, no log waiting and every task approved (attendance under 75% and an unverified certificate are warnings); the admin can override with a written reason that is kept.
+- [ ] PPO tracking — ✅ Built: status none, expected, offered, accepted or declined with a link to the offer record, notes, and conversion figures in the Overview tab.
+
+**Student side** (`/student/internships`)
+- [ ] Apply, log weekly work, see status — ✅ Built: open internships with the rules checked and the gaps shown, applications and their status, attendance, tasks and final report, weekly logs, feedback, certificate and any offer. Not live-tested.
 
 **Connection**
-- [ ] M9 → M10: completed internships appear on the resume — 🟡 Partial: the resume reads the self-entered Internships section, not the internship records
+- [ ] M9 → M10: completed internships appear on the resume — ✅ Built: the resume PDF has a "College internship records" block (and the shareable profile data carries them); the student-written Internships section is still separate.
 
 ### M10 – Dynamic Resume Engine
 

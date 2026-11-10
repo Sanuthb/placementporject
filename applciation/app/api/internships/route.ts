@@ -5,10 +5,10 @@ import { ApiError, badRequest } from "@/lib/api/errors";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { notifyStudent } from "@/lib/notify";
-import { departmentScope } from "@/lib/auth/session";
+import { scope } from "@/lib/internshipService";
 import { InternshipStatus } from "@/generated/prisma/client";
 
-const R = { module: "INTERNSHIPS" as const };
+const R = { module: "INTERNSHIPS" as const, facultyOk: true };
 const query = z.object({ status: z.enum(InternshipStatus).optional(), studentId: z.uuid().optional(), limit: z.coerce.number().int().min(1).max(100).default(50), cursor: z.uuid().optional() });
 const allot = z.object({
   studentId: z.uuid(), companyId: z.uuid().optional(), companyName: z.string().trim().min(2).max(200).optional(), role: z.string().trim().min(2).max(150),
@@ -18,8 +18,8 @@ const allot = z.object({
 export const GET = route(R, async (req, s) => {
   const q = parseQuery(req, query);
   const rows = await db.internship.findMany({
-    where: { collegeId: s.collegeId, status: q.status, studentId: q.studentId, student: { ...departmentScope(s) } },
-    include: { student: { select: { id: true, name: true, enrollmentNo: true } }, _count: { select: { logs: true, evaluations: true } } },
+    where: { ...scope(s), status: q.status, studentId: q.studentId },
+    include: { student: { select: { id: true, name: true, enrollmentNo: true } }, _count: { select: { logs: true, evaluations: true, tasks: true } } },
     orderBy: [{ startDate: "desc" }, { id: "asc" }], take: q.limit + 1, ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
   });
   const hasMore = rows.length > q.limit;
