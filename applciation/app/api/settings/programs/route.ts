@@ -8,7 +8,7 @@ import { resolveUniversity } from "@/lib/academicIntegrity";
 
 const create = programCreate
 
-export const GET = route({ facultyOk: true }, (_req, s) =>
+export const GET = route({ facultyOk: true, principalOk: true }, (_req, s) =>
   db.program.findMany({
     where: { collegeId: s.collegeId },
     include: { department: { select: { id: true, name: true, code: true } }, uni: { select: { id: true, name: true, code: true } }, branches: { where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } } },

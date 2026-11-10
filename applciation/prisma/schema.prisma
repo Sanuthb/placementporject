@@ -16,6 +16,8 @@ enum Role {
   DEPARTMENT_COORDINATOR
   // Teaching staff and mentors. Gets no placement access; only what the faculty routes explicitly allow.
   FACULTY
+  // The principal or director: a read-only view of the institution (dashboard, analytics, reports). Changes nothing.
+  PRINCIPAL
 }
 
 // Sellable modules (spec: "module tags"). Core is always on and is not stored.
@@ -473,6 +475,9 @@ model CollegeSettings {
   requireMfaForAdmins        Boolean          @default(false)
   /// Lets students and staff send an uploaded marksheet to the AI provider to read it. Off until an admin switches it on.
   aiDocumentReading          Boolean          @default(false)
+  /// Lets the college send text messages and WhatsApp messages to students who opted in. Off until an admin switches it on.
+  smsEnabled                 Boolean          @default(false)
+  whatsappEnabled            Boolean          @default(false)
   dataDeclaration            String?
   approvalRequired           ApprovalAction[]
   updatedAt                  DateTime         @updatedAt
@@ -645,6 +650,7 @@ model User {
   approvalsRequested   ApprovalRequest[]      @relation("ApprovalRequester")
   approvalsDecided     ApprovalRequest[]      @relation("ApprovalDecider")
   notifications        Notification[]
+  notificationPrefs    NotificationPref[]
   ticketsAssigned      Ticket[]               @relation("TicketAssignee")
   studentNotes         StudentNote[]
   prospectsOwned       Prospect[]
@@ -777,6 +783,9 @@ model Student {
   campaignMembers        CampaignMember[]
   readinessSnapshots     ReadinessSnapshot[]
   discussionSessions     DiscussionSession[]
+  notificationPrefs      NotificationPref[]
+  notificationDeliveries NotificationDelivery[]
+  calendarFeed           CalendarFeed?
   testImprovements       TestImprovement[]
 
   @@unique([collegeId, enrollmentNo])
@@ -3861,4 +3870,59 @@ model DiscussionAssignment {
   sessions DiscussionSession[]
 
   @@index([collegeId, createdAt])
+}
+
+/// One person's choice for one kind of notification on one channel. `ownerKey` is "S:<studentId>" or "U:<userId>". No row means the default applies. For SMS and WhatsApp a row with enabled = true is the person's consent, and `updatedAt` is when they gave it.
+model NotificationPref {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String   @db.Uuid
+  ownerKey  String
+  studentId String?  @db.Uuid
+  userId    String?  @db.Uuid
+  category  String
+  channel   String
+  enabled   Boolean
+  updatedAt DateTime @updatedAt
+
+  student Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerKey, category, channel])
+  @@index([collegeId])
+}
+
+/// Every attempt to send a notification outside the app (email, SMS, WhatsApp), and the ones skipped with the reason, so staff can see what happened.
+model NotificationDelivery {
+  id             String   @id @default(uuid()) @db.Uuid
+  collegeId      String   @db.Uuid
+  studentId      String   @db.Uuid
+  /// The in-app notification this delivery is for, when there is one. One delivery per notification and channel.
+  notificationId String?  @db.Uuid
+  channel        String
+  category       String
+  /// SENT, FAILED or SKIPPED.
+  status         String
+  detail         String?
+  providerRef    String?
+  title          String
+  createdAt      DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel])
+  @@index([collegeId, createdAt])
+  @@index([studentId, createdAt])
+}
+
+/// A private calendar subscription link for a student. Only a hash of the secret is kept, so the link can be shown once and then only replaced.
+model CalendarFeed {
+  id         String    @id @default(uuid()) @db.Uuid
+  collegeId  String    @db.Uuid
+  studentId  String    @unique @db.Uuid
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  rotatedAt  DateTime?
+  lastReadAt DateTime?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { DeliveryLog } from "@/components/delivery-log"
 import * as React from "react"
 import { toast } from "sonner"
 
@@ -28,8 +29,9 @@ type Msg = { id: string; subject: string; recipientEmail: string; status: string
 export default function CommunicationsPage() {
   return (
     <Tabs defaultValue="announcements">
-      <TabsList><TabsTrigger value="announcements">Announcements</TabsTrigger><TabsTrigger value="email">Send email</TabsTrigger><TabsTrigger value="history">Sent messages</TabsTrigger><TabsTrigger value="templates">Templates</TabsTrigger><TabsTrigger value="faqs">FAQs and rules</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="announcements">Announcements</TabsTrigger><TabsTrigger value="email">Send email</TabsTrigger><TabsTrigger value="history">Sent messages</TabsTrigger><TabsTrigger value="templates">Templates</TabsTrigger><TabsTrigger value="channels">SMS and WhatsApp</TabsTrigger><TabsTrigger value="faqs">FAQs and rules</TabsTrigger></TabsList>
       <TabsContent value="announcements"><Announcements /></TabsContent>
+      <TabsContent value="channels"><DeliveryLog /></TabsContent>
       <TabsContent value="email"><SendEmail /></TabsContent>
       <TabsContent value="history"><History /></TabsContent>
       <TabsContent value="templates">

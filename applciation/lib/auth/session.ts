@@ -72,6 +72,8 @@ export const isCoordinatorOnly = (s: { roles: Role[] }) => s.roles.includes("DEP
  * Someone who is faculty and also holds another role keeps that other role's access, as with every multi-role user.
  */
 export const isFacultyOnly = (s: { roles: Role[] }) => s.roles.length > 0 && s.roles.every((r) => r === "FACULTY");
+/** A person whose only role is PRINCIPAL (principal or director). Such a session is refused by every route that does not name PRINCIPAL or set `principalOk`, so it can only reach the read-only institutional views. */
+export const isPrincipalOnly = (s: { roles: Role[] }) => s.roles.length > 0 && s.roles.every((r) => r === "PRINCIPAL");
 
 export function requireRole(session: Session, ...roles: Role[]) {
   if (!hasRole(session, ...roles)) throw forbidden();

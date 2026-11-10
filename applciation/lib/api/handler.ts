@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError } from "zod";
 import { ApiError, forbidden } from "@/lib/api/errors";
-import { getSession, isFacultyOnly, requireModule, requireRole, type Session } from "@/lib/auth/session";
+import { getSession, isFacultyOnly, isPrincipalOnly, requireModule, requireRole, type Session } from "@/lib/auth/session";
 import type { ModuleKey, Role } from "@/generated/prisma/client";
 import { rateLimit, type LimitOpt } from "@/lib/rateLimit";
 
-type Opts = { roles?: Role[]; /** Let a faculty-only session through without listing FACULTY in `roles` (read-only routes any staff member may use). */ facultyOk?: boolean; module?: ModuleKey; limit?: LimitOpt; /** For the few routes a person must reach before finishing two-step sign-in. */ skipMfa?: boolean };
+type Opts = { roles?: Role[]; /** Let a faculty-only session through without listing FACULTY in `roles` (read-only routes any staff member may use). */ facultyOk?: boolean; /** Lets a principal-only session through. Only for routes that are safe for a read-only viewer. */ principalOk?: boolean; module?: ModuleKey; limit?: LimitOpt; /** For the few routes a person must reach before finishing two-step sign-in. */ skipMfa?: boolean };
 type Ctx<P> = { params: Promise<P> };
 
 /** Wraps a route handler: authenticates, checks role and module, and maps errors to JSON. */
@@ -18,6 +18,8 @@ export function route<P = Record<string, string>>(
       const session = await getSession(req, { skipMfa: opts.skipMfa });
       // Deny by default for faculty-only sessions: they reach a route only if it names FACULTY or sets facultyOk.
       if (isFacultyOnly(session) && !opts.facultyOk && !opts.roles?.includes("FACULTY")) throw forbidden();
+      // Deny by default for principal-only sessions too: they reach a route only if it names PRINCIPAL or sets principalOk.
+      if (isPrincipalOnly(session) && !opts.principalOk && !opts.roles?.includes("PRINCIPAL")) throw forbidden();
       if (opts.roles) requireRole(session, ...opts.roles);
       if (opts.module) await requireModule(session, opts.module);
       if (opts.limit) await rateLimit(opts.limit, session.userId);

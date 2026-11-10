@@ -1,3 +1,4 @@
+import { notifyStudent } from "@/lib/notify";
 import { z } from "zod";
 import { route } from "@/lib/api/handler";
 import { parseBody } from "@/lib/api/parse";
@@ -26,6 +27,7 @@ export const POST = route<{ id: string; slotId: string }>({ roles: ["TPO_ADMIN",
     await tx.interviewSlot.update({ where: { id: slotId }, data: { startsAt: b.startsAt, endsAt: b.endsAt, panelId, rescheduleCount: { increment: 1 } } });
     await audit(s, { action: "slot.reschedule", entity: "InterviewSlot", entityId: slotId, before: { startsAt: slot.startsAt.toISOString() }, after: { startsAt: b.startsAt.toISOString(), panelId }, reason: b.reason }, tx);
   });
+  await notifyStudent(s.collegeId, slot.application.studentId, { type: "interview.slot", title: `Interview rescheduled: ${drive.role}`, body: `${b.startsAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST${b.reason ? `. ${b.reason}` : ""}`, link: "/student/applications" }).catch(() => undefined);
   let notified = false;
   try {
     const r = await sendBulkEmail(s, { purpose: "slot.reschedule", subject: "Your interview has been rescheduled", body: `Hello ${slot.application.student.name},\n\nYour interview for ${drive.role} has been moved to ${b.startsAt.toUTCString()}.${b.reason ? `\n\nReason: ${b.reason}` : ""}`, recipients: [{ email: slot.application.student.email, studentId: slot.application.studentId }] });

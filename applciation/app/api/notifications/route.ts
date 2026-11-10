@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 const query = z.object({ unreadOnly: z.enum(["true", "false"]).default("false"), limit: z.coerce.number().int().min(1).max(100).default(30), cursor: z.uuid().optional() });
 
 /** The signed-in staff member's notifications, newest first, with the unread count. */
-export const GET = route({}, async (req, s) => {
+export const GET = route({ principalOk: true }, async (req, s) => {
   const q = parseQuery(req, query);
   const where = { userId: s.userId, ...(q.unreadOnly === "true" ? { readAt: null } : {}) };
   const [rows, unread] = await Promise.all([

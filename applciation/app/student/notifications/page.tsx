@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 
+import { NotificationSettings } from "@/components/notification-settings"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +31,7 @@ export default function NotificationsPage() {
   const unread = n.data.items.filter((i) => !i.readAt).length
   return (
     <div className="grid max-w-4xl gap-4 lg:grid-cols-2">
+      <div className="lg:col-span-2"><NotificationSettings /></div>
       <Card>
         <CardHeader><CardTitle>Notifications</CardTitle><CardDescription>{unread} unread</CardDescription></CardHeader>
         <CardContent className="flex flex-col gap-3 text-sm">

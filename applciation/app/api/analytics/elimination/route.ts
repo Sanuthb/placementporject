@@ -7,7 +7,7 @@ import { RoundType } from "@/generated/prisma/client";
 
 const query = z.object({ roundType: z.enum(RoundType).optional(), departmentId: z.uuid().optional(), batchId: z.uuid().optional(), driveId: z.uuid().optional(), format: z.enum(["json", "xlsx"]).default("json") });
 
-export const GET = route({ module: "ANALYTICS" }, async (req, s) => {
+export const GET = route({ module: "ANALYTICS", principalOk: true }, async (req, s) => {
   const { format, ...f } = parseQuery(req, query);
   const e = await elimination(s, f);
   if (format === "json") return e;

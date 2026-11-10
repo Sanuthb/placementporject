@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { StudentProgress } from "@/components/student-progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, statusVariant, titleCase } from "@/lib/web/format"
@@ -89,6 +90,8 @@ export default function StudentHome() {
           {m.isPlaced && <Badge>Placed</Badge>}
         </CardContent>
       </Card>
+
+      <StudentProgress />
 
       <div className="grid gap-4 md:grid-cols-2">
         {has("ONBOARDING") && (

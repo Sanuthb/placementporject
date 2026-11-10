@@ -14,6 +14,8 @@ const schema = z.object({
   CRON_SECRET: opt(z.string().min(24, "CRON_SECRET must be at least 24 characters")),
   SMTP_HOST: opt(z.string()), SMTP_PORT: opt(z.string()), SMTP_USER: opt(z.string()), SMTP_PASS: opt(z.string()), SMTP_FROM: opt(z.string()),
   SMTP_DRY_RUN: opt(z.enum(["true", "false"])),
+  TWILIO_ACCOUNT_SID: opt(z.string()), TWILIO_AUTH_TOKEN: opt(z.string()), TWILIO_SMS_FROM: opt(z.string()), TWILIO_WHATSAPP_FROM: opt(z.string()),
+  CHANNEL_DRY_RUN: opt(z.enum(["true", "false"])),
   ANTHROPIC_API_KEY: opt(z.string()),
   GROQ_API_KEY: opt(z.string()),
   GROQ_MODEL: opt(z.string()),

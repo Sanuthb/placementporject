@@ -21,7 +21,7 @@ const create = z.object({
   status: z.enum(BATCH_STATUS).default("ACTIVE"),
 });
 
-export const GET = route({ facultyOk: true }, (_req, s) =>
+export const GET = route({ facultyOk: true, principalOk: true }, (_req, s) =>
   db.batch.findMany({
     where: { collegeId: s.collegeId },
     include: {

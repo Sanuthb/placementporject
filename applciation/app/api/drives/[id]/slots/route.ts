@@ -1,3 +1,4 @@
+import { notifyStudent } from "@/lib/notify";
 import { z } from "zod";
 import { route } from "@/lib/api/handler";
 import { parseBody, parseQuery } from "@/lib/api/parse";
@@ -40,11 +41,14 @@ export const POST = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFI
   ]);
   if (!panel) throw badRequest("Panel not found in this drive");
   if (!app) throw badRequest("This student is not waiting for this round");
-  return db.$transaction(async (tx) => {
+  const made = await db.$transaction(async (tx) => {
     if (await tx.interviewSlot.findFirst({ where: { applicationId: app.id, roundId: b.roundId, status: { in: ["SCHEDULED", "IN_PROGRESS"] } } })) throw new ApiError(409, "CONFLICT", "This student already has a slot for this round");
     await assertNoConflict(tx, { panelId: b.panelId, studentId: app.studentId, startsAt: b.startsAt, endsAt: b.endsAt });
     const slot = await tx.interviewSlot.create({ data: { collegeId: s.collegeId, driveId: id, roundId: b.roundId, panelId: b.panelId, applicationId: app.id, startsAt: b.startsAt, endsAt: b.endsAt, notes: b.notes, createdById: s.userId } });
     await audit(s, { action: "slot.create", entity: "InterviewSlot", entityId: slot.id, after: { applicationId: app.id, panelId: b.panelId } }, tx);
     return slot;
   });
+  const d = await db.drive.findUnique({ where: { id }, select: { role: true, company: { select: { name: true } } } });
+  await notifyStudent(s.collegeId, app.studentId, { type: "interview.slot", title: `Interview scheduled: ${d?.company.name ?? ""} ${d?.role ?? ""}`.trim(), body: `${b.startsAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST. See Applications for the room.`, link: "/student/applications" }).catch(() => undefined);
+  return made;
 });

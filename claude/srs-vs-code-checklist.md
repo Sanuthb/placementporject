@@ -42,8 +42,8 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M17 – Job Readiness Engine | 5 | 5 | 0 | 0 | 0 | [ ] |
 | M18 – Placement Management | 13 | 13 | 0 | 0 | 0 | [ ] |
 | M19 – Group Discussion and Communication Simulator | 9 | 8 | 1 | 0 | 0 | [ ] |
-| M20 – Notification Centre | 9 | 5 | 3 | 1 | 0 | [ ] |
-| M21 – Dashboards and Analytics | 8 | 3 | 4 | 1 | 0 | [ ] |
+| M20 – Notification Centre | 10 | 9 | 1 | 0 | 0 | [ ] |
+| M21 – Dashboards and Analytics | 8 | 7 | 1 | 0 | 0 | [ ] |
 | **Total** | **202** | **110** | **37** | **53** | **2** | |
 
 ## Cross-module findings worth reading first
@@ -411,28 +411,29 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 **Placement Officer side**
 - [ ] Send announcements and messages — ✅ Built (`/staff/communications`, templates)
 - [ ] Email — ✅ Built (SMTP); reminders for rounds, assessments and personality tests
-- [ ] SMS and WhatsApp — ❌ Missing
-- [ ] Notifications for submitted profiles, correction requests, approvals — ✅ Built, with an Open link to the right screen
+- [ ] SMS and WhatsApp — 🟡 Built, **not tested against a live account**: a Twilio-style adapter (`lib/channels.ts`); the college switches each channel on (Communications > SMS and WhatsApp), the student opts in, nothing is sent 9 pm to 8 am except offers, every attempt or skip is logged with the reason. Needs `TWILIO_*` keys; WhatsApp free text only works inside the 24-hour window or with approved templates, and templates are not set up
+- [ ] Notifications for submitted profiles, correction requests, approvals — ✅ Built, with an Open link to the right screen; staff can mute kinds they do not need (account and offer messages cannot be muted)
+- [ ] Delivery log — ✅ Built: what went out by email, SMS or WhatsApp, and what was skipped and why
 
 **Student side**
 - [ ] In-app notifications and announcements — ✅ Built
-- [ ] Email notifications — ✅ Built
-- [ ] Calendar view of reminders — 🟡 Partial: a calendar page of drives, rounds and slots; no calendar-file or external calendar sync
-- [ ] Manage notification preferences — 🟡 Partial: two switches (announcements, reminders)
-- [ ] Events for registration, campaign invitations, preparation reminders, course deadlines — 🟡 Partial: registration, results, drive and offer updates exist; the campaign and course ones do not
+- [ ] Email notifications — ✅ Built, plus an opt-in email copy of any kind of in-app message
+- [ ] Calendar reminders — ✅ Built: one server-side calendar of drives, deadlines, rounds, interview slots, tests, preparation tasks, course assignments, assigned interviews and discussions and registered events; a private subscription link for Google, Apple or Outlook calendars (link shown once, can be replaced or switched off), and a one-off .ics download
+- [ ] Manage notification preferences — ✅ Built: twelve kinds of message by app, email, SMS and WhatsApp; SMS and WhatsApp are off until switched on (their consent, with date); account and offer messages always show in the app
+- [ ] Events for registration, campaign invitations, preparation reminders, course deadlines, test and interview scheduling — ✅ Built: test scheduled, interview slot booked or moved, and hourly reminders (tests opening or closing, course assignments, preparation tasks, assigned interviews and discussions) via `/api/notifications/reminders/run` (needs the scheduler, same as round reminders). Campaign invitations and registration already existed
 
 ### M21 – Dashboards and Analytics
 
 **Placement Officer side**
-- [ ] TPO dashboard: students, eligible students, opportunities, matching, readiness, results, placement stats — 🟡 Partial: students, drives, offers, attention items and analytics exist; matching, campaigns and readiness are not there
+- [ ] TPO dashboard: students, eligible students, opportunities, matching, readiness, results, placement stats — ✅ Built: the existing dashboard plus jobs and shortlisted candidates, preparation campaigns (students, progress, falling behind, ready), mock test results (attempts, average, pass rate), interviews and discussions (counts, averages, how many came from assignments) and a career readiness spread (bands and weakest parts, loaded on request from a fixed sample of up to 300 students)
 - [ ] Analytics: placement overview, elimination analysis, per-drive stats, NIRF — ✅ Built
 - [ ] Personality cohort analytics — ✅ Built (anonymised)
-- [ ] Principal/Director dashboard — ❌ Missing: no such role or view
+- [ ] Principal/Director dashboard — ✅ Built: a new read-only PRINCIPAL role (Settings > staff) that can reach only the institution dashboard, analytics and reports; every other route refuses it. Shows placement rate, packages, offers, departments and batches, placement by year, company engagement (visited, returning, top recruiters), training and learning, and preparation activity, with the placement PDF and NIRF downloads. No personality results or individual interview transcripts are shown
 - [ ] Employer dashboard — 🟡 Partial: the recruiter portal shows drives and candidates (outside this audit's scope)
 
 **Student side**
-- [ ] Student dashboard: profile completion, learning progress, opportunities, applications, offers — 🟡 Partial: home page covers profile, drives, applications, offers, notifications
-- [ ] Roadmap, today's tasks, skill development, career readiness — 🟡 Partial: the roadmap exists (`/student/roadmap`) but is not on the home dashboard; no daily tasks or readiness score
+- [ ] Student dashboard: profile completion, learning progress, opportunities, applications, offers — ✅ Built (home page)
+- [ ] Roadmap, today's tasks, skill development, career readiness — ✅ Built on the home page: today's dated items and late preparation, roadmap progress and next milestones, course progress, skill evidence, career readiness with next steps, mock test results, interviews and discussions, preparation campaigns. Skill development is the evidence-backed skills part of readiness, not a separate trend chart
 - [ ] Full view of my own data — ✅ Built (`/student/overview`, privacy page and access log)
 
 ---

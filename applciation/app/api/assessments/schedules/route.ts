@@ -1,3 +1,4 @@
+import { notifyStudent } from "@/lib/notify";
 import { z } from "zod";
 import { route } from "@/lib/api/handler";
 import { parseBody } from "@/lib/api/parse";
@@ -22,9 +23,13 @@ export const POST = route(R, async (req, s) => {
   if (!paper) throw badRequest("Paper not found");
   if (b.endsAt.getTime() - b.startsAt.getTime() < paper.durationMin * 60_000) throw badRequest("The window is shorter than the paper's duration");
   await assertDriveRefs(s.collegeId, { departmentIds: b.targetDepartmentIds, batchIds: b.targetBatchIds });
-  return db.$transaction(async (tx) => {
+  const made = await db.$transaction(async (tx) => {
     const sch = await tx.assessmentSchedule.create({ data: { ...b, collegeId: s.collegeId, createdById: s.userId } });
     await audit(s, { action: "assessment.schedule", entity: "AssessmentSchedule", entityId: sch.id, after: { title: sch.title, isBaseline: sch.isBaseline } }, tx);
     return sch;
   });
+  // Tell the students it is for. Personal practice sets are made by the student themselves, so only scheduled tests come through here.
+  const who = await db.student.findMany({ where: { collegeId: s.collegeId, isActive: true, ...(b.targetDepartmentIds.length ? { departmentId: { in: b.targetDepartmentIds } } : {}), ...(b.targetBatchIds.length ? { batchId: { in: b.targetBatchIds } } : {}) }, select: { id: true }, take: 5000 });
+  if (!b.isPractice) await Promise.all(who.map((w) => notifyStudent(s.collegeId, w.id, { type: "assessment.scheduled", title: `Test scheduled: ${made.title}`, body: `Opens ${made.startsAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST, closes ${made.endsAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST.`, link: `/student/assessments/${made.id}` }).catch(() => undefined)));
+  return made;
 });

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { PrepDashboard } from "@/components/prep-dashboard"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/web/auth"
@@ -86,8 +87,9 @@ export default function DashboardPage() {
   const { state } = useAuth()
   const router = useRouter()
   const facultyOnly = state.status === "ready" && state.profile.roles.length > 0 && state.profile.roles.every((r) => r === "FACULTY")
-  React.useEffect(() => { if (facultyOnly) router.replace("/staff/faculty") }, [facultyOnly, router])
-  const { data, error, loading } = useApi<Dash>(state.status === "ready" && !facultyOnly ? "/api/dashboard" : null)
+  const principalOnly = state.status === "ready" && state.profile.roles.length > 0 && state.profile.roles.every((r) => r === "PRINCIPAL")
+  React.useEffect(() => { if (facultyOnly) router.replace("/staff/faculty"); if (principalOnly) router.replace("/staff/institution") }, [facultyOnly, principalOnly, router])
+  const { data, error, loading } = useApi<Dash>(state.status === "ready" && !facultyOnly && !principalOnly ? "/api/dashboard" : null)
 
   if (error) return <Alert variant="destructive"><AlertTitle>Could not load the dashboard</AlertTitle><AlertDescription>{error instanceof Error ? error.message : "Try again"}</AlertDescription></Alert>
   if (!data) return <div className="grid gap-4 sm:grid-cols-6 lg:grid-cols-12">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-40 rounded-2xl sm:col-span-3 lg:col-span-3" />)}</div>
@@ -224,6 +226,7 @@ export default function DashboardPage() {
           </div>
         </Tile>
       )}
+      <PrepDashboard />
     </div>
   )
 }

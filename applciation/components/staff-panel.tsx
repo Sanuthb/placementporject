@@ -26,6 +26,7 @@ const ROLES = [
   ["TPO_ADMIN", "Head TPO / admin", "Everything, including settings and approvals."],
   ["PLACEMENT_OFFICER", "Placement officer", "Runs drives, students and offers day to day."],
   ["DEPARTMENT_COORDINATOR", "Department coordinator", "Sees and supports the students of one department."],
+  ["PRINCIPAL", "Principal / director", "Read-only view of the institution: dashboard, analytics and reports. Cannot change anything."],
   ["FACULTY", "Faculty / mentor", "Sees only the students they mentor or teach. No placement access. Set their programmes under Settings > Faculty."],
 ] as const
 const label = (r: string) => ROLES.find((x) => x[0] === r)?.[1] ?? titleCase(r)

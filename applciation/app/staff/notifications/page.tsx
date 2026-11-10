@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 
+import { StaffNotificationChoices } from "@/components/staff-notification-choices"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,7 +24,8 @@ export default function StaffNotificationsPage() {
     try { await api("/api/notifications/read", { method: "POST", body: { all: true } }); reload() } catch (e) { toastError(e) } finally { setBusy(false) }
   }
   return (
-    <Card className="max-w-2xl">
+    <div className="flex max-w-2xl flex-col gap-4">
+    <Card>
       <CardHeader><CardTitle>Notifications</CardTitle><CardDescription>{data.unread} unread</CardDescription></CardHeader>
       <CardContent className="flex flex-col gap-3 text-sm">
         {data.unread > 0 && <div><Button size="sm" variant="outline" disabled={busy} onClick={readAll}>Mark all read</Button></div>}
@@ -31,5 +33,7 @@ export default function StaffNotificationsPage() {
         {data.items.length === 0 && <span className="text-muted-foreground">Nothing yet.</span>}
       </CardContent>
     </Card>
+    <StaffNotificationChoices />
+    </div>
   )
 }

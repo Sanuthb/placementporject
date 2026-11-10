@@ -10,7 +10,7 @@ const query = z.object({
 });
 
 /** Placed vs total, package statistics, companies and offers. `format=xlsx` exports the by-department table. */
-export const GET = route({ module: "ANALYTICS" }, async (req, s) => {
+export const GET = route({ module: "ANALYTICS", principalOk: true }, async (req, s) => {
   const { format, includeHistorical, ...f } = parseQuery(req, query);
   const o = await overview(s, { ...f, includeHistorical: includeHistorical === "true" });
   if (format === "json") return o;

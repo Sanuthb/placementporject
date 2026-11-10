@@ -2,7 +2,7 @@ import { RocketIcon, FileSearchIcon, FolderKanbanIcon, LibraryIcon, ClipboardChe
 
 import type { Kind } from "@/lib/web/auth"
 
-export type NavItem = { title: string; href: string; icon: LucideIcon; module?: string; roles?: string[] }
+export type NavItem = { title: string; href: string; icon: LucideIcon; module?: string; roles?: string[]; /** Shown to a principal-only login (the read-only institutional view). */ principal?: boolean }
 export type NavSection = { label: string; items: NavItem[] }
 
 /**
@@ -12,7 +12,7 @@ export type NavSection = { label: string; items: NavItem[] }
 export const NAV: Record<Kind, NavSection[]> = {
   staff: [
     { label: "Faculty", items: [{ title: "My students", href: "/staff/faculty", icon: PresentationIcon, roles: ["FACULTY"] }] },
-    { label: "Placement", items: [{ title: "Dashboard", href: "/staff", icon: LayoutDashboardIcon }] },
+    { label: "Placement", items: [{ title: "Dashboard", href: "/staff", icon: LayoutDashboardIcon, principal: true }, { title: "Institution", href: "/staff/institution", icon: GraduationCapIcon, roles: ["PRINCIPAL"], principal: true }] },
     {
       label: "Students",
       items: [
@@ -35,7 +35,7 @@ export const NAV: Record<Kind, NavSection[]> = {
         { title: "Employer CRM", href: "/staff/crm", icon: TargetIcon, module: "EMPLOYER_CRM", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Recruiters", href: "/staff/recruiters", icon: UsersRoundIcon, module: "RECRUITER_PORTAL", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Blocking", href: "/staff/blocking", icon: BanIcon, module: "ATTENDANCE_BLOCKING" },
-        { title: "Analytics", href: "/staff/analytics", icon: BarChart3Icon, module: "ANALYTICS" },
+        { title: "Analytics", href: "/staff/analytics", icon: BarChart3Icon, module: "ANALYTICS", principal: true },
       ],
     },
     {
@@ -58,7 +58,7 @@ export const NAV: Record<Kind, NavSection[]> = {
         { title: "Messages", href: "/staff/communications", icon: MailIcon, roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Support tickets", href: "/staff/tickets", icon: TicketIcon },
         { title: "Notifications", href: "/staff/notifications", icon: InboxIcon },
-        { title: "Reports", href: "/staff/reports", icon: FileBarChartIcon, roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
+        { title: "Reports", href: "/staff/reports", icon: FileBarChartIcon, roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "PRINCIPAL"], principal: true },
       ],
     },
     { label: "Administration", items: [{ title: "Audit log", href: "/staff/audit", icon: ScrollTextIcon, roles: ["TPO_ADMIN"] }, { title: "Approvals", href: "/staff/approvals", icon: CheckCheckIcon }, { title: "My security", href: "/staff/security", icon: ShieldCheckIcon }, { title: "Settings", href: "/staff/settings", icon: SettingsIcon, roles: ["TPO_ADMIN"] }] },
@@ -97,8 +97,10 @@ export const KIND_LABEL: Record<Kind, string> = { staff: "Staff console", studen
 export function visibleNav(kind: Kind, modules: string[], roles: string[] = []): NavSection[] {
   // Faculty-only logins see only what is explicitly meant for faculty. Items with no role list are for placement staff.
   const facultyOnly = kind === "staff" && roles.length > 0 && roles.every((r) => r === "FACULTY")
+  const principalOnly = kind === "staff" && roles.length > 0 && roles.every((r) => r === "PRINCIPAL")
   return NAV[kind]
     .map((s) => ({ ...s, items: s.items.filter((i) => (!i.module || modules.includes(i.module)) && (!i.roles || i.roles.some((r) => roles.includes(r)))) }))
     .map((s) => (facultyOnly ? { ...s, items: s.items.filter((i) => i.roles?.includes("FACULTY")) } : s))
+    .map((s) => (principalOnly ? { ...s, items: s.items.filter((i) => i.principal) } : s))
     .filter((s) => s.items.length)
 }
