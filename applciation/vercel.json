@@ -15,6 +15,10 @@
     {
       "path": "/api/notifications/round-reminders/run",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/notifications/reminders/run",
+      "schedule": "30 * * * *"
     }
   ]
 }

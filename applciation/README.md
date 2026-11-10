@@ -53,13 +53,15 @@ Sign in through Supabase Auth to get an access token, then call the API with `Au
 
 ## Scheduled jobs
 
-Three endpoints must be called on a schedule with `Authorization: Bearer $CRON_SECRET`:
+Five endpoints must be called on a schedule with `Authorization: Bearer $CRON_SECRET`:
 
 | Endpoint | What it does | Suggested |
 |---|---|---|
 | `/api/blocking/evaluate` | Applies missed-drive block policies and expires old blocks | daily |
 | `/api/reports/schedules/run` | Emails scheduled reports that are due | daily |
 | `/api/crm/follow-ups/run` | Reminds prospect owners of due follow-ups | daily |
+| `/api/notifications/round-reminders/run` | Reminds students of rounds and interviews in the next 24 hours | hourly |
+| `/api/notifications/reminders/run` | Reminds students of tests, course assignments, preparation tasks and assigned interviews or discussions, and sends new notifications to email, SMS and WhatsApp for students who opted in | hourly |
 
 `vercel.json` already declares these for **Vercel Cron** (which sends GET with the secret). Elsewhere use any scheduler (`curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://api.example.edu/api/blocking/evaluate`). Admins can also trigger the same jobs by hand for their own college.
 
@@ -92,7 +94,7 @@ See [`docs/PRODUCTION_CHECKLIST.md`](docs/PRODUCTION_CHECKLIST.md). In short: se
 
 ## Not built (decided)
 
-SMS, WhatsApp and push notifications · SSO and multi-factor login for staff · ERP integration · multi-campus under one college · in-app backup and restore · AI mock interviews (needs a decision about sending students' answers to an external AI service).
+Push notifications · single sign-on and mobile-number sign-in · ERP integration · multi-campus under one college · in-app backup and restore · running code for coding and SQL answers · data retention and deletion settings · interviewer, trainer and alumni portals. SMS and WhatsApp are built but need a Twilio account and have not been tried against a live one. See `claude/srs-vs-code-checklist.md` for the full list against the SRS.
 
 ## Known limitations
 

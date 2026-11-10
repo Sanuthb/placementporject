@@ -17,7 +17,7 @@ The **Code** column is my reading of the source code, not a test result:
 
 Your own rule applies: a module counts as complete only when its screens, backend and links to other modules have been tested. The Code mark does not replace that. The one exception is the invitation and student onboarding work, which has automated tests (`tests/e2e/10-student-invitations.mjs`, `tests/e2e/11-intelligence.mjs`).
 
-Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
+Last checked against the code: 2026-11-15 (all modules; sections 2, 3 and 5 re-checked, the per-module lines were written as each module was built).
 
 ## Summary (generated from the lines below)
 
@@ -26,16 +26,16 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M1 – Authentication and User Management | 17 | 15 | 0 | 0 | 2 | [ ] |
 | M2 – Institution Management | 13 | 13 | 0 | 0 | 0 | [ ] |
 | M3 – Student Registration and Profile | 19 | 19 | 0 | 0 | 0 | [ ] |
-| M4 – Student Assessment and Career Profiling | 21 | 20 | 0 | 1 | 0 | [ ] |
-| M5 – Career Roadmap and Student Development | 10 | 7 | 2 | 1 | 0 | [ ] |
-| M6 – Learning Management System | 11 | 9 | 2 | 0 | 0 | [ ] |
+| M4 – Student Assessment and Career Profiling | 21 | 21 | 0 | 0 | 0 | [ ] |
+| M5 – Career Roadmap and Student Development | 10 | 8 | 2 | 0 | 0 | [ ] |
+| M6 – Learning Management System | 11 | 8 | 3 | 0 | 0 | [ ] |
 | M7 – Resource Management System | 9 | 7 | 2 | 0 | 0 | [ ] |
 | M8 – Project Management and Portfolio | 7 | 6 | 1 | 0 | 0 | [ ] |
 | M9 – Internship Management | 7 | 7 | 0 | 0 | 0 | [ ] |
 | M10 – Dynamic Resume Engine | 9 | 9 | 0 | 0 | 0 | [ ] |
 | M11 – Job Description Management and AI Analysis | 7 | 7 | 0 | 0 | 0 | [ ] |
 | M12 – AI Candidate Matching Engine | 8 | 8 | 0 | 0 | 0 | [ ] |
-| M13 – Job-Specific Preparation Campaign | 8 | 7 | 1 | 0 | 0 | [ ] |
+| M13 – Job-Specific Preparation Campaign | 8 | 8 | 0 | 0 | 0 | [ ] |
 | M14 – Mock Test Engine | 10 | 10 | 0 | 0 | 0 | [ ] |
 | M15 – AI Mock Interview Engine | 7 | 6 | 1 | 0 | 0 | [ ] |
 | M16 – Report Generation | 5 | 5 | 0 | 0 | 0 | [ ] |
@@ -44,15 +44,17 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M19 – Group Discussion and Communication Simulator | 9 | 8 | 1 | 0 | 0 | [ ] |
 | M20 – Notification Centre | 10 | 9 | 1 | 0 | 0 | [ ] |
 | M21 – Dashboards and Analytics | 8 | 7 | 1 | 0 | 0 | [ ] |
-| **Total** | **202** | **110** | **37** | **53** | **2** | |
+| **Total** | **213** | **199** | **12** | **0** | **2** | |
 
 ## Cross-module findings worth reading first
 
-1. **Course-based LMS, projects, resource library with workflow, JD upload with AI parsing, candidate matching score, preparation campaigns, readiness score, group-discussion simulator, roadmap**: none of these exist as modules. M6, M7, M8, M11, M12, M13, M17, M19 and M5 are the main gaps, and several of them depend on each other (see section 3).
-2. **Projects are only a text section** in the student profile (title, tools, link). There is no project record, no team, no milestone, no faculty review. So the M8 to M10 and M8 to M12 links cannot be real yet.
-3. **AI is used in two places**: AI mock interviews (Claude, text only) and the Student 360 intelligence reading (Groq). Nothing else in the SRS's AI list (JD parsing, matching, resource recommendations, tutor, preparation plans, test improvement engine) exists.
-4. **Only three staff roles exist** (Head TPO / admin, Placement Officer, Department Coordinator). Principal, Faculty, Trainer, Interviewer and Alumni roles do not exist in the staff portal.
-5. **Login security gaps against M1**: no mobile OTP, no SSO, no multi-factor authentication for privileged accounts, no login-history screen.
+Rewritten 2026-11-15 after Modules 6 to 21 were built. The earlier findings (no LMS, projects as a text field, only two AI features, three staff roles, no readiness score) are no longer true.
+
+1. **Every module M1 to M21 now has code.** Remaining non-built lines are listed in the summary table and in section 5. Nothing here has been run in a browser by me: "Built" means the code, build and unit tests agree, not that you have tested it.
+2. **Four things are built but not proven against a live service:** SMS and WhatsApp sending (Twilio-style adapter, needs your account and approved WhatsApp templates), the AI features (they need `ANTHROPIC_API_KEY` and `GROQ_API_KEY`), email (needs SMTP), and the hourly reminder job (needs the scheduler; it is now in `vercel.json`).
+3. **No end-to-end browser tests exist for Modules 6 to 21.** The Playwright suites (`tests/e2e`, 12 files) cover the older modules. The newer modules have unit tests for their rules only.
+4. **Coding and SQL answers are read by the AI, never run.** There is no code execution environment.
+5. **Section 5 below lists SRS requirements that are not part of any module list and are missing or partial**: several of the section 11 reports, AI question generation, model and prompt version retention, data retention and deletion, public landing page, interviewer, trainer and alumni portals, ERP integration.
 
 ---
 
@@ -163,7 +165,7 @@ Re-checked 2026-11-09 after the seven-phase M4 build. "Tested" says how each lin
 - [ ] Personalised recommendations — ✅ Built: rule-based (not AI), from the student's own results: improve, take a test, explore roles, strengths. Tested: unit (10 cases); not live.
 
 **Connection**
-- [ ] M4 → M5: assessment results feed a roadmap — ❌ Missing (no roadmap module yet; the recommendations are the data it will use).
+- [ ] M4 → M5: assessment results feed a roadmap — ✅ Built: results tick milestones, suggest milestones and target roles (see M5).
 - [ ] M4 → Student 360 intelligence — ✅ Built: aptitude, technical, digital literacy, communication, teamwork, interests and behavioural style are separate dimensions with their own score, confidence and gaps. Tested: unit; not live.
 
 ### M5 – Career Roadmap and Student Development
@@ -178,7 +180,7 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 **Student side**
 - [ ] Four-year personalised roadmap with yearly goals — ✅ Built, scaled to the programme: the four themes in the SRS (discover, build, specialise, prepare) are spread over the programme's own semesters, so an MCA (4 semesters, 2 years) and a B.Tech (8 semesters, 4 years) each get a sensible plan. 25 standard milestones. Tested: unit (generation for 1 to 10 semesters, determinism, placement within themes); not live.
 - [ ] Semester-wise milestones — ✅ Built: every milestone sits in a semester, with progress, what is behind from earlier semesters, and what is up next. Tested: unit.
-- [ ] Learning recommendations from assessments — 🟡 Partial: weak assessment results become suggested milestones the student can add (with the reason), but they point at practice and preparation resources in general; there are no courses or resource library to recommend from yet (M6 and M7). Tested: unit.
+- [ ] Learning recommendations from assessments — 🟡 Partial: weak assessment results become suggested roadmap milestones (with the reason), and courses (M6) and study material (M7) are recommended from weak areas on their own pages; the roadmap's own suggestion list still points at practice in general rather than naming courses. Tested: unit.
 - [ ] Goal setting, career role selection, roadmap changes, achievement tracking — ✅ Built: career goal sentence, goals with dates (open, achieved, dropped), target role with ideas from the student's interests and stated preferences, add, move, skip and remove milestones, and a history of every change with who made it. Many milestones tick themselves from real activity (assessments taken, achievements verified, internships completed, practice interviews, drives applied and attended, profile and resume verified). Tested: unit (auto-tracking rules, change rules); not live.
 - [ ] Learning journeys (a step list a programme follows) — 🟡 Partial: unchanged; exists as a staff-defined journey for a training programme. A step done in a learning programme now also ticks a roadmap milestone.
 
@@ -317,7 +319,7 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 - Progress updates itself: a finished course, completed study material, a submitted mock test or a completed mock interview ticks its plan item; study, practice and revision items are ticked by the student.
 
 **Connection**
-- [ ] M12 → M13 → M14/M15 — 🟡 Partial: campaigns use M12 matches and gaps, M6 courses, M7 material, the existing scheduled assessments as mock tests and the existing AI mock interviews; the dedicated M14 mock test engine and M15 interview engine are not built.
+- [ ] M12 → M13 → M14/M15 — ✅ Built: campaigns use M12 matches and gaps, M6 courses, M7 material, scheduled tests linked to the job (M14) and AI mock interviews and discussions (M15, M19).
 
 ### M14 – Mock Test Engine
 
@@ -446,14 +448,14 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 - [ ] 3. Assign and monitor assessments (M4) — ✅ Built
 - [ ] 4. Monitor career roadmaps (M5) — ✅ Built (`/staff/roadmaps`)
 - [ ] 5. Monitor learning and training (M6, M7) — ✅ Built: courses, programmes and the resource library with usage figures
-- [ ] 6. Track projects and internships (M8, M9) — 🟡 Partial: internships yes, projects no
+- [ ] 6. Track projects and internships (M8, M9) — ✅ Built (`/staff/projects`, `/staff/internships`)
 - [ ] 7. Monitor student resumes (M10) — ✅ Built
-- [ ] 8. Manage JDs and candidate matching (M11, M12) — 🟡 Partial
-- [ ] 9. Manage preparation campaigns (M13) — ❌ Missing
-- [ ] 10. Assign and review assessments (M14, M15) — 🟡 Partial
-- [ ] 11. Review reports and readiness (M16, M17) — 🟡 Partial
+- [ ] 8. Manage JDs and candidate matching (M11, M12) — ✅ Built
+- [ ] 9. Manage preparation campaigns (M13) — ✅ Built (`/staff/campaigns`)
+- [ ] 10. Assign and review assessments (M14, M15) — ✅ Built: tests, marking queue, assigned interviews and discussions with reports
+- [ ] 11. Review reports and readiness (M16, M17) — 🟡 Partial: test, interview, discussion, student and group reports and readiness exist; several SRS section 11 reports are still missing (see section 5)
 - [ ] 12. Manage placement drives (M18) — ✅ Built
-- [ ] 13. Monitor communication and analytics (M19–M21) — 🟡 Partial
+- [ ] 13. Monitor communication and analytics (M19–M21) — ✅ Built, SMS and WhatsApp untested against a live account
 
 ### Student portal
 - [ ] 1. Activate account (M1) — ✅ Built
@@ -461,16 +463,16 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 - [ ] 3. Complete Student 360 assessments (M4) — ✅ Built: personality, aptitude, career interests, behavioural style, technical, digital literacy, communication, teamwork
 - [ ] 4. View career roadmap (M5) — ✅ Built (`/student/roadmap`)
 - [ ] 5. Access courses and resources (M6, M7) — ✅ Built (`/student/courses`, `/student/resources`)
-- [ ] 6. Build projects and portfolio (M8) — 🟡 Partial: text section and shareable page
+- [ ] 6. Build projects and portfolio (M8) — ✅ Built
 - [ ] 7. Participate in internships (M9) — ✅ Built
-- [ ] 8. Build resume (M10) — 🟡 Partial
-- [ ] 9. View jobs and matching information (M11, M12) — 🟡 Partial
-- [ ] 10. Complete preparation campaigns (M13) — ❌ Missing
-- [ ] 11. Attempt mock tests and interviews (M14, M15) — 🟡 Partial
-- [ ] 12. View performance reports (M16, M17) — 🟡 Partial
+- [ ] 8. Build resume (M10) — ✅ Built
+- [ ] 9. View jobs and matching information (M11, M12) — ✅ Built (gaps and match explanation through campaigns and readiness)
+- [ ] 10. Complete preparation campaigns (M13) — ✅ Built (`/student/campaigns`)
+- [ ] 11. Attempt mock tests and interviews (M14, M15) — ✅ Built
+- [ ] 12. View performance reports (M16, M17) — ✅ Built (test, interview, discussion and performance reports; readiness)
 - [ ] 13. Apply and participate in placement drives (M18) — ✅ Built
-- [ ] 14. Practise group discussions (M19) — ❌ Missing
-- [ ] 15. Receive notifications and track progress (M20, M21) — 🟡 Partial
+- [ ] 14. Practise group discussions (M19) — ✅ Built
+- [ ] 15. Receive notifications and track progress (M20, M21) — ✅ Built
 
 ---
 
@@ -483,19 +485,19 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 | 3 | M5 → M6 | Learning goals and recommended courses | ✅ Finishing a course ticks a roadmap milestone; courses are recommended from the target role, goal and weak assessment areas (`/student/courses`, with reasons) | [ ] |
 | 4 | M5 → M7 | Recommended resources | 🟡 Resources are recommended from assessment results and target role; the roadmap itself does not list them | [ ] |
 | 5 | M6 → M21 | Course progress and completion | ✅ Per-course analytics and a college-wide summary on the courses page | [ ] |
-| 6 | M8 → M10 | Project information and portfolio evidence | 🟡 Only the self-entered Projects text section | [ ] |
-| 7 | M9 → M10 | Internship experience | 🟡 Resume reads the self-entered section, not internship records | [ ] |
-| 8 | M3 + M6 + M8 + M9 → M10 | Resume information | 🟡 M3 only (profile sections) | [ ] |
-| 9 | M11 → M12 | Structured job requirements | 🟡 Eligibility thresholds only | [ ] |
-| 10 | M3 + M4 + M8 + M9 + M10 → M12 | Student evidence for matching | 🟡 Thresholds from M3; Student 360 page shows evidence but no matching | [ ] |
-| 11 | M12 → M13 | Matched and eligible candidates | 🟡 Match results, gaps and preparation suggestions exist per student; M13 campaigns are not built | [ ] |
-| 12 | M13 → M14 | Assigned job-specific tests | 🟡 Campaigns assign existing scheduled assessments; no mock test engine yet | [ ] |
-| 13 | M13 → M15 | Assigned mock interview preparation | 🟡 Plans include technical and HR mock interviews using the existing AI interviewer, tracked automatically | [ ] |
-| 14 | M14 + M15 → M16 | Test and interview results | 🟡 Results exist in each module; no combined report | [ ] |
-| 15 | M3 + M4 + M6 + M8 + M9 + M14 + M15 → M17 | Career readiness evidence | 🟡 Student 360 reads M3, M4, M9 data, mock interviews and tests; no readiness score | [ ] |
+| 6 | M8 → M10 | Project information and portfolio evidence | ✅ Submitted projects feed the resume engine, the portfolio and matching | [ ] |
+| 7 | M9 → M10 | Internship experience | ✅ Verified internships feed the resume engine and matching | [ ] |
+| 8 | M3 + M6 + M8 + M9 → M10 | Resume information | ✅ One master profile reads profile sections, courses, projects, internships and assessments | [ ] |
+| 9 | M11 → M12 | Structured job requirements | ✅ Reviewed, mandatory/preferred requirements and scoring weights | [ ] |
+| 10 | M3 + M4 + M8 + M9 + M10 → M12 | Student evidence for matching | ✅ Matching reads the master profile with evidence | [ ] |
+| 11 | M12 → M13 | Matched and eligible candidates | ✅ Campaigns are built from matches, with gaps kept as they were when invited | [ ] |
+| 12 | M13 → M14 | Assigned job-specific tests | ✅ Tests can be linked to a job description and added to a campaign plan | [ ] |
+| 13 | M13 → M15 | Assigned mock interview preparation | ✅ Plans include mock interviews; staff can assign interviews and discussions for a job | [ ] |
+| 14 | M14 + M15 → M16 | Test and interview results | ✅ Test, interview, discussion, student and group reports | [ ] |
+| 15 | M3 + M4 + M6 + M8 + M9 + M14 + M15 → M17 | Career readiness evidence | ✅ Career Readiness Index and Job-Specific Readiness Score | [ ] |
 | 16 | M17 → M18 | Readiness information for placement review | ✅ Drive pipeline shows job readiness beside eligibility | [ ] |
 | 17 | M18 → M20 | Placement notifications | ✅ Built | [ ] |
-| 18 | All modules → M21 | Dashboard and analytics data | 🟡 For the modules that exist | [ ] |
+| 18 | All modules → M21 | Dashboard and analytics data | ✅ Student, placement office and principal dashboards | [ ] |
 | 19 | M2 → M3 | Academic structure fills the student's assigned record | ✅ Built and tested | [ ] |
 | 20 | M1 → M3 | Accepting an invitation activates the same student record | ✅ Built and tested | [ ] |
 
@@ -504,3 +506,85 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 - Employer, Faculty/Trainer, Interviewer, Alumni and Super Admin portals.
 - Whether any screen looks right in a browser. This file reads code and tests, not the running app.
 - Non-functional requirements in the SRS beyond section 5 (performance, security hardening, data retention), except where noted.
+
+## 5. SRS requirements outside the module list (added 2026-11-15)
+
+The module checklist covers SRS section 5. These come from the other sections of the SRS (3 roles, 4 structure, 6 screens, 7 data, 8 AI, 9 non-functional, 10 integrations, 11 reports, 17 principles). Checked by reading the code and searching it; nothing was run. Marks mean the same as above.
+
+### Section 11 – Reports and exports
+The SRS asks for downloadable reports in PDF, Excel and CSV. What exists: placement report (PDF), NIRF data (Excel), scheduled report emails, student list, offers, applications and eligibility exports (Excel), test, interview, discussion, student performance and group reports (PDF and Word), resume (PDF and Word).
+- [ ] Student profile report — ❌ Missing as a download (the profile is a screen and the resume is a separate file)
+- [ ] Academic performance report — ❌ Missing as a download
+- [ ] Career assessment report — ❌ Missing as a download (results are on screen; personality results are private to the student by design)
+- [ ] Career roadmap report — ❌ Missing as a download
+- [ ] Course completion report — ❌ Missing as a download (figures are on the Courses and Learning screens)
+- [ ] Skill gap report — ❌ Missing as a download (gaps show on the matching and campaign screens)
+- [ ] Project report, internship report — ❌ Missing as downloads
+- [ ] Resume report — 🟡 Partial: the resume itself downloads; there is no report across students
+- [ ] JD analysis report, candidate matching report — 🟡 Partial: the matching board shows everything and the shortlist exports to Excel; no PDF report
+- [ ] Preparation campaign report — ❌ Missing as a download (the campaign dashboard is a screen)
+- [ ] Mock test report, mock interview report — ✅ Built (PDF and Word)
+- [ ] Job readiness report — ❌ Missing as a download (readiness is on screen); the "final readiness report" in the TPO screens list is the same gap
+- [ ] Placement drive report, company hiring report — 🟡 Partial: per-drive analytics on screen and an applications export; no combined PDF per drive or per company
+- [ ] Department placement report, institutional placement report — ✅ Built (Excel by department, placement PDF, NIRF)
+- [ ] CSV as a format — 🟡 Partial: exports are Excel and PDF; CSV is only used in a few places
+
+### Section 8 – AI requirements
+- [ ] Document intelligence (OCR, extraction, quality, duplicates) — 🟡 Partial: marksheets are read by an AI vision model with review before anything is verified; no separate document classification, quality check or duplicate detection for uploaded documents
+- [ ] Career, recruitment, assessment, interview and resume intelligence — ✅ Built (Student 360 reading, JD parsing, matching with explanations, test analysis and weak topics, interviews and discussions, resume suggestions and ATS checks)
+- [ ] Learning intelligence: tutor, recommendations — ✅ Built. **Question generation — ❌ Missing** (questions are written by staff or imported from starter banks, not generated by AI). **Revision planning — ❌ Missing**
+- [ ] Preparation intelligence — 🟡 Partial: individual plans, resource and assessment recommendations and next actions come from rules over the student's evidence; the AI is not used to write the plan
+- [ ] Retain model and prompt versions for important evaluations — ❌ Missing: only the Student 360 reading stores the model name. AI marks of descriptive answers, interview evaluations and discussion evaluations do not record which model or prompt produced them
+- [ ] Clearly identify AI-generated content, human review for consequential decisions, do not invent achievements — ✅ Built: reports label student words and AI text apart, AI marks can be corrected by staff, JD parsing needs review before publishing, prompts forbid inventing achievements and judging voice or appearance
+- [ ] Correct inaccurate information — ✅ Built (correction requests, staff review)
+
+### Section 9 – Non-functional
+- [ ] Role-based access, institution data isolation, secure sessions, audit logs, MFA for administrators — ✅ Built
+- [ ] Multi-factor for all privileged accounts — ✅ Built for administrators (authenticator app)
+- [ ] Backup and disaster recovery — 🟡 Partial: relies on Supabase backups; there is no in-app backup, restore or tested recovery drill (the production checklist asks for one)
+- [ ] Monitoring and error tracking — 🟡 Partial: JSON logs with request ids and a health endpoint; no error-tracking service or alerting is wired in
+- [ ] Retry for failed background jobs — 🟡 Partial: jobs are safe to re-run (each item has a stable key) and delivery of messages is retried by the sweep; there is no job queue
+- [ ] Long-running AI work asynchronously, with progress indicators — 🟡 Partial: AI calls run inside the request with a spinner and time limits; nothing is queued
+- [ ] Data retention policies and data deletion workflows — ❌ Missing: nothing is deleted automatically and there is no student deletion or retention setting (the README says so)
+- [ ] Informed consent for assessments and recordings — ✅ Built (personality consent, voice consent; no audio or video is recorded)
+- [ ] Mobile-responsive, accessible, search and filters — 🟡 Partial: built with responsive components and labelled controls; not tested with a screen reader or on devices
+- [ ] Encryption at rest and in transit, secure document storage — ✅ Provided by the hosting (Supabase and HTTPS); documents sit in private storage with signed links
+- [ ] Applicable Indian data protection compliance — ❌ Not assessed: consent, correction and an access log exist, but there is no breach process, retention schedule, deletion workflow or grievance contact
+
+### Section 10 – Integrations
+- [ ] Email (SMTP), calendar (feeds and .ics), AI providers, cloud storage — ✅ Built
+- [ ] SMS and WhatsApp — 🟡 Built, untested against a live account (see M20)
+- [ ] GitHub — ✅ Built for team repositories (public commit counts)
+- [ ] Video conferencing — 🟡 Partial: live sessions and events carry a meeting link; no creation of meetings
+- [ ] Coding assessment environment — ❌ Missing: coding and SQL answers are marked by reading, not run
+- [ ] College ERP / student information system, university systems — ❌ Missing: students arrive by CSV import only
+- [ ] External LMS and learning providers, payment gateway — ❌ Missing (the payment gateway is only needed if subscriptions are introduced)
+
+### Sections 3, 4 and 6 – Roles, structure, screens
+- [ ] Super Administrator — 🟡 Partial: a separate platform portal registers institutions and protects platform admins with two-step sign-in; AI configuration is by environment variables, and there is no subscription, platform analytics or support monitoring screen
+- [ ] Institution Administrator / Principal / Director — ✅ Built (read-only PRINCIPAL role and institution dashboard); "assign administrative permissions" stays with the Head TPO
+- [ ] Head TPO, Placement Officer, Department Coordinator, Faculty / Mentor, Student, Employer (recruiter portal) — ✅ Built
+- [ ] Training Coordinator / Trainer role — ❌ Missing as a separate role (training programmes and courses are run by placement staff and faculty)
+- [ ] Interviewer role and Interviewer portal — ❌ Missing: panels and slots exist but an interviewer cannot log in, see a schedule or submit evaluation forms
+- [ ] Alumni / Industry Mentor role — 🟡 Partial: external mentors can review projects and internships through a one-time link; no alumni profile, mentorship offers or career sessions
+- [ ] Permission principle: institution, department, batch, individual, company-specific and temporary access — 🟡 Partial: college, department, individual and company-specific access exist and temporary links exist for mentors; there is no campus-level or batch-level access scope for staff
+- [ ] Configurable roles and permissions — ❌ Missing: the roles and their permissions are fixed in code (no Role or Permission tables)
+- [ ] Public website / landing page — ❌ Missing: the home page redirects to the sign-in screen
+- [ ] Mobile-responsive student application — 🟡 Partial: the student portal is responsive and has a manifest; there is no native app
+- [ ] Student, TPO and Employer screen lists in section 6 — ✅ Built for the student and placement portals (including the final readiness view on screen). "Mock interview scheduling" is assignments with a last day, not time slots
+
+### Section 7 – Data and history
+- [ ] Core entities — ✅ Built for the student, organisation, learning, practical experience, resume, recruitment, preparation, assessment, interview, placement and communication groups. Skills and skill evidence are derived from other records, not tables of their own; interview questions and responses are stored inside the interview record
+- [ ] History of JD changes and eligibility changes — 🟡 Partial: the audit log records that a JD or an eligibility rule changed and who did it, but not the earlier content, so old versions cannot be viewed or restored
+- [ ] History of score versions, preparation activities and placement status — ✅ Built (readiness snapshots, kept AI readings, plan items, status worked out from dated records)
+
+### Section 17 – Design principles
+- [ ] One student master profile, evidence-based skills, AI-assisted and human-controlled, reusable resources, continuous improvement, measurable outcomes — ✅ Followed (master profile feeds resume, matching, readiness; test and interview weak areas feed recommendations and practice sets)
+- [ ] Configurable workflows — 🟡 Partial: many settings are per college (profile sections, approvals, reassessment rules, channels, modules); readiness and matching weights per job exist, readiness weights are fixed
+
+## 6. Documents that were out of date (fixed 2026-11-15)
+
+- This file: the summary counts, cross-module findings, role-wise lines and data connection rows still described the state before Modules 6 to 21.
+- `README.md` listed SMS and WhatsApp, staff multi-factor sign-in and AI mock interviews as "not built", and said three scheduled jobs were needed.
+- `vercel.json` did not schedule the new reminders job, so reminders and the message sweep would not have run on Vercel.
+- `.env.example` had no entries for the SMS and WhatsApp keys.

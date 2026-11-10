@@ -19,7 +19,7 @@ Work top to bottom. Items marked **(blocking)** should not be skipped.
 ## Deploy
 - [ ] Release step runs migrations **before** the new code receives traffic.
 - [ ] Smoke test: `GET /api/health` is 200; sign in as the admin; `GET /api/me` lists the modules.
-- [ ] Scheduler configured for the three job endpoints (`vercel.json` does this on Vercel). Trigger each once by hand and check for a 200.
+- [ ] Scheduler configured for the five job endpoints listed in the README (`vercel.json` does this on Vercel). Trigger each once by hand and check for a 200.
 - [ ] Send a real test email (a report schedule, or an announcement to yourself) and confirm it arrives.
 
 ## Soon after
