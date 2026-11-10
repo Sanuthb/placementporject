@@ -1,4 +1,4 @@
-import { FolderKanbanIcon, LibraryIcon, ClipboardCheckIcon, GraduationCapIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, PresentationIcon, type LucideIcon } from "lucide-react"
+import { FileSearchIcon, FolderKanbanIcon, LibraryIcon, ClipboardCheckIcon, GraduationCapIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, PresentationIcon, type LucideIcon } from "lucide-react"
 
 import type { Kind } from "@/lib/web/auth"
 
@@ -28,6 +28,7 @@ export const NAV: Record<Kind, NavSection[]> = {
       items: [
         { title: "Companies", href: "/staff/companies", icon: BuildingIcon, module: "DRIVES" },
         { title: "Drives", href: "/staff/drives", icon: BriefcaseIcon, module: "DRIVES" },
+        { title: "Job descriptions", href: "/staff/job-descriptions", icon: FileSearchIcon, module: "DRIVES", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Offers", href: "/staff/offers", icon: HandshakeIcon, module: "DRIVES" },
         { title: "Job alerts", href: "/staff/job-alerts", icon: MegaphoneIcon, module: "DRIVES" },
         { title: "Employer CRM", href: "/staff/crm", icon: TargetIcon, module: "EMPLOYER_CRM", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },

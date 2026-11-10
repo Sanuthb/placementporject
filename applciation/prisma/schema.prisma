@@ -983,6 +983,7 @@ model Drive {
   panels             InterviewPanel[]
   slots              InterviewSlot[]
   prospects          Prospect[]
+  jd                 JobDescription?
 
   @@index([collegeId, status, driveDate])
   @@index([companyId])
@@ -3471,4 +3472,52 @@ model ResumeVersion {
   @@unique([studentId, number])
   @@index([studentId, status])
   @@index([collegeId])
+}
+
+// ---------- Job description management (M11) ----------
+enum JdStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
+enum JdSource {
+  UPLOAD
+  PASTE
+  MANUAL
+}
+
+/// A job description as structured, reviewed data. `data` holds the title, requirements (each mandatory or preferred, weighted), eligibility rules, selection process and
+/// scoring weights (see lib/jd.ts). Nothing built from it (a drive, the matching engine) may use it before it is APPROVED by an authorised person.
+model JobDescription {
+  id              String    @id @default(uuid()) @db.Uuid
+  collegeId       String    @db.Uuid
+  driveId         String?   @unique @db.Uuid
+  companyId       String?   @db.Uuid
+  source          JdSource
+  status          JdStatus  @default(DRAFT)
+  /// Copied out of `data` for lists and search.
+  title           String
+  companyName     String
+  rawText         String?
+  fileName        String?
+  filePath        String?
+  mimeType        String?
+  sizeBytes       Int?
+  data            Json
+  /// Things the extraction could not be sure about, shown to the reviewer.
+  extractionNotes String[]
+  extractedAt     DateTime?
+  reviewNote      String?
+  submittedAt     DateTime?
+  approvedById    String?   @db.Uuid
+  approvedAt      DateTime?
+  createdById     String    @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  drive Drive? @relation(fields: [driveId], references: [id], onDelete: SetNull)
+
+  @@index([collegeId, status])
 }

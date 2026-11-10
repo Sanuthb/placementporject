@@ -25,6 +25,7 @@ type Drive = {
   company: { name: string; tier: string; industry: string | null; website: string | null }
   rounds: { id: string; order: number; type: string; scheduledAt: string | null; venue: string | null }[]
   documents: { id: string; fileName: string; url: string | null }[]
+  requirements?: { mandatory: { kind: string; text: string }[]; preferred: { kind: string; text: string }[]; experience: string | null; selectionProcess: string[]; other: string | null } | null
   rules: { minCgpa: number | string | null; minTenthPct: number | string | null; minTwelfthPct: number | string | null; maxActiveBacklogs: number | null; allowPlaced: boolean }
   saved: boolean; myApplication: { id: string; status: string; appliedAt: string } | null
   eligibility: { eligible: boolean; blocked: boolean; reasons: string[] }
@@ -81,6 +82,15 @@ export default function StudentDrivePage() {
           {d.rounds.map((r) => <div key={r.id} className="flex justify-between gap-2"><span>{r.order}. {titleCase(r.type)}</span><span className="text-muted-foreground">{fmtDateTime(r.scheduledAt)}{r.venue ? ` · ${r.venue}` : ""}</span></div>)}
           {d.rounds.length === 0 && <span className="text-muted-foreground">Rounds will be announced.</span>}
         </CardContent></Card>
+        {d.requirements && (d.requirements.mandatory.length > 0 || d.requirements.preferred.length > 0) && (
+          <Card><CardHeader><CardTitle>What the job needs</CardTitle></CardHeader><CardContent className="flex flex-col gap-3 text-sm">
+            {d.requirements.mandatory.length > 0 && <div><div className="mb-1 font-medium">Required</div><ul className="list-disc pl-5">{d.requirements.mandatory.map((r, i) => <li key={i}>{r.text}</li>)}</ul></div>}
+            {d.requirements.preferred.length > 0 && <div><div className="mb-1 font-medium">Preferred</div><ul className="list-disc pl-5 text-muted-foreground">{d.requirements.preferred.map((r, i) => <li key={i}>{r.text}</li>)}</ul></div>}
+            {d.requirements.experience && <p><span className="font-medium">Experience: </span>{d.requirements.experience}</p>}
+            {d.requirements.selectionProcess.length > 0 && <p><span className="font-medium">Selection process: </span>{d.requirements.selectionProcess.join(", ")}</p>}
+            {d.requirements.other && <p className="whitespace-pre-wrap">{d.requirements.other}</p>}
+          </CardContent></Card>
+        )}
         <Card><CardHeader><CardTitle>Eligibility rules</CardTitle></CardHeader><CardContent className="grid grid-cols-2 gap-1 text-sm">
           <span className="text-muted-foreground">Minimum CGPA</span><span>{d.rules.minCgpa ?? "None"}</span>
           <span className="text-muted-foreground">10th / 12th</span><span>{d.rules.minTenthPct ?? "—"} / {d.rules.minTwelfthPct ?? "—"}</span>

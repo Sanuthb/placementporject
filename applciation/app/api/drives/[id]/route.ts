@@ -15,7 +15,8 @@ export const GET = route<{ id: string }>({ module: "DRIVES" }, async (_req, s, {
   if (!d) throw notFound("Drive not found");
   const bucket = supabaseAdmin().storage.from("drive-documents");
   const documents = await Promise.all(d.documents.map(async (x) => ({ id: x.id, fileName: x.fileName, mimeType: x.mimeType, sizeBytes: x.sizeBytes, url: (await bucket.createSignedUrl(x.storagePath, 600)).data?.signedUrl ?? null })));
-  return { ...d, documents };
+  const jd = await db.jobDescription.findUnique({ where: { driveId: id }, select: { id: true, status: true } });
+  return { ...d, documents, jd };
 });
 
 export const PATCH = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"], module: "DRIVES" }, async (req, s, { id }) => {

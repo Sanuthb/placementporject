@@ -10,6 +10,8 @@ export const POST = route<{ id: string }>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFI
   if (d.applicationDeadline <= new Date()) throw badRequest("The application deadline must be in the future");
   if (d.driveDate < d.applicationDeadline) throw badRequest("driveDate cannot be before the application deadline");
   if (!(await db.company.count({ where: { id: d.companyId, isActive: true } }))) throw badRequest("The company is inactive");
+  const jd = await db.jobDescription.findUnique({ where: { driveId: id }, select: { status: true } });
+  if (jd && jd.status !== "APPROVED") throw badRequest("The job description for this drive has not been approved yet. An authorised person must approve it before the drive is published");
   return db.$transaction(async (tx) => {
     const claim = await tx.drive.updateMany({ where: { id, status: "DRAFT" }, data: { status: "PUBLISHED", publishedAt: new Date() } });
     if (claim.count === 0) throw new ApiError(409, "CONFLICT", "Only draft drives can be published");

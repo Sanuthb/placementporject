@@ -32,8 +32,8 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M7 – Resource Management System | 9 | 7 | 2 | 0 | 0 | [ ] |
 | M8 – Project Management and Portfolio | 7 | 6 | 1 | 0 | 0 | [ ] |
 | M9 – Internship Management | 7 | 7 | 0 | 0 | 0 | [ ] |
-| M10 – Dynamic Resume Engine | 9 | 3 | 2 | 4 | 0 | [ ] |
-| M11 – Job Description Management and AI Analysis | 7 | 2 | 3 | 2 | 0 | [ ] |
+| M10 – Dynamic Resume Engine | 9 | 9 | 0 | 0 | 0 | [ ] |
+| M11 – Job Description Management and AI Analysis | 7 | 7 | 0 | 0 | 0 | [ ] |
 | M12 – AI Candidate Matching Engine | 8 | 3 | 2 | 3 | 0 | [ ] |
 | M13 – Job-Specific Preparation Campaign | 8 | 0 | 0 | 8 | 0 | [ ] |
 | M14 – Mock Test Engine | 9 | 3 | 4 | 2 | 0 | [ ] |
@@ -257,31 +257,34 @@ Before this work the module was only a staff-allotted record with weekly logs an
 ### M10 – Dynamic Resume Engine
 
 **Placement Officer side**
-- [ ] Monitor resume availability and readiness — ✅ Built (resume readiness by department; resume PDF on a student)
-**Student side**
-- [ ] Single master profile as the source — ✅ Built
-- [ ] PDF export — ✅ Built
-- [ ] DOCX export — ❌ Missing
-- [ ] Multiple templates and resume types — ❌ Missing: one layout
-- [ ] AI content suggestions — 🟡 Partial: a resume quality checklist with hints, not AI writing
-- [ ] Version history, student approval — ❌ Missing
-- [ ] Distinguish claimed from verified skills — 🟡 Partial: section verification status exists; skills are not individually evidenced
-- [ ] Automatic update when a course, project, internship or certification is completed — ❌ Missing
+- [ ] Monitor resume availability and readiness — ✅ Built: readiness by department (now also how many students have an approved resume), and each student's approved resumes with PDF and Word downloads on the student page (Resumes tab). The college-format PDF used by recruiters and the shareable profile now comes from the same engine.
 
-### M11 – Job Description Management and AI Analysis
+**Student side** (`/student/resume`)
+- [ ] Single master profile as the source — ✅ Built: the master career profile is built live from profile sections, college projects, internships, completed courses, assessments (never personality or interests) and achievements, so it updates itself when a course, project or internship is finished or a certification, hackathon or publication is added. Tested: unit.
+- [ ] PDF export — ✅ Built.
+- [ ] DOCX export — ✅ Built (Word file with headings, bullets and tab-aligned dates; no tables, so recruiters' software can read it).
+- [ ] Multiple templates and resume types — ✅ Built: four templates (plain ATS, classic, modern in the college colour, compact) and seven kinds (master, technical, management, internship, fresher, project-based, company-specific), each choosing its own sections, order and limits; a company-specific resume takes the company, role and job description and moves matching skills and projects first.
+- [ ] AI content suggestions — ✅ Built: a summary and rewrites of a project or internship, written only from the student's own records; anything the AI adds that the records do not contain (a number, tool or name) is flagged for the student, and nothing is saved until they use it. Also a match against the job description and hints for online applications. Checked live with synthetic text, including an injected instruction (ignored).
+- [ ] Version history, student approval — ✅ Built: each resume is a numbered version; a draft follows the live profile, approving freezes it, an approved one never changes (copy it to edit), one can be the main resume, and old ones are archived, not deleted.
+- [ ] Distinguish claimed from verified skills — ✅ Built: each skill is verified (staff checked the list), backed by records (a project, course, internship, assessment of 60%+ or achievement, with what backs it shown) or claimed. Resumes can use only checked material, and mark backed skills with *.
+- [ ] Automatic update when a course, project, internship or certification is completed — ✅ Built, in two parts: the master profile updates at once; an approved resume stays as approved but is flagged "N new items in your profile" with the list, so the student makes an updated copy. Approved resumes are never rewritten behind the student's back.
+
+Changes in behaviour: the old resume PDF printed the whole Personal details section (including date of birth and address); the new one never prints private details. Applications still snapshot the verified sections as before and do not use resume versions yet.
+
+### M11 – Job Description Management and AI Analysis (`/staff/job-descriptions`)
 
 **Placement Officer side**
-- [ ] Create a job/drive manually — ✅ Built (`/staff/drives/new`: role, package, eligibility rules, rounds)
-- [ ] Upload JD as PDF/DOCX/text — 🟡 Partial: a document can be attached to a drive; no parsing
-- [ ] AI extraction of skills, qualifications, experience, selection process — ❌ Missing
-- [ ] Edit extracted data, mark mandatory vs preferred, scoring weights — ❌ Missing
-- [ ] Approval before publishing — 🟡 Partial: drives have a publish step and an optional admin approval rule; recruiter-posted jobs have a review step (`recruiter-jobs`)
+- [ ] Create a job/drive manually — ✅ Built: drives as before, and job descriptions can be written by hand.
+- [ ] Upload JD as PDF/DOCX/text — ✅ Built: upload a PDF (with a text layer), a Word .docx (macros refused) or a text file, paste text, or write it by hand. The type is read from the file's content. A scanned PDF cannot be read (paste the text instead).
+- [ ] AI extraction of skills, qualifications, experience, selection process — ✅ Built: company, title, summary, employment type, location, salary, experience, required and preferred skills, qualifications, communication needs, marks and backlog rules, branches (matched to your departments and programmes) and selection rounds. Every requirement carries the words it came from; anything not found word for word in the document is flagged "Check" and blocks approval until looked at. Checked live with a made-up JD including an injected instruction (ignored). Needs the college's "AI document reading" setting on, because the text is sent to the AI provider.
+- [ ] Edit extracted data, mark mandatory vs preferred, scoring weights — ✅ Built: every field is editable; each requirement is required or preferred with a weight 1-10; five scoring areas (skills, qualification, experience, assessments, communication) must add up to 100; the original text sits beside the form with "show in the document".
+- [ ] Approval before publishing — ✅ Built, with a limit: staff send a draft for review, only the placement admin approves (approval needs every check settled), and a drive made from a job description cannot be published unless it is approved; an approved one is locked, and reopening is blocked once its drive is live. Drives created by hand without a job description, and recruiter-posted jobs, are not covered by this gate.
 
 **Student side**
-- [ ] View published opportunities and job requirements — ✅ Built (`/student/drives`, job alerts)
+- [ ] View published opportunities and job requirements — ✅ Built: the drive page shows what the job needs (required and preferred) from the approved job description, the experience and selection process; the scoring weights are not shown.
 
 **Connection**
-- [ ] M11 → M12 structured job requirements — 🟡 Partial: structured eligibility thresholds exist; no structured skill requirements
+- [ ] M11 → M12 structured job requirements — ✅ Built on the M11 side: each requirement is typed, required or preferred and weighted, with its share of the score worked out, plus rules and scoring weights. M12 (candidate matching) itself is not built yet.
 
 ### M12 – AI Candidate Matching Engine
 
