@@ -19,7 +19,6 @@ import { ROUND_TYPES } from "@/lib/web/enums"
 import { fmtDateTime, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
-type Res = { id: string; title: string; category: string; url: string; description: string | null }
 type Exp = { id: string; companyName: string; role: string; roundType: string | null; experience: string; difficulty: number }
 type Mine = { id: string; companyName: string; role: string; status: string; moderationNote: string | null }
 type Slot = { id: string; startsAt: string; endsAt: string; counsellor: { name: string }; status?: string }
@@ -50,19 +49,12 @@ export default function PrepPage() {
 function PrepTabs() {
   return (
     <Tabs defaultValue="mock">
-      <TabsList><TabsTrigger value="mock">Mock interviews</TabsTrigger><TabsTrigger value="resources">Resources</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="mock">Mock interviews</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling</TabsTrigger></TabsList>
       <TabsContent value="mock"><MockInterviews /></TabsContent>
-      <TabsContent value="resources"><Resources /></TabsContent>
       <TabsContent value="experiences"><Experiences /></TabsContent>
       <TabsContent value="counselling"><Counselling /></TabsContent>
     </Tabs>
   )
-}
-
-function Resources() {
-  const { data } = useApi<Res[]>("/api/student/prep/resources")
-  if (!data) return <Skeleton className="h-40" />
-  return <div className="grid gap-3 md:grid-cols-2">{data.map((r) => <Card key={r.id} size="sm"><CardHeader><CardTitle><a className="underline-offset-4 hover:underline" href={r.url} target="_blank" rel="noreferrer">{r.title}</a></CardTitle><CardDescription>{titleCase(r.category)}{r.description ? ` · ${r.description}` : ""}</CardDescription></CardHeader></Card>)}{data.length === 0 && <p className="text-sm text-muted-foreground">No resources yet.</p>}</div>
 }
 
 function Experiences() {

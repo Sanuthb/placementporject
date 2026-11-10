@@ -3,7 +3,7 @@
 import * as React from "react"
 import { toast } from "sonner"
 
-import { ActiveBadge, MasterTab } from "@/components/master-tab"
+import { MasterTab } from "@/components/master-tab"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -17,20 +17,13 @@ import { api, toastError } from "@/lib/web/api"
 import { fmtDateTime, statusVariant, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 
-type Res = { id: string; title: string; category: string; url: string; isActive: boolean }
 type Exp = { id: string; companyName: string; role: string; roundType: string | null; experience: string; difficulty: number; student: { name: string; enrollmentNo: string } }
 type Slot = { id: string; startsAt: string; endsAt: string; status: string; counsellor: { name: string }; student: { name: string } | null }
-const CATS = ["APTITUDE", "CODING", "INTERVIEW", "SOFT_SKILLS", "OTHER"].map((v) => ({ value: v, label: titleCase(v) }))
 
 export default function PrepPage() {
   return (
-    <Tabs defaultValue="resources">
-      <TabsList><TabsTrigger value="resources">Resources</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling slots</TabsTrigger></TabsList>
-      <TabsContent value="resources">
-        <MasterTab<Res> endpoint="/api/prep/resources" addLabel="Add resource" noun="resource" editable editFields={[{ name: "title", label: "Title" }, { name: "url", label: "Link" }, { name: "description", label: "Description", required: false }]} toEditBody={(v) => ({ title: v.title, url: v.url, description: v.description || null })} deletePath={(r) => `/api/prep/resources/${r.id}`} patchPath={(r) => `/api/prep/resources/${r.id}`}
-          fields={[{ name: "title", label: "Title" }, { name: "category", label: "Category", type: "select", options: CATS, required: true }, { name: "url", label: "Link" }, { name: "description", label: "Description", required: false }]}
-          columns={[{ label: "Title", cell: (r) => <a className="underline underline-offset-4" href={r.url} target="_blank" rel="noreferrer">{r.title}</a> }, { label: "Category", cell: (r) => titleCase(r.category) }, { label: "State", cell: (r) => <ActiveBadge active={r.isActive} /> }]} />
-      </TabsContent>
+    <Tabs defaultValue="experiences">
+      <TabsList><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling slots</TabsTrigger></TabsList>
       <TabsContent value="experiences"><Experiences /></TabsContent>
       <TabsContent value="counselling">
         <MasterTab<Slot> endpoint="/api/prep/counselling" addLabel="Open a slot"

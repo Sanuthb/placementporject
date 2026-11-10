@@ -29,7 +29,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M4 – Student Assessment and Career Profiling | 21 | 20 | 0 | 1 | 0 | [ ] |
 | M5 – Career Roadmap and Student Development | 10 | 7 | 2 | 1 | 0 | [ ] |
 | M6 – Learning Management System | 11 | 9 | 2 | 0 | 0 | [ ] |
-| M7 – Resource Management System | 9 | 1 | 1 | 7 | 0 | [ ] |
+| M7 – Resource Management System | 9 | 7 | 2 | 0 | 0 | [ ] |
 | M8 – Project Management and Portfolio | 7 | 0 | 2 | 5 | 0 | [ ] |
 | M9 – Internship Management | 7 | 4 | 3 | 0 | 0 | [ ] |
 | M10 – Dynamic Resume Engine | 9 | 3 | 2 | 4 | 0 | [ ] |
@@ -184,7 +184,7 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 
 **Connection**
 - [ ] M4 → M5: assessment results feed the roadmap — ✅ Built: results tick milestones, create suggested milestones, and suggest target roles. Tested: unit; not live.
-- [ ] M5 → M6/M7 (goals to courses and resources) — 🟡 Partial: courses are recommended from goals and finishing one ticks the roadmap; no resource module (M7).
+- [ ] M5 → M6/M7 (goals to courses and resources) — ✅ Built: courses and study material are recommended from the target role and assessment results.
 
 ### M6 – Learning Management System
 
@@ -207,18 +207,18 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 
 ### M7 – Resource Management System
 
-**Placement Officer side**
-- [ ] Upload files (PDF, DOCX, PPT, images, video, audio) — ❌ Missing: resources are links only
-- [ ] Links, question banks, coding practice links — 🟡 Partial: link list by category (aptitude, coding, interview, soft skills, other) in `/staff/prep`; question banks exist under assessments
-- [ ] Metadata (subject, topic, skill, job role, company, difficulty, language, duration, version, expiry, visibility) — ❌ Missing: only title, category, link, description
-- [ ] Review / approve workflow — ❌ Missing
-- [ ] Assign to students, groups, JDs, skill gaps, tests — ❌ Missing
-- [ ] Completion tracking and effectiveness analysis — ❌ Missing
-- [ ] AI resource recommendations — ❌ Missing
+**Placement Officer side** (`/staff/resources`)
+- [ ] Upload files (PDF, DOCX, PPT, images, video, audio) — ✅ Built: PDF, Word (.docx), PowerPoint (.pptx), PNG/JPEG, MP4/WebM video up to 50 MB, MP3/M4A/WAV/OGG audio. The type is read from the file's bytes; macro files, old .doc/.ppt and scripted PDFs are refused. Tested: unit; not live.
+- [ ] Links, question banks, coding practice links — ✅ Built: external video links, websites, question banks, sample tests, coding practice links and company material are resource types. (The scored question banks under Assessments are separate.)
+- [ ] Metadata (subject, topic, skill, job role, company, difficulty, language, duration, version, expiry, visibility) — ✅ Built, all of them, plus uploaded-by. "Suggest tags with AI" fills category, subject, topic, skills, roles and difficulty for staff to check.
+- [ ] Review / approve workflow — ✅ Built: draft, send for review, admin approves or rejects (with a reason), archive and restore; the admin can approve their own draft. A new file on an approved resource is a new version and needs approving again (students lose access in the meantime). Earlier versions are kept.
+- [ ] Assign to students, groups, JDs, skill gaps, tests — 🟡 Partial: a student, department, batch, preparation group (learning programme), everyone with a skill gap, or the takers of a mock test, with a due date and note; students are told. Not built: JDs (M11) and mock interviews as targets.
+- [ ] Completion tracking and effectiveness analysis — ✅ Built: opened, finished (tied to the version), 1-5 rating and feedback per student; per resource reach, completion, ratings, and a completer-vs-others assessment comparison shown only with 5+ on each side and labelled as a link, not proof; library overview of most used, best and worst rated, unused, expiring.
+- [ ] AI resource recommendations — 🟡 Partial: a list of at most five from weak assessment areas, target role, skills, language and the hours the student has, avoiding hard material for weak students, each with its reason. These are rules, not a language model; AI is used only for tagging.
 
-**Student side**
-- [ ] Open the resource list — ✅ Built (`/student/prep`)
-- [ ] See only assigned materials — ❌ Missing
+**Student side** (`/student/resources`)
+- [ ] Open the resource list — ✅ Built: "For you", "Assigned to me", and the open library, with search and filters.
+- [ ] See only assigned materials — ✅ Built: students see approved, unexpired resources that are assigned to them or marked open to every student; staff-only and unapproved ones never reach them.
 
 ### M8 – Project Management and Portfolio
 
@@ -423,7 +423,7 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 - [ ] 2. Access assigned academic structure (M2) — ✅ Built (department coordinators are limited to their department)
 - [ ] 3. Assign and monitor assessments (M4) — ✅ Built
 - [ ] 4. Monitor career roadmaps (M5) — ✅ Built (`/staff/roadmaps`)
-- [ ] 5. Monitor learning and training (M6, M7) — 🟡 Partial: courses and programmes yes, resource library no (M7)
+- [ ] 5. Monitor learning and training (M6, M7) — ✅ Built: courses, programmes and the resource library with usage figures
 - [ ] 6. Track projects and internships (M8, M9) — 🟡 Partial: internships yes, projects no
 - [ ] 7. Monitor student resumes (M10) — ✅ Built
 - [ ] 8. Manage JDs and candidate matching (M11, M12) — 🟡 Partial
@@ -438,7 +438,7 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 - [ ] 2. Complete profile and documents (M3) — ✅ Built
 - [ ] 3. Complete Student 360 assessments (M4) — ✅ Built: personality, aptitude, career interests, behavioural style, technical, digital literacy, communication, teamwork
 - [ ] 4. View career roadmap (M5) — ✅ Built (`/student/roadmap`)
-- [ ] 5. Access courses and resources (M6, M7) — 🟡 Partial: courses and programmes yes, resource library no (M7)
+- [ ] 5. Access courses and resources (M6, M7) — ✅ Built (`/student/courses`, `/student/resources`)
 - [ ] 6. Build projects and portfolio (M8) — 🟡 Partial: text section and shareable page
 - [ ] 7. Participate in internships (M9) — ✅ Built
 - [ ] 8. Build resume (M10) — 🟡 Partial
@@ -459,7 +459,7 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 | 1 | M3 → M4 | Verified academic and profile information | ✅ Built: intelligence reads it | [ ] |
 | 2 | M4 → M5 | Personality, aptitude, interests, career profile | ✅ Built: results tick milestones, suggest milestones and target roles | [ ] |
 | 3 | M5 → M6 | Learning goals and recommended courses | ✅ Finishing a course ticks a roadmap milestone; courses are recommended from the target role, goal and weak assessment areas (`/student/courses`, with reasons) | [ ] |
-| 4 | M5 → M7 | Recommended resources | ❌ | [ ] |
+| 4 | M5 → M7 | Recommended resources | 🟡 Resources are recommended from assessment results and target role; the roadmap itself does not list them | [ ] |
 | 5 | M6 → M21 | Course progress and completion | ✅ Per-course analytics and a college-wide summary on the courses page | [ ] |
 | 6 | M8 → M10 | Project information and portfolio evidence | 🟡 Only the self-entered Projects text section | [ ] |
 | 7 | M9 → M10 | Internship experience | 🟡 Resume reads the self-entered section, not internship records | [ ] |

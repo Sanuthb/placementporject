@@ -1,4 +1,4 @@
-import { ClipboardCheckIcon, GraduationCapIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, PresentationIcon, type LucideIcon } from "lucide-react"
+import { LibraryIcon, ClipboardCheckIcon, GraduationCapIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, PresentationIcon, type LucideIcon } from "lucide-react"
 
 import type { Kind } from "@/lib/web/auth"
 
@@ -40,6 +40,7 @@ export const NAV: Record<Kind, NavSection[]> = {
       label: "Student support",
       items: [
         { title: "Preparation", href: "/staff/prep", icon: NotebookPenIcon, module: "STUDENT_PREP", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
+        { title: "Resource library", href: "/staff/resources", icon: LibraryIcon, module: "STUDENT_PREP", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Assessments", href: "/staff/assessments", icon: ClipboardListIcon, module: "ASSESSMENTS", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Internships", href: "/staff/internships", icon: BriefcaseBusinessIcon, module: "INTERNSHIPS" },
         { title: "Events and fairs", href: "/staff/events", icon: CalendarDaysIcon, module: "EVENTS", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
@@ -71,6 +72,7 @@ export const NAV: Record<Kind, NavSection[]> = {
         { title: "My career profile", href: "/student/career-profile", icon: BrainIcon, module: "ONBOARDING" },
         { title: "My roadmap", href: "/student/roadmap", icon: ClipboardListIcon, module: "ONBOARDING" },
         { title: "Preparation", href: "/student/prep", icon: NotebookPenIcon, module: "STUDENT_PREP" },
+        { title: "Study material", href: "/student/resources", icon: LibraryIcon, module: "STUDENT_PREP" },
         { title: "Courses", href: "/student/courses", icon: GraduationCapIcon, module: "LEARNING" },
         { title: "Learning", href: "/student/learning", icon: BookOpenIcon, module: "LEARNING" },
         { title: "Internships", href: "/student/internships", icon: BriefcaseBusinessIcon, module: "INTERNSHIPS" },

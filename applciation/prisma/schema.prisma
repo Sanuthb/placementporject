@@ -755,6 +755,7 @@ model Student {
   instrumentAttempts    InstrumentAttempt[]
   roadmap               StudentRoadmap?
   courseEnrolments      CourseEnrolment[]
+  resourceProgress      ResourceProgress[]
   internships           Internship[]
   eventRegistrations    EventRegistration[]
   learningMemberships   LearningMember[]
@@ -1900,17 +1901,143 @@ model AssessmentAttempt {
 }
 
 // ---------- Student preparation ----------
-model PrepResource {
-  id          String           @id @default(uuid()) @db.Uuid
-  collegeId   String           @db.Uuid
-  title       String
-  category    ResourceCategory
-  url         String
-  description String?
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
+enum ResourceType {
+  DOCUMENT
+  IMAGE
+  VIDEO
+  AUDIO
+  VIDEO_LINK
+  WEBSITE
+  QUESTION_BANK
+  SAMPLE_TEST
+  CODING_PRACTICE
+  COMPANY_MATERIAL
+}
 
-  @@index([collegeId, isActive])
+enum ResourceStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+/// ALL_STUDENTS: in the library for every student. ASSIGNED_ONLY: only students it was assigned to. STAFF_ONLY: never shown to students.
+enum ResourceVisibility {
+  ALL_STUDENTS
+  ASSIGNED_ONLY
+  STAFF_ONLY
+}
+
+enum ResourceDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ResourceTarget {
+  STUDENT
+  DEPARTMENT
+  BATCH
+  GROUP
+  SKILL_GAP
+  MOCK_TEST
+}
+
+/// A preparation resource: a file or a link, with metadata, an approval workflow, versions and assignments. Students see only approved, unexpired ones.
+model PrepResource {
+  id           String              @id @default(uuid()) @db.Uuid
+  collegeId    String              @db.Uuid
+  title        String
+  category     ResourceCategory
+  type         ResourceType        @default(WEBSITE)
+  url          String?
+  filePath     String?
+  fileName     String?
+  mimeType     String?
+  sizeBytes    Int?
+  description  String?
+  subject      String?
+  topic        String?
+  skills       String[]
+  jobRoles     String[]
+  companyName  String?
+  difficulty   ResourceDifficulty?
+  language     String              @default("English")
+  durationMin  Int?
+  status       ResourceStatus      @default(DRAFT)
+  version      Int                 @default(1)
+  expiresAt    DateTime?
+  visibility   ResourceVisibility  @default(ASSIGNED_ONLY)
+  uploadedById String?             @db.Uuid
+  reviewedById String?             @db.Uuid
+  reviewedAt   DateTime?
+  reviewNote   String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @default(now()) @updatedAt
+
+  versions    ResourceVersion[]
+  assignments ResourceAssignment[]
+  progress    ResourceProgress[]
+
+  @@index([collegeId, status])
+}
+
+/// An earlier version of a resource's content, kept when a new file or link replaces it.
+model ResourceVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  resourceId  String   @db.Uuid
+  version     Int
+  url         String?
+  filePath    String?
+  fileName    String?
+  mimeType    String?
+  sizeBytes   Int?
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  resource PrepResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, version])
+}
+
+/// Who a resource is assigned to. targetId is a student, department, batch, learning programme (group) or assessment paper; SKILL_GAP uses targetKey (aptitude, technical, ...).
+model ResourceAssignment {
+  id           String         @id @default(uuid()) @db.Uuid
+  resourceId   String         @db.Uuid
+  collegeId    String         @db.Uuid
+  targetType   ResourceTarget
+  targetId     String?        @db.Uuid
+  targetKey    String?
+  note         String?
+  dueAt        DateTime?
+  assignedById String         @db.Uuid
+  createdAt    DateTime       @default(now())
+
+  resource PrepResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
+  @@index([collegeId, targetType, targetId])
+}
+
+/// One student's use of one resource: opened, completed, and their feedback.
+model ResourceProgress {
+  id               String    @id @default(uuid()) @db.Uuid
+  resourceId       String    @db.Uuid
+  studentId        String    @db.Uuid
+  collegeId        String    @db.Uuid
+  openedAt         DateTime?
+  completedAt      DateTime?
+  completedVersion Int?
+  rating           Int?
+  feedback         String?
+  updatedAt        DateTime  @default(now()) @updatedAt
+
+  resource PrepResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  student  Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, studentId])
+  @@index([studentId])
 }
 
 model CounsellingSlot {
