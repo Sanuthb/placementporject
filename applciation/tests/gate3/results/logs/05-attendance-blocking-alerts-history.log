@@ -1,0 +1,72 @@
+PASS expected 4, none marked 
+PASS session code + qr payload 
+PASS same session returned again 
+PASS wrong code refused 
+PASS A checks in with code 
+PASS B marked manually 
+PASS student not in the drive refused 
+PASS live counts 2/0/2 
+PASS rotate gives new code 
+PASS old code now fails 
+PASS close marks 2 absent 
+PASS close is repeatable 
+PASS check-in after close refused 
+PASS attendance fed round results 
+PASS C corrected to present after close 
+PASS A and B clear round 1 (attendance did not block) 
+PASS excuse needs a recorded absence 
+PASS duplicate panel name 409 
+PASS slot for A on panel 1 
+PASS panel double-booking refused 
+PASS student double-booking refused 
+PASS student not waiting for round 2 refused 
+PASS slot for B on panel 2 
+PASS reschedule into a clash refused 
+PASS reschedule + student notified 
+PASS start A 
+PASS panel runs one interview at a time 
+PASS live view: A in interview, B next 
+PASS complete A 
+PASS completed slot cannot restart 
+PASS panel with slots cannot be deleted 
+PASS cancel B 
+PASS drive-level: A present 
+PASS drive-level close marks 3 absent 
+PASS excuse B's absence 
+PASS close d1 round 2 too 
+PASS bad policy params refused 
+PASS create policy 
+PASS evaluate: exactly D blocked 
+PASS evaluate again: nothing new 
+PASS D has an automatic block, student notified 
+PASS C, B not blocked (corrected / excused) 
+PASS blocked student ineligible with reason 
+PASS exception cannot bypass a block 
+PASS cannot apply while blocked 
+PASS lift needs a reason 
+PASS lift with reason 
+PASS lift twice 409 
+PASS can apply after lift 
+PASS same missed drives are not counted twice 
+PASS manual block 
+PASS manual block in the past refused 
+PASS filter blocks by source 
+PASS tier policy can be created once 
+PASS scheduler with secret runs 
+PASS wrong secret rejected 
+PASS no credentials rejected 
+PASS dry run counts 
+PASS dry run wrote nothing 
+PASS import creates 3 offers 
+PASS re-import is idempotent 
+PASS history stays out of the current list 
+PASS history visible as archived 
+PASS company history includes past hires 
+PASS alert with unknown department refused 
+PASS create alert (draft) 
+PASS publish: audience = skill match only, emailed 
+PASS publish twice 409 
+PASS stats 
+PASS close 
+PASS closed alert cannot be edited 
+ALL PASSED

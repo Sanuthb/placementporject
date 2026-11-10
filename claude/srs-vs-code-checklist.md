@@ -17,7 +17,7 @@ The **Code** column is my reading of the source code, not a test result:
 
 Your own rule applies: a module counts as complete only when its screens, backend and links to other modules have been tested. The Code mark does not replace that. The one exception is the invitation and student onboarding work, which has automated tests (`tests/e2e/10-student-invitations.mjs`, `tests/e2e/11-intelligence.mjs`).
 
-Last checked against the code: 2026-11-15 (all modules; sections 2, 3 and 5 re-checked, the per-module lines were written as each module was built).
+Last checked against the code: 2026-11-10 (all modules; sections 2, 3 and 5 re-checked, the per-module lines were written as each module was built).
 
 ## Summary (generated from the lines below)
 
@@ -48,7 +48,7 @@ Last checked against the code: 2026-11-15 (all modules; sections 2, 3 and 5 re-c
 
 ## Cross-module findings worth reading first
 
-Rewritten 2026-11-15 after Modules 6 to 21 were built. The earlier findings (no LMS, projects as a text field, only two AI features, three staff roles, no readiness score) are no longer true.
+Rewritten 2026-11-10 after Modules 6 to 21 were built. The earlier findings (no LMS, projects as a text field, only two AI features, three staff roles, no readiness score) are no longer true.
 
 1. **Every module M1 to M21 now has code.** Remaining non-built lines are listed in the summary table and in section 5. Nothing here has been run in a browser by me: "Built" means the code, build and unit tests agree, not that you have tested it.
 2. **Four things are built but not proven against a live service:** SMS and WhatsApp sending (Twilio-style adapter, needs your account and approved WhatsApp templates), the AI features (they need `ANTHROPIC_API_KEY` and `GROQ_API_KEY`), email (needs SMTP), and the hourly reminder job (needs the scheduler; it is now in `vercel.json`).
@@ -507,7 +507,7 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 - Whether any screen looks right in a browser. This file reads code and tests, not the running app.
 - Non-functional requirements in the SRS beyond section 5 (performance, security hardening, data retention), except where noted.
 
-## 5. SRS requirements outside the module list (added 2026-11-15)
+## 5. SRS requirements outside the module list (added 2026-11-10)
 
 The module checklist covers SRS section 5. These come from the other sections of the SRS (3 roles, 4 structure, 6 screens, 7 data, 8 AI, 9 non-functional, 10 integrations, 11 reports, 17 principles). Checked by reading the code and searching it; nothing was run. Marks mean the same as above.
 
@@ -582,7 +582,7 @@ The SRS asks for downloadable reports in PDF, Excel and CSV. What exists: placem
 - [ ] One student master profile, evidence-based skills, AI-assisted and human-controlled, reusable resources, continuous improvement, measurable outcomes — ✅ Followed (master profile feeds resume, matching, readiness; test and interview weak areas feed recommendations and practice sets)
 - [ ] Configurable workflows — 🟡 Partial: many settings are per college (profile sections, approvals, reassessment rules, channels, modules); readiness and matching weights per job exist, readiness weights are fixed
 
-## 6. Documents that were out of date (fixed 2026-11-15)
+## 6. Documents that were out of date (fixed 2026-11-10)
 
 - This file: the summary counts, cross-module findings, role-wise lines and data connection rows still described the state before Modules 6 to 21.
 - `README.md` listed SMS and WhatsApp, staff multi-factor sign-in and AI mock interviews as "not built", and said three scheduled jobs were needed.

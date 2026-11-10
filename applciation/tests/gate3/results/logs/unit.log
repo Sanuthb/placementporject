@@ -1,0 +1,272 @@
+
+> applciation@0.1.0 test:unit
+> tsx tests/unit/scoring.test.mts && tsx tests/unit/invitations.test.mts && tsx tests/unit/intelligence.test.mts && tsx tests/unit/institution.test.mts && tsx tests/unit/personal.test.mts && tsx tests/unit/academic.test.mts && tsx tests/unit/documents.test.mts && tsx tests/unit/achievements.test.mts && tsx tests/unit/completion.test.mts && tsx tests/unit/ocr.test.mts && tsx tests/unit/docai.test.mts && tsx tests/unit/reassessment.test.mts && tsx tests/unit/instruments.test.mts && tsx tests/unit/starterbanks.test.mts && tsx tests/unit/recommendations.test.mts && tsx tests/unit/roadmap.test.mts && tsx tests/unit/roadmapchanges.test.mts && tsx tests/unit/lms.test.mts && tsx tests/unit/lmsrecommend.test.mts && tsx tests/unit/resources.test.mts && tsx tests/unit/projects.test.mts && tsx tests/unit/internships.test.mts && tsx tests/unit/resumeengine.test.mts && tsx tests/unit/jd.test.mts && tsx tests/unit/matching.test.mts && tsx tests/unit/campaign.test.mts && tsx tests/unit/mocktest.test.mts && tsx tests/unit/interview.test.mts && tsx tests/unit/reports.test.mts && tsx tests/unit/readiness.test.mts && tsx tests/unit/placementstatus.test.mts && tsx tests/unit/discussion.test.mts && tsx tests/unit/notifyrules.test.mts && tsx tests/unit/dashboards.test.mts
+
+PASS all-neutral answers score 50 on every trait (reverse items cancel out) 
+PASS agreeing with everything is not a perfect score (reverse-scored items) 
+PASS incomplete answers rejected 
+PASS out-of-range answer rejected 
+PASS answer key never leaves the server 
+PASS all right = full marks 
+PASS multi-select needs the exact set 
+PASS wrong answers cost negative marks, skipped cost nothing 
+PASS score never goes below zero 
+PASS max score is the sum of marks 
+PASS question order is stable per attempt 
+PASS different attempts can see different orders 
+PASS no shuffle keeps paper order 
+PASS {{name}} filled, with fallback 
+PASS complete resume scores 100 and is ready 
+PASS empty resume scores low with advice 
+PASS score 70+ but unverified is not 'ready' 
+PASS good production config: no errors, no warnings 
+PASS missing database url is an error 
+PASS service key equal to anon key is an error 
+PASS short cron secret is an error 
+PASS production warnings: dry-run mail, no CORS, no cron secret 
+PASS dev config is not nagged 
+ALL PASSED
+PASS tokens are 256-bit, URL-safe and unique
+PASS the stored hash is a SHA-256 hex digest that does not contain the token
+PASS the link keeps the token in the fragment, never in the path or query
+PASS masked email hides the name
+PASS invitation email follows the specified wording
+PASS email escapes HTML in names
+PASS percentage is read directly or worked out from marks
+PASS required marks cards follow the student's own history
+PASS missing information is listed by step
+PASS a complete profile has nothing missing
+PASS a rejected document counts as missing and is called out
+PASS an invalid mobile number or a future birth date counts as missing
+PASS sections for verification are built from what the student entered
+PASS validation errors say which field and why, never a bare 'Invalid input'
+ALL PASSED
+PASS no name, email or contact details are sent to the model
+PASS an answer that decides eligibility or hiring is withheld
+PASS a pathway resting only on personality is downgraded and flagged
+PASS self-declared evidence can never be labelled measured
+PASS every reading carries the guidance-only caution
+{"level":"error","msg":"intelligence narrative did not match schema","error":"[\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"summary\"\n    ],\n    \"message\": \"Invalid input: expected string, received undefined\"\n  }\n]"}
+PASS an incomplete answer is retried once, then reported
+ALL PASSED
+PASS faculty-only: FACULTY alone is faculty-only; any other role removes the restriction
+PASS roles: FACULTY is accepted as a staff role, existing roles unchanged
+PASS navigation: faculty-only sees only the faculty pages (their students, roadmaps and the campaigns they train); officers and admins never see the faculty page
+PASS provisioning: needs a name and an administrator; normalises the email; rejects a bad address
+PASS provisioning: academic year must end after it starts; unknown modules refused
+PASS provisioning: slugs are url-safe
+PASS university: code upper-cased, website must be a URL
+PASS programme: accepts universityId and keeps the legacy university text
+PASS faculty: allocation ids must be uuids; profile fields optional
+PASS academic structure: a branch of another programme, a foreign semester and a mismatched department are refused
+ALL PASSED
+PASS a normal personal section is accepted
+PASS blank fields are allowed, so a draft with gaps can be saved
+PASS a future date of birth is refused, with the reason
+PASS an impossible or badly formatted date is refused
+PASS a day that does not exist is refused
+PASS a date of birth before 1950 is refused
+PASS mobile numbers: letters, too short and too long are refused
+PASS the mobile rule is the one the wizard uses
+PASS alternate email and LinkedIn must be well formed when given
+PASS postal codes of other countries are not forced into six digits
+PASS keys the platform does not know are kept, not rejected
+PASS the section rule is wired into the verification engine for PERSONAL only
+PASS what the wizard builds for verification passes the same validation
+PASS anything the wizard would call complete is accepted by the section rule
+PASS address is joined the way the onboarding submit joins it, and blanks are skipped
+PASS approving writes phone, gender, date of birth and address to the student record
+PASS the name is never written from the personal section
+PASS a blank never erases what is on the record
+PASS an invalid stored date is ignored rather than written
+ALL PASSED
+PASS a normal semester with subjects is accepted
+PASS marks cannot be negative or above the maximum
+PASS maximum marks must be above zero
+PASS grade points are 0 to 10
+PASS SGPA boundaries: 0 and 10 pass, outside is refused
+PASS semester numbers run from 1 to 12
+PASS the same subject twice in a semester is refused, by code or by name
+PASS a semester with no subjects is allowed (only the SGPA is known)
+PASS SGPA is worked out from credits and grade points when every subject has them
+PASS SGPA cannot be checked when a subject lacks credits or grade points
+PASS a declared SGPA that contradicts the grade points is refused and says what it should be
+PASS a semester's percentage comes from the marks and is not an input
+PASS a qualification whose percentage matches its marks is accepted
+PASS a percentage that contradicts the marks is refused
+PASS a percentage alone, or marks alone, is still fine
+PASS obtained marks above the maximum, and CGPA above 10, are still refused
+PASS a backlog needs a subject and a semester
+PASS clearing a backlog must say in which semester
+PASS a backlog is pending until an attempt clears it
+PASS attempt numbers count up and earlier attempts are kept
+PASS a cleared backlog takes no more attempts, and there is a ceiling
+PASS declared active backlogs cannot be fewer than the pending subjects listed
+PASS with no structured records the section data is untouched
+PASS semesters keep the keys eligibility and intelligence read (semester, sgpa)
+PASS semesters already in the JSON are kept; a structured record replaces only the same semester
+PASS only verified records reach the verified snapshot
+PASS a pending edit is shown to the proposed view but never to the verified one
+PASS stale generated semesters are dropped when their records are gone, older entries stay
+PASS backlog history lists every attempt and its outcome; older count-style entries are kept
+PASS an unverified attempt is not in the verified backlog history
+PASS pending backlog count follows the view
+PASS 10th and 12th percentages come from the qualification records, worked out from marks
+PASS an unverified qualification does not change the verified percentages
+PASS a diploma stands in for 12th when there is no 12th record
+PASS the education history keeps the shape the onboarding submit always produced
+PASS a pending qualification edit shows in the proposed history only
+PASS with no qualification records the history is untouched
+ALL PASSED
+PASS type comes from the bytes
+PASS a clean PDF, PNG and JPEG pass and are hashed
+PASS same bytes give the same hash, different bytes do not
+PASS declared type or extension that disagrees with the content is refused
+PASS empty, tiny and oversized files are refused
+PASS PDFs with scripts, launch actions, attachments or encryption are refused
+PASS truncated files are refused
+PASS a hostile file name is neutralised
+ALL PASSED
+PASS a complete achievement is accepted and empty optional fields are dropped
+PASS the section is wired into section validation
+PASS an empty section is valid (nothing to declare)
+PASS title, category and date are required
+PASS an unknown category or level is refused
+PASS a future date is refused
+PASS a malformed date is refused
+PASS only http(s) links are accepted
+PASS the same title on the same date cannot be listed twice
+PASS at most 30 achievements
+PASS resume and showcase get them newest first, and get nothing from invalid data
+PASS achievements are optional by default, so existing verified students are not demoted
+ALL PASSED
+PASS nothing done: 0%, and the first required section is the next action
+PASS submitted counts for the student, not for verification
+PASS required documents count as items; a pending upload is waiting, a missing one is to do
+PASS staff feedback comes first: changes requested beats anything left to fill in
+PASS a rejected document is a fix with the reason, and stays a fix (remove it) even beside a newer pending copy
+PASS a rejected document that is not required still has to be dealt with, but does not change the percentage
+PASS before the onboarding form is submitted, the form is the next step
+PASS corrections requested on the whole profile point at the onboarding form
+PASS all verified: optional achievements are suggested once, then the profile is complete
+PASS an optional section never counts against completion
+PASS a required list of nothing is 100% (a college that requires nothing)
+PASS duplicate required entries are counted once
+PASS a saved draft says so, an untouched section says not filled in
+PASS empty saved content does not count as content
+ALL PASSED
+PASS the schema is what the API is asked to fill (every field present, nullable)
+PASS implausible values are dropped before they can become suggestions
+PASS a matching reading produces nothing to do
+PASS differing and missing values become suggestions on the right qualification
+PASS names match regardless of word order and initials
+PASS a different name, a wrong document type and low confidence are flagged for staff
+PASS an unreadable document gives only the re-upload advice
+PASS no matching qualification is a flag, not a guess
+PASS a 12th marksheet goes to the 12th record, not the 10th
+PASS a semester marksheet suggests the semester when it is new or differs
+PASS a semester marksheet without a readable semester number is flagged
+PASS every suggestion starts open
+ALL PASSED
+PASS a photo is sent as one JPEG image, shrunk to at most 2000 px
+PASS a PDF with a real text layer is sent as its text
+PASS a scanned PDF (image only) is sent as its page images, at most 3
+PASS a PDF with neither text nor a page image is refused with advice
+PASS model answers in a loose shape are coerced and validated
+PASS missing keys become nulls; an unknown document kind is OTHER (no suggestion), never a guess
+PASS the names models use for documents map onto our kinds
+PASS confidence is normalised, unknown means low
+PASS implausible values from the model are still dropped
+ALL PASSED
+PASS without a college rule, scheduled tests keep the old behaviour: one attempt
+PASS without a college rule, the personality test keeps the old 180-day wait
+PASS a college rule replaces the default
+PASS the first attempt always starts as attempt 1
+PASS an attempt in progress is resumed, never doubled
+PASS attempts are limited and counted
+PASS the wait runs from the end of the previous attempt and says when
+PASS no limit and no wait allows any number of retakes
+PASS practice tests can always be retaken, whatever the rule
+PASS attempt order in the input does not matter
+PASS averages use each student's newest attempt only
+PASS trend shows change since first and since previous attempt
+ALL PASSED
+PASS every instrument has unique item ids and, for choice items, unique option ids
+PASS RIASEC has 36 items, six for each of six types, and every scale has a meaning for every band
+PASS RIASEC: liking only Social activities puts S first and gives the Holland code
+PASS RIASEC: answering 'Not sure' to everything is a flat 50 for every type
+PASS behavioural style: 12 sets, each with exactly one statement per style, in rotating order
+PASS behavioural style: always choosing D as most and C as least makes D 100 and C 0
+PASS behavioural style: most and least must differ
+PASS teamwork: 10 scenarios, 4 options, every option scores only on named skills with 0-3 points
+PASS teamwork: always choosing the best option scores 100 everywhere; always the weakest scores very low
+PASS teamwork: every one of the four skills is tested by at least three scenarios
+PASS answers: every question is required, unknown questions and out-of-range values are refused
+PASS writing: word limits are enforced and the marks become scales plus an overall
+PASS what a student receives never contains scoring keys
+PASS private instruments are exactly the personality-style ones
+ALL PASSED
+PASS every question has four distinct options, a valid answer, an explanation and a tag
+PASS banks have unique keys and names, a real category, and sensible paper settings
+PASS question texts are unique within a bank
+PASS correct answers are not bunched in one position (no guessing by pattern)
+PASS the SRS categories are all covered: aptitude, digital literacy, communication and technical
+PASS the aptitude bank covers quantitative, logical and verbal evenly
+PASS spot-check the arithmetic in the quantitative questions
+ALL PASSED
+PASS a low skill gets an 'improve' recommendation that says the score, and the weakest comes first
+PASS a skill with no result gets a 'take the test' recommendation pointing at the right place
+PASS a declared (unmeasured) skill is not treated as missing
+PASS scores between 60 and 75 produce no advice either way
+PASS teamwork: missing gets a prompt, low gets practice advice, high gets none
+PASS interests: the top three types become roles to explore, framed as ideas not predictions
+PASS behavioural style gives one tip for the strongest style, and nothing when it is not available
+PASS the same results always give the same, stable ordering
+PASS no recommendation mentions eligibility, selection or rejection
+PASS coverage counts measured areas and names the missing ones
+PASS the staff wording speaks about the student, never to them, and has no student-only links
+ALL PASSED
+PASS an 8-semester programme gives each of the four themes two semesters, in order
+PASS a 4-semester programme (an MCA) gives each theme one semester
+PASS a 6-semester programme still covers all four themes in order
+PASS very short programmes (2 semesters) still give every theme a semester to sit in
+PASS years: 8 semesters over 4 years is two semesters a year; 4 over 2 years likewise
+PASS the library has unique keys, every phase is covered, and every auto rule exists
+PASS a generated roadmap places every milestone inside its theme's semesters, for any programme length
+PASS generation is deterministic and ordered by semester
+PASS early-phase items sit at the start of a phase and late ones at the end
+PASS auto rules tick from signals
+PASS autoUpdates only returns open, auto-tracked, active milestones whose rule is met - and never reopens or touches skipped ones
+PASS progress: percentage, per theme, overdue (earlier semesters not done) and the next three
+PASS suggestions: low skills become proposed milestones in the current semester, with the reason; strengths and tests-to-take do not
+PASS suggestions never repeat something already on the roadmap, and the semester stays inside the programme
+PASS role suggestions: the student's own preferences first, then interest-based roles, no repeats, capped
+ALL PASSED
+PASS a student can mark a hand-ticked milestone done, and it records who and when
+PASS a student cannot mark an automatically tracked milestone done, and is told what makes it done
+PASS a student can still skip or move an automatically tracked milestone
+PASS moving to another semester changes its phase, and a semester beyond the programme is refused
+PASS standard milestones cannot be renamed; the student's own can
+PASS a mentor or staff member can confirm done and reopen, with their own role recorded
+PASS a mentor or staff member can confirm an automatically tracked milestone (they are not the student) but cannot rewrite or move the plan
+PASS reopening a done milestone clears who and when; setting the same status changes nothing
+PASS notes can be added and cleared
+PASS input limits: a milestone needs a real title, and semesters are 1 to 20
+ALL PASSED
+lms ok
+lmsrecommend ok
+resources ok
+projects ok
+internships ok
+resumeengine ok
+jd ok
+matching ok
+campaign ok
+mocktest ok
+interview ok
+reports ok
+readiness ok
+placementstatus ok
+discussion ok
+notifyrules ok
+dashboards ok

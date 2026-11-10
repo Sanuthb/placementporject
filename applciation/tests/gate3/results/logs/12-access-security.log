@@ -1,0 +1,45 @@
+PASS roles: /api/me lists every role, main first 
+PASS roles: officer + coordinator is NOT limited to the coordinator's department 
+PASS roles: a pure coordinator IS limited to their department 
+PASS roles: officer rights from the main role apply (can invite students) 
+PASS roles: a pure coordinator cannot invite students 
+PASS roles: only admins manage staff (multi-role officer is refused) 
+PASS roles: staff list returns roles arrays 
+PASS roles: admin can change roles (add admin to the officer) 
+PASS roles: the new admin role takes effect (can read staff) 
+PASS roles: coordinator role needs a department 
+PASS roles: at least one role is required 
+PASS roles: a department is refused when there is no coordinator role 
+PASS roles: changes are audited with the full role list 
+PASS history: a sign-in is recorded 
+PASS history: recording the same session twice adds nothing 
+PASS history: unauthenticated calls are refused 
+PASS history: I can see my own sign-ins 
+PASS history: an admin can see a staff member's sign-ins 
+PASS history: other staff cannot 
+PASS history: a student's sign-in is recorded and visible to the officer 
+PASS history: a student cannot read staff history 
+PASS reset: an admin cannot reset their own access here 
+PASS reset: only admins can reset staff access 
+PASS reset: an action is required 
+PASS reset: a student with a login can be sent a password reset (or the email service says why not) 
+PASS reset: a student who has not accepted is told to resend the invitation instead 
+PASS mfa: an authenticator app can be enrolled and confirmed 
+PASS mfa: before the code, /api/me still answers and says a code is needed 
+PASS mfa: before the code, every other staff API is refused (MFA_REQUIRED) 
+PASS mfa: the same applies to admin-only settings 
+PASS mfa: Supabase reports a second step is due 
+PASS mfa: a wrong code is refused 
+PASS mfa: after the right code the session is trusted 
+PASS mfa: the sign-in history notes the second step 
+PASS mfa: a person without the admin role is never asked for it 
+PASS mfa: an admin with an authenticator can require it for all admins 
+PASS mfa: once required, an admin with no authenticator app is told to set one up 
+PASS mfa: /api/me still works so the screen can send them to set it up 
+PASS mfa: they cannot switch the requirement off or on without their own app 
+PASS mfa: an admin who has it can switch the requirement off again 
+PASS reset: removing an authenticator app works even if the person has none 
+PASS reset: self-reset of the admin's own app is refused 
+PASS reset: after another admin removes the app, the person signs in with one step again and can enrol a new one 
+PASS reset: it was audited 
+ALL PASSED

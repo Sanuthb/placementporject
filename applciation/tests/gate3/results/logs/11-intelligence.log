@@ -1,0 +1,19 @@
+PASS intelligence: loads for a student with no data 
+PASS intelligence: every dimension is separate and there is no overall score 
+PASS intelligence: no data means no score, and the gap is said 
+PASS intelligence: no reading exists yet, and AI availability is reported 
+PASS intelligence: no name, email or phone in the evidence 
+FAIL intelligence: DISC and RIASEC are honestly marked as not available 
+PASS academics: score is computed by code from the marks (blend minus backlog penalty) 
+PASS academics: unverified marks are flagged and capped at medium confidence 
+PASS technical: self-declared skills get no invented score 
+PASS preferences: declared interests are carried 
+PASS aptitude and personality stay empty without an assessment 
+PASS consent: personality and aptitude from the built-in test stay hidden until the student shares 
+PASS consent: once shared, the five traits appear without an overall personality score 
+PASS consent: aptitude is scored per area and averaged 
+PASS consent: viewing shared personality data is logged 
+PASS generate: clear message when AI is off, otherwise a stored reading 
+PASS access: requires sign-in 
+PASS access: unknown student is a 404 
+1 FAILED

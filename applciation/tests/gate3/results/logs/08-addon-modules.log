@@ -1,0 +1,103 @@
+PASS create prospect (owner defaults to me) 
+PASS owner must be admin/officer 
+PASS cannot skip to drive scheduled 
+PASS to in conversation 
+PASS drive scheduled needs a drive 
+PASS drive scheduled with a linked drive 
+PASS won creates the company record 
+PASS company now exists 
+PASS won is terminal 
+PASS lost needs a reason 
+PASS lost without reason refused 
+PASS lost with reason 
+PASS activity logged 
+PASS follow-up is due 
+PASS reminder created for the owner 
+PASS reminders are not repeated 
+PASS pipeline counts 
+PASS cron can run reminders 
+PASS end before start refused 
+PASS allot internship 
+PASS one internship at a time 
+PASS student told about the allotment 
+PASS no logs before it starts 
+PASS start 
+PASS complete before start refused elsewhere 
+PASS student logs a week 
+PASS duplicate week refused 
+PASS week outside the internship refused 
+PASS reject needs a comment 
+PASS reject with comment 
+PASS student corrects and resubmits 
+PASS approve 
+PASS approved log is locked 
+PASS evaluation recorded 
+PASS summary: hours + average score 
+PASS student sees evaluations 
+FAIL complete 
+FAIL no logs after completion 
+PASS virtual event needs a join link 
+PASS draft events are invisible to students 
+PASS publish 
+PASS publish twice 409 
+PASS seats shown 
+PASS A registers 
+PASS B registers 
+PASS C goes on the waiting list 
+PASS register twice 409 
+PASS join link hidden until registered 
+PASS cancel promotes the waiting student 
+PASS promoted student was told 
+PASS capacity holds under simultaneous sign-ups (1 seat, 3 students) 
+PASS registration after the deadline refused 
+PASS results with rank/score 
+PASS unregistered student skipped 
+PASS registrations show attended + rank 
+PASS registrations export 
+PASS cancel an event notifies registrants 
+PASS cancelled events cannot be edited 
+PASS create journey 
+PASS duplicate journey 409 
+PASS partner programme needs a partner 
+PASS programme with two students 
+PASS student sees programme and steps 
+PASS complete step 1 
+PASS complete step 2 
+PASS repeating a step changes nothing 
+PASS step out of range refused 
+PASS not enrolled -> 404 
+PASS staff progress report 
+PASS add members (one already in) 
+PASS finish the programme 
+PASS bad correct index refused 
+PASS add 6 questions 
+PASS paper needs enough questions 
+PASS random paper of 4 questions, 8 marks 
+PASS window shorter than the paper refused 
+PASS student sees open + upcoming 
+PASS cannot start before it opens 
+PASS start: 4 questions, no answer key, ~30 min 
+PASS resuming gives the same order and deadline 
+PASS save progress 
+PASS result not available before submitting 
+PASS proctoring: 1st violation ok 
+PASS proctoring: 2nd violation flags it 
+PASS A submits: all correct = 8/8 
+PASS submit twice refused 
+PASS start again after submitting refused 
+PASS B all wrong: negatives floor at 0 
+PASS late save is refused and the saved answers are submitted 
+PASS staff results close C's overdue attempt and summarise 
+PASS results export 
+PASS analysis shows assessment scores 
+PASS baseline cohort of 4 is hidden 
+PASS baseline cohort of 5 shows distribution 
+file:///home/sanuth/Desktop/placement/applciation/tests/e2e/08-addon-modules.mjs:150
+t("student sees the resource", (await me.A("GET", "/api/student/prep/resources?category=INTERVIEW")).d.some((x) => x.id === rs.id));
+                                                                                                       ^
+
+TypeError: Cannot read properties of undefined (reading 'some')
+    at file:///home/sanuth/Desktop/placement/applciation/tests/e2e/08-addon-modules.mjs:150:104
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v24.18.1

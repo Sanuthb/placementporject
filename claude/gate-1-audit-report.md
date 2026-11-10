@@ -1,6 +1,6 @@
 # Gate 1 — Audit report (audit only)
 
-Date: 2026-11-15. Scope: the whole repository at `applciation/`, the SRS, and `claude/srs-vs-code-checklist.md`.
+Date: 2026-11-10. Scope: the whole repository at `applciation/`, the SRS, and `claude/srs-vs-code-checklist.md`.
 Rule followed: **no application code, schema, configuration or deployment file was changed during this gate.** Only this report was written. Nothing was run against a database; only read-only commands, type-check, lint and the pure unit tests were run.
 
 Vocabulary used (from your prompt): **Built, Partial, Missing, Broken, Built but not tested, On hold.**
@@ -19,9 +19,9 @@ Vocabulary used (from your prompt): **Built, Partial, Missing, Broken, Built but
 | Route guard inventory | Of 520 route files, 10 do not use a wrapper. All 10 look intentional: `health`, `auth/login-event` and `me/logins` (check the bearer token themselves), `invitations/lookup` and `accept`, and token links (`showcase/[token]` and its PDF, `project-review/[token]`, `internship-feedback/[token]`, `calendar/feed/[token]`). Five more export raw handlers beside wrapped ones: the four cron job routes and the calendar feed. Not yet proven by test |
 | Role guards | Faculty-only and principal-only sessions are refused by every route unless the route names them (deny by default). Roles: TPO_ADMIN, PLACEMENT_OFFICER, DEPARTMENT_COORDINATOR, FACULTY, PRINCIPAL. Recruiters and platform admins are separate identities |
 | Tenant isolation | Every record carries `collegeId`; sessions are loaded from the token and queries are scoped. One login belongs to one college |
-| Scheduled jobs | Five endpoints (cron secret): block evaluation, scheduled reports, CRM follow-ups, round reminders, reminders and message sweep. All declared in `vercel.json` (the last one was missing until the 2026-11-15 audit) |
+| Scheduled jobs | Five endpoints (cron secret): block evaluation, scheduled reports, CRM follow-ups, round reminders, reminders and message sweep. All declared in `vercel.json` (the last one was missing until the 2026-11-10 audit) |
 | AI | Provider calls are made inside the request with time limits; there is no queue. Keys come from environment variables only |
-| Migrations | Database diff against the schema is empty (checked 2026-11-15): all 46 migrations, including Modules 14 to 21, are applied on the hosted database |
+| Migrations | Database diff against the schema is empty (checked 2026-11-10): all 46 migrations, including Modules 14 to 21, are applied on the hosted database |
 
 ## 2. Existing test framework and what was actually run today
 
@@ -102,7 +102,7 @@ This is the least complete area. Verified by reading the code:
 
 The SRS text has about **1,070 bullet-style requirement lines** (about 570 in the module sections, 120 in roles and structure, 84 screens, 93 entities, 49 AI, 37 non-functional, 14 integrations, 20 reports, 21 workflow, 53 acceptance, 11 principles). This is an approximate count of lines, not of testable requirements; the exact inventory is a Gate 2 deliverable.
 
-Gaps already found in the 2026-11-15 comparison (full list in `srs-vs-code-checklist.md` section 5):
+Gaps already found in the 2026-11-10 comparison (full list in `srs-vs-code-checklist.md` section 5):
 - **Missing as downloads:** student profile, academic performance, career assessment, roadmap, course completion, skill gap, project, internship, preparation campaign and job readiness reports. Partial: JD analysis, candidate matching, drive and company reports. CSV only in a few places.
 - **Missing:** AI question generation, revision planning, model and prompt version retention, data retention and deletion workflows, Interviewer, Trainer and Alumni roles, configurable roles and permissions, campus-level and batch-level staff access, public landing page, ERP and SIS integration, code execution for coding and SQL, JD and eligibility change history (the audit log records that a change happened, not the earlier content), document classification, quality and duplicate checks.
 - **Partial:** backup and recovery (relies on Supabase, no tested drill), monitoring and error tracking, background retries (no queue), asynchronous AI work.
@@ -117,11 +117,11 @@ Gaps already found in the 2026-11-15 comparison (full list in `srs-vs-code-check
 | ID | Severity | Finding | Evidence |
 |---|---|---|---|
 | A-01 | Medium | Lint fails on two files outside the normally linted folders (`scripts/list-routes.mjs`, `hooks/use-mobile.ts`) | `eslint .` output |
-| A-02 | High (to confirm) | Suspended institutions' public token pages may stay reachable (showcase and others) | `lib/showcase.ts` has no college check |
+| A-02 | High (**confirmed by code reading in Gate 2**) | Suspended institutions' public pages stay reachable and writable: showcase page and resume PDF (`lib/showcase.ts`), calendar feed (`lib/calendarService.ts`), project-mentor review and internship-mentor feedback links (both can also write), and invitation acceptance (`app/api/invitations/accept`). None checks the college status; the showcase page also counts a view | `lib/showcase.ts`, `lib/calendarService.ts`, `app/api/project-review/[token]/route.ts`, `app/api/internship-feedback/[token]/route.ts`, `app/api/invitations/accept/route.ts`. Not yet reproduced by a running test (Gate 3) |
 | A-03 | Medium | Platform audit trail is split between `PlatformAuditLog` (MFA events) and the college `AuditLog` (institution actions), and the first has no reader | code reading |
 | A-04 | Medium | AI evaluations (descriptive marks, interview and discussion reports) do not store model or prompt version | code reading, SRS section 8 rule |
 | A-05 | Medium | No automatic cleanup and no deletion workflow for student data | README states it |
-| A-06 | Low | A scheduled-jobs gap that existed (reminders job missing from `vercel.json`) was fixed on 2026-11-15; no test guards the list | fixed earlier, no regression test |
+| A-06 | Low | A scheduled-jobs gap that existed (reminders job missing from `vercel.json`) was fixed on 2026-11-10; no test guards the list | fixed earlier, no regression test |
 | A-07 | Info | `tests/e2e` and `tests/web` have not been run against Modules 5 to 21 | section 2 |
 
 ## 8. Proposed testing strategy (for approval)

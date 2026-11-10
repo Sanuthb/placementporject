@@ -1,0 +1,118 @@
+PASS invite: bad email rejected 
+PASS invite: graduation before admission rejected 
+PASS invite: created, email sent 
+PASS invite: duplicate admission number blocked with a pending-invite hint 
+PASS invite: duplicate email blocked 
+PASS invitation: status SENT with an email log 
+PASS invitation: response holds no token or link 
+PASS invitation: only a 64-char hash is stored 
+PASS email log keeps no token 
+PASS link: issues a fragment link 
+PASS lookup: garbage token gives a generic 410 
+PASS lookup: shows branding and assigned details, masks the email 
+PASS link: issuing a new link kills the old one 
+PASS accept: wrong email refused 
+PASS accept: weak password refused 
+PASS accept: succeeds with the invited email 
+PASS accept: single use (second try is refused) 
+PASS accept: lookup is refused afterwards 
+PASS accept: login linked to the same student record, status Invitation Accepted 
+PASS accept: no second student created 
+PASS accept: resend after acceptance refused 
+PASS wizard: loads assigned details read-only 
+PASS submit: refused while required information is missing, and says what 
+PASS wizard: draft saved, status Profile In Progress 
+PASS wizard: a different name is held for review, not written over the record 
+PASS wizard: progress survives a reload 
+PASS education: a record needs level and institution 
+PASS education: completion before admission refused 
+PASS education: SSLC and PUC added 
+PASS documents: SSLC and PUC marks cards become required 
+PASS documents: content that does not match its type is refused 
+PASS documents: unsupported type refused 
+PASS documents: PDFs uploaded as PENDING 
+PASS documents: listed with private signed links 
+PASS documents: the same file again is refused as a duplicate 
+PASS documents: a PDF carrying a script is refused 
+PASS documents: replacing keeps the same category, archives the old row and keeps its file 
+PASS documents: the student's list shows only the live versions 
+PASS submit: still blocked until the declaration is accepted 
+PASS submit: accepted, status Submitted for Verification 
+PASS submit: nothing is verified by submitting 
+PASS submit: profile is locked afterwards 
+PASS submit: contact details copied to the student record 
+PASS submit: staff were notified 
+PASS review: staff see everything the student entered and the documents 
+PASS review: opening it moves to Verification in Progress 
+PASS verify: blocked until the different name is decided 
+PASS verify: blocked while documents are pending (and the name decision rolls back) 
+PASS documents: a verifier can reject one with a reason 
+PASS documents: profile status is independent of document status 
+PASS corrections: requested with a comment 
+PASS corrections: student sees the comment and can edit again 
+PASS corrections: student was notified 
+PASS corrections: student replaces the rejected document 
+PASS corrections: resubmitted 
+PASS verify: blocked while the new document is unreviewed 
+PASS verify: profile verified after approval 
+PASS verify: invited name kept, stage verified, status Verified 
+PASS audit: invite, accept, submit, changes, verify all recorded 
+PASS verify: verifying twice is refused 
+PASS personal: the wizard shows the current academic year and semester read-only 
+PASS personal: a future date of birth is refused 
+PASS personal: a day that does not exist is refused 
+PASS personal: a bad mobile number is refused and the message names it 
+PASS personal: a bad alternate email is refused 
+PASS personal: refused edits changed nothing 
+PASS personal: editing a verified section waits as a pending revision 
+PASS personal: the student record is untouched while the revision is pending 
+PASS personal: submitting sends it for review, still no change to the record 
+PASS personal: a section under review cannot be edited 
+PASS personal: approval writes the contact details onto the student record 
+PASS personal: the name is not changed by a personal-details approval 
+PASS personal: the previous and new values are in the audit log with the approver 
+PASS personal: the verified section now holds the approved values 
+PASS personal: every approval is kept in the verification history 
+PASS personal: a staff edit records the previous values as well as the new 
+PASS education: records of a verified profile are verified 
+PASS education: a percentage that contradicts the marks is refused 
+PASS education: editing a verified qualification waits as a pending revision; the verified value stays 
+PASS education: the verified section does not change before approval 
+PASS education: a verified qualification cannot be deleted by the student 
+PASS education: after verification the student can add a qualification, as a draft 
+PASS education: submitting sends the revision and the new record for review 
+PASS education: nothing can be edited while it is under review 
+PASS education: approval applies the pending revision and verifies the new record 
+PASS education: the verified section and the 10th percentage in ACADEMICS follow the records 
+PASS education: a staff edit stays verified, is audited with old and new values, and refreshes the snapshot 
+PASS access: another student cannot delete my documents 
+PASS access: another student cannot change my qualification 
+PASS access: another student's list shows none of mine 
+PASS access: a student cannot use staff verification 
+PASS access: student cannot read staff review data 
+PASS access: a student's personal-details save only ever touches their own record 
+PASS access: another student cannot approve personal details 
+PASS access: staff cannot be used on the student onboarding api 
+PASS expiry: an expired invitation says so 
+PASS expiry: an expired invitation cannot activate an account 
+PASS expiry: student shows Invitation Expired 
+PASS resend: a fresh invitation is emailed 
+PASS resend: the old token stays dead 
+PASS revoke: a revoked invitation cannot be used 
+PASS lockout: repeated wrong emails lock the invitation 
+PASS lockout: even the right email is refused until a new invitation is issued 
+PASS bulk: preview maps the new columns 
+PASS bulk: 2 valid, 1 duplicate, 3 invalid 
+PASS bulk: reasons name the problem (email, batch, missing number) 
+PASS bulk: confirm creates only the valid rows 
+PASS bulk: each valid row has an invitation 
+PASS bulk: emails are sent after the response, each logged 
+PASS bulk: invitation status Sent once the email goes out 
+PASS dashboard: summary has the six onboarding numbers 
+PASS dashboard: filter by profile status 
+PASS dashboard: filter by invitation status 
+PASS dashboard: filter by verification status 
+PASS dashboard: rows carry invitation, onboarding status and last activity 
+PASS dashboard: bad filter value rejected 
+PASS settings: expiry period is configurable 
+ALL PASSED

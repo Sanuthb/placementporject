@@ -1,0 +1,55 @@
+PASS shortlist all 4 
+PASS candidates for round 1 
+PASS offer before rounds blocked 
+PASS round 1 results 
+PASS D (absent) cannot skip to round 2 
+PASS correct C: rejected -> cleared 
+PASS C back in the drive 
+PASS round 2 results 
+PASS cannot change round 1 after round 2 result 
+PASS rounds cannot be replaced now 
+PASS A clears final round 
+PASS upload: 1 applied, 2 row errors 
+PASS shortlist export 
+PASS offer to A 
+PASS duplicate active offer 409 
+PASS PPO flag refused on full-time 
+PASS one-offer rule blocks 2nd offer 
+PASS accept A 
+PASS accept twice 409 
+PASS A is now placed 
+PASS joined needs a date 
+PASS mark joined 
+PASS offer letter upload 
+PASS offer shows letter url 
+PASS revoke needs reason 
+PASS revoke A 
+PASS A no longer placed 
+PASS joining on revoked offer 409 
+PASS re-offer after revoke 
+PASS results blocked while an offer exists 
+PASS lower tier refused for placed student 
+PASS higher tier allowed (upgrade) 
+PASS offer gated -> 202 
+PASS nothing created yet 
+PASS shows in pending list 
+PASS reject needs comment 
+PASS approve runs the offer 
+PASS offer now exists 
+PASS decide twice 409 
+PASS send back 
+PASS sent-back offer not created 
+PASS bulk status gated 
+PASS status unchanged while pending 
+PASS bulk status applied after approval (B blocked by live offer) 
+PASS single change is not gated 
+PASS reminder gated 
+PASS approved reminder sent 
+PASS ungated reminder sends 
+PASS message history 
+PASS announcement to a batch 
+PASS announcement needs a target 
+PASS self-approval blocked with 2 admins 
+PASS self-approval allowed for sole admin 
+PASS company history: hired counted 
+ALL PASSED

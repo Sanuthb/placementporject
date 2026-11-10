@@ -1,0 +1,83 @@
+PASS B (cgpa 6.0) not eligible 
+PASS dashboard student counts 
+PASS placement progress by dept and batch 
+PASS drives closing soon listed 
+PASS needs-attention basics 
+PASS upcoming drives within 7 days 
+PASS offers this week include C's 
+PASS quick actions for admin 
+FAIL 360 profile + 8 sections 
+FAIL 360 academics with semesters 
+PASS 360 drives summary 
+PASS 360 timeline has verification and application events 
+PASS 360 shows no blocks 
+PASS add note 
+PASS note appears 
+PASS C: placed, accepted offer 
+FAIL trend: 3 semesters, declining {"semesterTrend":[],"latest":null,"change":null,"direction":null,"weakSubjects":[]}
+FAIL weak subjects found (45% Maths) 
+PASS comparison with batch/department 
+PASS at-risk: repeated rejection at same round type 
+PASS readiness + personality placeholder 
+PASS A resume ready, score 100 
+PASS B resume needs work 
+PASS batch readiness 
+PASS resume PDF generated 
+PASS no verified data -> 409 
+PASS non-Latin name does not break the PDF 
+PASS overview shape 
+PASS overview filters by department 
+PASS overview xlsx export 
+PASS drive funnel 
+PASS absentee list + round stats 
+PASS drive funnel xlsx 
+PASS elimination: stops at technical 
+PASS repeat failures flagged (A and D, twice at technical) 
+PASS by department matrix 
+PASS click-through to students 
+PASS elimination xlsx 
+PASS management PDF 
+PASS NIRF-style table 
+PASS NIRF xlsx 
+PASS NIRF needs a year 
+PASS create schedule 
+PASS due report is sent 
+PASS run again: nothing due 
+PASS report emails logged for both recipients 
+PASS cron secret can run reports 
+PASS deactivate schedule 
+PASS delete schedule 
+PASS students export 
+PASS offers export 
+FAIL officer and CSE coordinator notified of submission, EEE coordinator not 
+PASS student notified of offer 
+PASS student notified of requested changes 
+PASS my notifications + unread count 
+PASS mark all read 
+PASS announcement 
+PASS announcement expiry before publish refused 
+PASS withdraw announcement 
+PASS create template 
+PASS duplicate template 409 
+PASS send using template 
+PASS unknown template refused 
+PASS needs template or text 
+PASS edit + delete template 
+PASS correction needs data 
+PASS unknown student 
+PASS correction ticket 
+PASS verified value kept, correction pending 
+PASS correction is in the verification queue as a revision 
+PASS ticket list shows status, age 
+PASS reply moves to in progress 
+PASS coordinator from another department refused 
+PASS assign to own-department coordinator 
+PASS assigned shows in their list 
+PASS approve correction applies it 
+PASS resolve 
+PASS resolve twice 409 
+PASS reply on resolved 409 
+PASS student notified of reply and resolution 
+PASS plain ticket 
+PASS staff notified of new ticket 
+5 FAILED

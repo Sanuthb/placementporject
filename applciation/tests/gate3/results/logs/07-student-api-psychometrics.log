@@ -1,0 +1,87 @@
+PASS student /me 
+PASS first sign-in activated the invite 
+PASS student token refused on staff API 
+PASS staff token refused on student API 
+PASS no token refused 
+FAIL 8 sections, 2 required 
+PASS save academics draft 
+PASS invalid academics rejected 
+PASS upload proof to a draft section 
+PASS bad file type refused 
+PASS section shows proof with link 
+PASS remove proof 
+PASS submit academics 
+PASS cannot edit while under review 
+PASS cannot add proof while under review 
+PASS staff queue shows it 
+PASS changes requested reaches the student 
+PASS student sees the notification 
+PASS onboard A 
+PASS edit of verified section waits as a revision 
+PASS approving the revision applies it 
+PASS A sees the drive and is eligible 
+PASS B is told why not (CGPA) 
+PASS F (not onboarded) is told what to do 
+PASS drive detail with rounds and rules 
+PASS A applies 
+PASS apply twice 409 
+PASS B cannot apply 
+PASS withdraw 
+PASS withdraw again 404 
+PASS re-apply after withdrawing 
+PASS my applications with journey 
+PASS wrong code refused 
+PASS A checks in with the code 
+PASS student not in the drive cannot check in 
+PASS staff sees A present 
+PASS student sees interview slot with room 
+PASS student sees the offer 
+PASS another student cannot answer it 
+PASS A accepts 
+PASS A is now placed 
+PASS student got the offer notification 
+PASS mark all read 
+PASS student sees announcement 
+PASS A (has the skill) sees the alert 
+PASS C (no skill) does not 
+PASS view recorded 
+PASS click on a hidden alert refused 
+PASS staff stats count it 
+PASS student raises a ticket 
+PASS correction ticket with data 
+PASS ...lands in the staff verification queue as a revision 
+PASS correction without data refused 
+PASS my tickets list 
+PASS another student cannot read it 
+PASS student sees staff reply, marked not-mine 
+PASS student replies 
+PASS reply on resolved 409 
+PASS same status refused 
+PASS request status change 
+PASS second pending request refused 
+PASS staff approves 
+PASS own resume analysis 
+PASS own resume PDF 
+PASS no verified data -> 409 
+PASS student sees their block 
+PASS blocked student told why 
+PASS blocked student cannot apply 
+PASS instrument has 25 + 10 questions and no answer key 
+PASS incomplete answers refused 
+PASS scored: aptitude 100%, traits 0-100 
+PASS attempt twice 409 
+PASS my result 
+PASS no result yet -> 404 
+PASS completion counts 
+PASS cohort of 4 is hidden 
+PASS cohort of 5 shows averages and distributions 
+PASS individual result needs a reason 
+PASS individual result with a reason 
+PASS access is logged 
+PASS 360 analysis shows completion, not scores 
+PASS psychometrics never changed A's eligibility 
+FAIL reminder emails pending students 
+PASS onboarding blocked until assessment is done 
+PASS onboarding allowed after the assessment 
+PASS deactivated student loses access 
+2 FAILED

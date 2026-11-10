@@ -1,0 +1,42 @@
+PASS create company 
+PASS duplicate company 409 
+PASS note 
+PASS bad dates rejected 
+PASS foreign dept rejected 
+PASS create drive 
+PASS apply before publish blocked 
+PASS publish 
+PASS publish twice 409 
+PASS A eligible 
+PASS B ineligible with CGPA reason 
+PASS opted-out C never appears 
+PASS exception for opted-out refused 
+PASS exception needs reason 
+PASS exception for eligible refused 
+PASS exception for B 
+PASS B eligible via exception 
+PASS eligible export xlsx 
+PASS apply A 
+PASS apply A again 409 
+PASS apply B via exception 
+PASS apply C refused 
+PASS applicants listed with cgpa 
+PASS shortlist both 
+PASS shortlist idempotent 
+PASS reject A 
+PASS applicants export 
+PASS non-applicants 
+PASS PATCH keeps rules (allowPlaced, departments) 
+PASS replace rounds 
+PASS upload JD 
+PASS JD has signed url 
+PASS bad file type refused 
+PASS duplicate is draft with rounds 
+PASS cancel needs reason 
+PASS cancel duplicate 
+PASS feedback before drive refused 
+PASS close 
+PASS edit closed 409 
+PASS feedback after close 
+PASS company history 
+ALL PASSED

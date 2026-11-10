@@ -1,0 +1,25 @@
+PASS health is up and says nothing about configuration 
+PASS header x-content-type-options 
+PASS header x-frame-options 
+PASS header referrer-policy 
+PASS header cache-control 
+PASS request id on every response 
+PASS framework banner removed 
+PASS a caller's request id is echoed back 
+PASS errors carry the request id 
+PASS bad token is a clean 401 
+PASS allowed origin gets CORS headers 
+PASS unknown origin gets none 
+PASS preflight answered without auth 
+PASS preflight from an unknown origin gets no allowance 
+PASS oversized JSON is refused (413) 
+PASS oversized upload is refused before it is processed 
+PASS cron endpoint without the secret: 401 on GET 
+PASS cron endpoint with a wrong secret: 401 on GET 
+PASS cron endpoint with the secret works on GET 
+PASS cron endpoints refuse anonymous POST 
+PASS public link probing is rate limited (120/min) 
+PASS 429 explains itself and says when to retry 
+PASS public anon key reaches no tables 
+PASS flood guard trips on a burst from one address 
+ALL PASSED

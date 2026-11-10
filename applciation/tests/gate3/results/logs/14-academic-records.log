@@ -1,0 +1,51 @@
+PASS access: a student token is needed 
+PASS access: staff cannot use the student records api 
+PASS access: a student cannot use the staff records api 
+PASS semester: marks above the maximum is refused 
+PASS semester: negative marks is refused 
+PASS semester: a maximum of zero is refused 
+PASS semester: the same subject twice is refused 
+PASS semester: an SGPA above 10 is refused 
+PASS semester: a negative SGPA is refused 
+PASS semester: semester number 0 is refused 
+PASS semester: an SGPA that contradicts the grade points is refused 
+PASS semester: refused attempts stored nothing 
+PASS semester: there is no stored percentage column (it is calculated) 
+PASS mapping: a semester after the student's current one is refused and says why 
+PASS semester: a normal semester is saved as a draft with its percentage calculated 
+PASS mapping: a semester of the student's own batch is linked to the M2 semester 
+PASS semester: saving the same semester again replaces it (one row per semester) 
+PASS backlog: a failed subject is listed as pending with its first attempt 
+PASS backlog: listing the same subject again is refused 
+PASS backlog: clearing needs a semester 
+PASS backlog: it cannot be cleared before the semester it was failed in 
+PASS backlog: a second failed attempt is added, the first is kept 
+PASS active backlogs cannot be declared lower than the pending subjects listed 
+PASS a second student cannot reach my backlog 
+PASS submit: the ACADEMICS section goes for review 
+PASS submit: semester results and backlog attempts are now under review 
+PASS submit: the section carries the structured records in the same keys as before 
+PASS lock: nothing can be changed while the section is under review 
+PASS lock: a semester under review cannot be deleted, and a backlog under review is kept 
+PASS review: changes requested sends the records back with the comment 
+PASS review: the student can edit again 
+PASS review: approval verifies the records 
+PASS review: the verified section holds the approved records (sgpa 7.8 for semester 2) 
+PASS review: staff see the semesters, subjects and every backlog attempt 
+PASS review: submissions, the change request and the approval are all in the history 
+PASS compat: Student 360 still reads cgpa and semesters from the verified section 
+PASS protect: editing a verified semester waits as a pending revision, the verified values stay 
+PASS protect: the verified snapshot does not move until approval 
+PASS protect: a verified semester and a verified backlog cannot be deleted 
+PASS backlog: clearing adds a third attempt, the verified failures are untouched 
+PASS backlog: the verified snapshot still says pending until the clearance is approved 
+PASS backlog: a cleared subject takes no further attempts 
+PASS review: resubmitting keeps the earlier verified section data until approval 
+PASS review: approval applies the pending revision and clears it 
+PASS review: the clearance is verified and history is complete (failed, failed, cleared) 
+PASS backlog: a mistaken, unreviewed entry can be removed 
+PASS isolation: other students' records are separate 
+PASS tenant: another institution's administrator cannot read this student's academic records 
+PASS tenant: nor change the section, nor read the education records 
+PASS tenant: every record carries its own institution 
+ALL PASSED

@@ -1,0 +1,101 @@
+PASS institution B can build its own structure 
+PASS university: created 
+PASS university: duplicate code refused 
+PASS university: duplicate name refused ignoring case 
+PASS university: the same code is allowed in another institution 
+PASS programme: linked to a university, legacy text kept in step 
+PASS programme: cannot link another institution's university 
+PASS programme: a bare university name is matched to the record 
+PASS university: deleting one in use is refused 
+PASS university: another institution's university is not found 
+PASS university: the list never includes another institution's 
+PASS tenant: A cannot create a programme under B's department 
+PASS tenant: A cannot create a batch for B's programme 
+PASS tenant: A cannot patch B's batch 
+PASS tenant: A cannot delete B's programme 
+PASS tenant: lists show only own records 
+PASS tenant: A's staff list does not include B's admin 
+PASS tenant: A cannot change B's admin 
+PASS integrity: a batch cannot take a branch of another programme 
+PASS integrity: a batch cannot be created with another programme's branch 
+PASS integrity: a semester cannot take another institution's academic year 
+PASS integrity: the report is clean after the checks above 
+PASS faculty: appears in the faculty list 
+PASS faculty: not in another institution's list 
+PASS faculty: another institution cannot read or edit them 
+PASS faculty: profile and department saved 
+PASS faculty: cannot be allocated another institution's department 
+PASS faculty: cannot be allocated a programme outside their departments 
+PASS faculty: cannot be allocated a programme of a department they are not in 
+PASS faculty: programme and batch allocated 
+PASS faculty: sees their own profile 
+PASS faculty: refused placement routes 
+PASS faculty: refused administration 
+PASS faculty: can read the academic structure 
+PASS faculty: cannot call platform routes 
+PASS admin: cannot call platform routes 
+PASS faculty: sees students of an allocated batch 
+PASS faculty: does not see students outside their allocation 
+PASS mentor: cannot assign a student outside the faculty's departments 
+PASS mentor: a student in their department can be assigned 
+PASS mentor: another institution cannot assign this student 
+PASS faculty: a mentee is flagged 
+PASS faculty: student payload has no contact history or documents 
+PASS multi-role: officer + faculty still reaches placement routes 
+PASS multi-role: officer + faculty does not gain admin routes 
+PASS faculty: deactivated 
+PASS faculty: a deactivated account is refused 
+PASS audit: faculty update, allocation and deactivation are logged 
+PASS mentor: reassign to a second mentor 
+PASS mentor: assigning to a deactivated faculty is refused 
+PASS mentor: current mentor shown 
+PASS mentor: history lists each change in order, with who made it 
+PASS mentor: the mentor's list shows the student 
+PASS mentor: another institution cannot read this student's mentor or history 
+PASS mentor: another institution cannot read this faculty's mentees 
+PASS mentor: needs exactly one of facultyId / studentId 
+PASS mentor: faculty cannot manage mentors 
+PASS mentor: unassign 
+PASS mentor: every assignment change is audited per student 
+PASS faculty: created through the API with an invitation 
+PASS faculty: the invitation landed in the local mail sink 
+PASS platform: a platform admin has no college access 
+PASS platform MFA: no authenticator => institutions refused with MFA_SETUP_REQUIRED 
+PASS platform MFA: provisioning refused too 
+PASS platform MFA: status route tells the screen what to do 
+PASS platform MFA: this is independent of the college TPO setting (college has it off) 
+PASS platform MFA: enrolment starts 
+PASS platform MFA: incomplete enrolment still refused 
+PASS platform MFA: a wrong code is rejected and enrolment stays incomplete 
+PASS platform MFA: a malformed code is refused 
+PASS platform MFA: another factor id is refused 
+PASS platform MFA: the right code completes enrolment and returns an upgraded session 
+PASS platform MFA: the upgraded session can use the platform 
+PASS platform MFA: a fresh password-only sign-in is refused with MFA_REQUIRED 
+PASS platform MFA: an enrolled admin cannot enrol another authenticator from a password-only session 
+PASS platform MFA: the Auth server itself refuses a second factor at password-only level 
+PASS platform MFA: an invalid challenge is rejected 
+PASS platform MFA: the right challenge code upgrades the session 
+PASS platform: college administrators and faculty cannot reach platform routes 
+PASS provisioning: institution created 
+PASS provisioning: the administrator's invitation landed in the local mail sink 
+PASS provisioning: settings row created 
+PASS provisioning: only the chosen modules enabled 
+PASS provisioning: initial TPO admin created in the new college 
+PASS provisioning: starting department and year belong to the new college 
+PASS provisioning: nothing else was created 
+PASS provisioning: audited as the platform admin 
+PASS provisioning: duplicate address refused 
+PASS provisioning: the existing institution gained no records 
+PASS platform: deactivating an institution blocks its sign-ins 
+PASS platform: invalid provisioning input is refused 
+PASS platform MFA: removal with a wrong code is refused 
+PASS platform MFA: removal is refused for a password-only session 
+PASS platform MFA: removal with a fresh code works 
+PASS platform MFA: after removal, access is blocked until a new authenticator is enrolled 
+PASS platform MFA: a new authenticator can be enrolled after removal 
+PASS platform MFA recovery: the command removes the authenticator 
+PASS platform MFA recovery: refused without the matching confirmation 
+PASS platform MFA: after recovery the old session is refused 
+PASS platform audit: enrolment, failures, challenges, removal and recovery are all recorded 
+ALL PASSED
