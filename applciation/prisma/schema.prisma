@@ -756,6 +756,7 @@ model Student {
   roadmap               StudentRoadmap?
   courseEnrolments      CourseEnrolment[]
   resourceProgress      ResourceProgress[]
+  projectMemberships    ProjectMember[]
   internships           Internship[]
   eventRegistrations    EventRegistration[]
   learningMemberships   LearningMember[]
@@ -2955,4 +2956,239 @@ model CourseCertificate {
   enrolment CourseEnrolment @relation(fields: [enrolmentId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
+}
+
+// ---------- Projects and portfolio (M8) ----------
+enum ProjectType {
+  INDIVIDUAL
+  TEAM
+  INTERDISCIPLINARY
+}
+
+/// PROPOSED: a student's own idea waiting for approval. OPEN: students can take it. CLOSED: no new teams. REJECTED: a proposal that was turned down.
+enum ProjectStatus {
+  PROPOSED
+  DRAFT
+  OPEN
+  CLOSED
+  ARCHIVED
+  REJECTED
+}
+
+enum TeamStatus {
+  FORMING
+  ACTIVE
+  SUBMITTED
+  EVALUATED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum ReviewerType {
+  FACULTY
+  INDUSTRY
+  STAFF
+}
+
+enum ProjectFileKind {
+  DOCUMENT
+  PRESENTATION
+}
+
+/// A problem statement in the college's project repository. Teams (one student for an individual project) take it up and do the work.
+model Project {
+  id                String        @id @default(uuid()) @db.Uuid
+  collegeId         String        @db.Uuid
+  title             String
+  problemStatement  String
+  skills            String[]
+  type              ProjectType   @default(TEAM)
+  status            ProjectStatus @default(DRAFT)
+  minTeamSize       Int           @default(1)
+  maxTeamSize       Int           @default(1)
+  /// Who may take it. Empty means every department / batch.
+  departmentIds     String[]      @db.Uuid
+  batchIds          String[]      @db.Uuid
+  /// The faculty member who guides and reviews it.
+  guideId           String?       @db.Uuid
+  industryPartner   String?
+  startsAt          DateTime?
+  dueAt             DateTime?
+  /// When true students may start or join teams themselves; otherwise staff allocate.
+  selfFormTeams     Boolean       @default(true)
+  maxTeams          Int?
+  /// Milestones every team gets: [{ title, dueInDays }], counted from the team's start.
+  milestoneTemplate Json          @default("[]")
+  proposedById      String?       @db.Uuid
+  createdById       String?       @db.Uuid
+  rejectReason      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
+
+  teams   ProjectTeam[]
+  members ProjectMember[]
+
+  @@index([collegeId, status])
+}
+
+model ProjectTeam {
+  id                String     @id @default(uuid()) @db.Uuid
+  projectId         String     @db.Uuid
+  collegeId         String     @db.Uuid
+  name              String
+  leaderId          String     @db.Uuid
+  status            TeamStatus @default(FORMING)
+  summary           String?
+  repoUrl           String?
+  /// Commit figures read from GitHub: { fullName, pushedAt, totalCommits, contributors: [{ login, commits }], fetchedAt }.
+  repoStats         Json?
+  repoSyncedAt      DateTime?
+  startedAt         DateTime?
+  submittedAt       DateTime?
+  /// The published result, as a percentage. Students see it only once resultPublishedAt is set.
+  finalPercent      Int?
+  resultPublishedAt DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @default(now()) @updatedAt
+
+  project    Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members    ProjectMember[]
+  milestones ProjectMilestone[]
+  tasks      ProjectTask[]
+  updates    ProjectUpdate[]
+  files      ProjectFile[]
+  reviews    ProjectReview[]
+  invites    ProjectMentorInvite[]
+
+  @@index([projectId])
+  @@index([collegeId])
+}
+
+model ProjectMember {
+  id              String   @id @default(uuid()) @db.Uuid
+  teamId          String   @db.Uuid
+  projectId       String   @db.Uuid
+  studentId       String   @db.Uuid
+  collegeId       String   @db.Uuid
+  /// Stated by the student; used to match commits to people. Not verified.
+  githubUsername  String?
+  role            String?
+  showInPortfolio Boolean  @default(true)
+  joinedAt        DateTime @default(now())
+
+  team    ProjectTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, studentId])
+  @@index([studentId])
+  @@index([teamId])
+}
+
+model ProjectMilestone {
+  id        String    @id @default(uuid()) @db.Uuid
+  teamId    String    @db.Uuid
+  title     String
+  dueAt     DateTime?
+  sortOrder Int       @default(0)
+  doneAt    DateTime?
+
+  team  ProjectTeam   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tasks ProjectTask[]
+
+  @@index([teamId])
+}
+
+model ProjectTask {
+  id                 String     @id @default(uuid()) @db.Uuid
+  teamId             String     @db.Uuid
+  milestoneId        String?    @db.Uuid
+  title              String
+  description        String?
+  assigneeId         String?    @db.Uuid
+  status             TaskStatus @default(TODO)
+  dueAt              DateTime?
+  completedAt        DateTime?
+  createdByStudentId String?    @db.Uuid
+  createdByUserId    String?    @db.Uuid
+  createdAt          DateTime   @default(now())
+
+  team      ProjectTeam       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  milestone ProjectMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+
+  @@index([teamId])
+}
+
+/// A progress update from a student, or a note from a faculty member or staff.
+model ProjectUpdate {
+  id           String   @id @default(uuid()) @db.Uuid
+  teamId       String   @db.Uuid
+  studentId    String?  @db.Uuid
+  authorUserId String?  @db.Uuid
+  text         String
+  createdAt    DateTime @default(now())
+
+  team ProjectTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+}
+
+model ProjectFile {
+  id                  String          @id @default(uuid()) @db.Uuid
+  teamId              String          @db.Uuid
+  kind                ProjectFileKind
+  title               String
+  filePath            String
+  fileName            String
+  mimeType            String
+  sizeBytes           Int
+  uploadedByStudentId String?         @db.Uuid
+  createdAt           DateTime        @default(now())
+
+  team ProjectTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+/// One review of a team by a faculty guide, staff member or an industry mentor. `scores` has a 0-10 mark per rubric criterion; `individualMarks` optionally
+/// marks single students (0-10) so one person's contribution can differ from the team's result.
+model ProjectReview {
+  id              String       @id @default(uuid()) @db.Uuid
+  teamId          String       @db.Uuid
+  reviewerType    ReviewerType
+  reviewerName    String
+  reviewerUserId  String?      @db.Uuid
+  inviteId        String?      @db.Uuid
+  comments        String?
+  scores          Json
+  individualMarks Json         @default("{}")
+  percent         Int
+  isFinal         Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+
+  team ProjectTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+/// A one-time link that lets an industry mentor (who has no account) review one team.
+model ProjectMentorInvite {
+  id          String    @id @default(uuid()) @db.Uuid
+  teamId      String    @db.Uuid
+  collegeId   String    @db.Uuid
+  name        String
+  email       String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdById String    @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  team ProjectTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
 }

@@ -43,7 +43,7 @@ export async function ensureRoadmap(collegeId: string, studentId: string) {
 
 /** What the system knows about the student, as the signals the auto-tracking rules read. */
 export async function gatherSignals(collegeId: string, studentId: string, targetRole: string | null): Promise<Signals> {
-  const [st, sections, instruments, attempts, psych, mocks, steps, courses, interns, events, apps, attend] = await Promise.all([
+  const [st, sections, instruments, attempts, psych, mocks, steps, courses, projectWork, interns, events, apps, attend] = await Promise.all([
     db.student.findUniqueOrThrow({ where: { id: studentId }, select: { stage: true, onboardingStatus: true } }),
     db.studentSection.findMany({ where: { studentId }, select: { section: true, status: true, data: true, pendingData: true } }),
     db.instrumentAttempt.findMany({ where: { studentId }, select: { instrumentKey: true }, distinct: ["instrumentKey"] }),
@@ -52,6 +52,7 @@ export async function gatherSignals(collegeId: string, studentId: string, target
     db.mockInterview.count({ where: { studentId, status: "COMPLETED" } }),
     db.learningProgress.count({ where: { member: { studentId } } }),
     db.courseEnrolment.count({ where: { studentId, status: "COMPLETED" } }),
+    db.projectMember.count({ where: { studentId, team: { status: { in: ["SUBMITTED", "EVALUATED"] } } } }),
     db.internship.count({ where: { studentId, status: "COMPLETED" } }),
     db.eventRegistration.count({ where: { studentId, status: { in: ["REGISTERED", "ATTENDED"] } } }),
     db.application.count({ where: { studentId } }),
@@ -65,7 +66,7 @@ export async function gatherSignals(collegeId: string, studentId: string, target
   return {
     profileVerified: st.onboardingStatus === "VERIFIED" || st.stage === "VERIFIED" || st.stage === "ONBOARDED",
     resumeVerified: verified("RESUME"), skillsVerified: verified("SKILLS"), achievementsVerified: verified("ACHIEVEMENTS"),
-    projectsListed: proj ? listOf(hasData(proj.data) ? proj.data : proj.pendingData, "projects").length : 0,
+    projectsListed: (proj ? listOf(hasData(proj.data) ? proj.data : proj.pendingData, "projects").length : 0) + projectWork,
     tests: instruments.map((i) => i.instrumentKey), categoriesTaken: [...cats],
     mockInterviews: mocks, learningStepsDone: steps + courses, internshipsCompleted: interns, eventsRegistered: events, applications: apps, driveAttendances: attend,
     targetRoleSet: !!targetRole?.trim(),

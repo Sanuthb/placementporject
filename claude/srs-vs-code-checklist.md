@@ -30,7 +30,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M5 – Career Roadmap and Student Development | 10 | 7 | 2 | 1 | 0 | [ ] |
 | M6 – Learning Management System | 11 | 9 | 2 | 0 | 0 | [ ] |
 | M7 – Resource Management System | 9 | 7 | 2 | 0 | 0 | [ ] |
-| M8 – Project Management and Portfolio | 7 | 0 | 2 | 5 | 0 | [ ] |
+| M8 – Project Management and Portfolio | 7 | 6 | 1 | 0 | 0 | [ ] |
 | M9 – Internship Management | 7 | 4 | 3 | 0 | 0 | [ ] |
 | M10 – Dynamic Resume Engine | 9 | 3 | 2 | 4 | 0 | [ ] |
 | M11 – Job Description Management and AI Analysis | 7 | 2 | 3 | 2 | 0 | [ ] |
@@ -222,18 +222,20 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 
 ### M8 – Project Management and Portfolio
 
-**Placement Officer side**
-- [ ] Project repository, problem statements, allocation, teams, milestones, tasks — ❌ Missing
-- [ ] Faculty and industry mentor review, evaluation — ❌ Missing
-- [ ] Monitor projects — ❌ Missing
+**Placement Officer and faculty side** (`/staff/projects`)
+- [ ] Project repository, problem statements, allocation, teams, milestones, tasks — ✅ Built: problem statements with skills, kind (individual, team, interdisciplinary), team size, audience by department/batch, guide, industry partner, dates and a milestone template every team gets; staff allocate students to teams or students form them; student-proposed projects are approved or rejected; tasks are kept by the team. Team rules (size, two departments for interdisciplinary) are checked. Tested: unit (rules); not live.
+- [ ] Faculty and industry mentor review, evaluation — ✅ Built: a five-point rubric (0-10 each) with comments from the faculty guide or staff; industry mentors, who have no account, get a one-time link (14 days, emailed when email is set up, otherwise shown to copy). Individual marks let one student's result differ from the team's. Faculty and staff count 60% and industry 40% of the result when both review; the admin or guide publishes it, and students see scores only then.
+- [ ] Monitor projects — ✅ Built (Monitor tab): proposals waiting, teams behind schedule, work waiting for a final review, members with little recorded work. Faculty see only projects they guide.
 
-**Student side**
-- [ ] List projects in the profile — 🟡 Partial: a text section (title, tools, description, link)
-- [ ] Create team projects, submit work, GitHub integration, documentation, presentations — ❌ Missing
-- [ ] Portfolio generation — 🟡 Partial: a shareable public profile page with a revocable link (`/student/showcase`)
+**Student side** (`/student/projects`, `/student/portfolio`)
+- [ ] List projects in the profile — ✅ Built: real project records (role, team, result) alongside the existing profile text section.
+- [ ] Create team projects, submit work, GitHub integration, documentation, presentations — ✅ Built: start or join teams, plan with milestones and tasks, progress updates, PDF/Word/PowerPoint documentation and presentation uploads (up to 20 MB, type read from the file), GitHub repository link with commits read from the public API (checked live), submit for review. Only public repositories; the GitHub username is stated by the student and not verified. Not live-tested in the app.
+- [ ] Portfolio generation — ✅ Built: a printable portfolio from submitted projects (students can hide any), also added to the shareable profile data and the resume PDF ("College project work"). The public profile API carries it; there is no public web page for it yet.
 
 **Connection**
-- [ ] M8 → M10 / M12 project evidence — ❌ Missing as real records (only the text section is read)
+- [ ] M8 → M10 / M12 project evidence — 🟡 Partial: submitted projects feed the resume PDF, the shareable profile and the roadmap's projects milestone. M12 (candidate matching) does not exist yet to use them.
+
+Each member's recorded work (tasks finished, updates, files, commits, capped) is shown separately from the team result, with a flag for under half a fair share. It measures activity, not quality.
 
 ### M9 – Internship Management
 

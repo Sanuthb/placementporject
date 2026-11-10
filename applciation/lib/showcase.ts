@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { notFound } from "@/lib/api/errors";
 import { listOf } from "@/lib/resume";
 import { sortedAchievements } from "@/lib/achievements";
+import { portfolioFor } from "@/lib/projectService";
 
 export const newToken = () => randomBytes(32).toString("base64url");
 
@@ -16,11 +17,13 @@ export async function publicProfile(token: string) {
   const sec = (name: string) => p.student.sections.find((x) => x.section === name)?.data as Record<string, unknown> | undefined;
   const college = await db.college.findUniqueOrThrow({ where: { id: p.collegeId }, select: { name: true, logoUrl: true, brandColor: true } });
   await db.showcaseProfile.update({ where: { id: p.id }, data: { views: { increment: 1 } } });
+  const work = (await portfolioFor(p.studentId, { onlyShown: true })).map((w) => ({ title: w.title, problem: w.problem, type: w.type, skills: w.skills, industryPartner: w.industryPartner, teamName: w.teamName, teammates: w.teammates, myRole: w.myRole, summary: w.summary, repoUrl: w.repoUrl, submittedAt: w.submittedAt, myResultPercent: w.myResultPercent }));
   return {
     college, name: p.student.name, headline: p.headline, department: p.student.department.name, batch: p.student.batch.name,
     ...(p.showCgpa ? { cgpa: (sec("ACADEMICS") as { cgpa?: number } | undefined)?.cgpa ?? null } : {}),
     ...(p.showContact ? { contact: { email: p.student.email, phone: p.student.phone } } : {}),
     summary: sec("RESUME")?.summary ?? null, skills: listOf(sec("SKILLS"), "skills"), projects: listOf(sec("PROJECTS"), "projects"), internships: listOf(sec("INTERNSHIPS"), "internships"), achievements: sortedAchievements(sec("ACHIEVEMENTS")), education: sec("EDUCATION_HISTORY") ?? null,
+    collegeProjects: work,
     studentId: p.studentId, collegeId: p.collegeId,
   };
 }
