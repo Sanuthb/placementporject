@@ -1,5 +1,6 @@
 "use client"
 
+import { JdReadiness } from "@/components/staff-readiness"
 import * as React from "react"
 import { toast } from "sonner"
 
@@ -64,7 +65,9 @@ export function CampaignWorkspace({ id }: { id: string }) {
       {c.status === "DRAFT" && c.problems.length > 0 && <Alert><AlertTitle>Before you can activate</AlertTitle><AlertDescription><ul className="list-disc pl-5">{c.problems.map((p) => <li key={p}>{p}</li>)}</ul></AlertDescription></Alert>}
 
       <Tabs defaultValue="dashboard">
-        <TabsList><TabsTrigger value="dashboard">Dashboard</TabsTrigger><TabsTrigger value="candidates">Candidates</TabsTrigger>{c.canManage && <TabsTrigger value="setup">Schedule and setup</TabsTrigger>}{c.canManage && <TabsTrigger value="groups">Groups</TabsTrigger>}<TabsTrigger value="history">History</TabsTrigger></TabsList>
+        <TabsList><TabsTrigger value="dashboard">Dashboard</TabsTrigger><TabsTrigger value="candidates">Candidates</TabsTrigger>{c.canManage && <TabsTrigger value="setup">Schedule and setup</TabsTrigger>}{c.canManage && <TabsTrigger value="groups">Groups</TabsTrigger>}<TabsTrigger value="readiness">Readiness</TabsTrigger><TabsTrigger value="history">History</TabsTrigger></TabsList>
+
+        <TabsContent value="readiness"><JdReadiness jdId={c.jdId} campaignId={c.id} /></TabsContent>
 
         <TabsContent value="dashboard" className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">

@@ -67,7 +67,7 @@ export function latestBy<T extends { attemptNumber: number }>(rows: T[], key: (r
   return [...best.values()];
 }
 
-export type HistoryPoint = { attemptNumber: number; at: string; percent: number };
+export type HistoryPoint = { attemptNumber: number; at: string; percent: number; id?: string };
 /** Change from the first to the latest attempt, and from the previous one, in percentage points. */
 export function trend(points: HistoryPoint[]) {
   const s = [...points].sort((a, b) => a.attemptNumber - b.attemptNumber);

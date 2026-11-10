@@ -4,6 +4,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { MockInterviews } from "@/components/mock-interviews"
+import { StudentReadiness } from "@/components/student-readiness"
 import { OptionSelect } from "@/components/option-select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,8 +49,9 @@ export default function PrepPage() {
 
 function PrepTabs() {
   return (
-    <Tabs defaultValue="mock">
-      <TabsList><TabsTrigger value="mock">Mock interviews</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling</TabsTrigger></TabsList>
+    <Tabs defaultValue="readiness">
+      <TabsList><TabsTrigger value="readiness">Readiness</TabsTrigger><TabsTrigger value="mock">Mock interviews</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling</TabsTrigger></TabsList>
+      <TabsContent value="readiness"><StudentReadiness /></TabsContent>
       <TabsContent value="mock"><MockInterviews /></TabsContent>
       <TabsContent value="experiences"><Experiences /></TabsContent>
       <TabsContent value="counselling"><Counselling /></TabsContent>

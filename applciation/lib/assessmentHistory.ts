@@ -8,13 +8,13 @@ const pct = (score: unknown, max: unknown) => (Number(max) ? Math.round((Number(
 export async function testHistory(collegeId: string, studentId: string) {
   const rows = await db.assessmentAttempt.findMany({
     where: { studentId, status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, score: { not: null }, schedule: { collegeId } },
-    select: { attemptNumber: true, score: true, maxScore: true, submittedAt: true, status: true, scheduleId: true, schedule: { select: { title: true, isPractice: true, isBaseline: true, paper: { select: { category: true } } } } },
+    select: { id: true, attemptNumber: true, score: true, maxScore: true, submittedAt: true, status: true, scheduleId: true, schedule: { select: { title: true, isPractice: true, isBaseline: true, paper: { select: { category: true } } } } },
     orderBy: [{ submittedAt: "asc" }],
   });
   const byTest = new Map<string, { scheduleId: string; title: string; category: string; isPractice: boolean; isBaseline: boolean; attempts: (HistoryPoint & { status: string })[] }>();
   for (const r of rows) {
     const t = byTest.get(r.scheduleId) ?? byTest.set(r.scheduleId, { scheduleId: r.scheduleId, title: r.schedule.title, category: r.schedule.paper.category, isPractice: r.schedule.isPractice, isBaseline: r.schedule.isBaseline, attempts: [] }).get(r.scheduleId)!;
-    t.attempts.push({ attemptNumber: r.attemptNumber, at: (r.submittedAt ?? new Date(0)).toISOString(), percent: pct(r.score, r.maxScore), status: r.status });
+    t.attempts.push({ id: r.id, attemptNumber: r.attemptNumber, at: (r.submittedAt ?? new Date(0)).toISOString(), percent: pct(r.score, r.maxScore), status: r.status });
   }
   return [...byTest.values()].map((t) => ({ ...t, attempts: t.attempts.sort((a, b) => a.attemptNumber - b.attemptNumber), latest: t.attempts.at(-1)?.percent ?? null, ...trend(t.attempts) }));
 }

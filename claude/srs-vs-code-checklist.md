@@ -37,9 +37,9 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M12 – AI Candidate Matching Engine | 8 | 8 | 0 | 0 | 0 | [ ] |
 | M13 – Job-Specific Preparation Campaign | 8 | 7 | 1 | 0 | 0 | [ ] |
 | M14 – Mock Test Engine | 10 | 10 | 0 | 0 | 0 | [ ] |
-| M15 – AI Mock Interview Engine | 7 | 1 | 2 | 4 | 0 | [ ] |
-| M16 – Report Generation | 5 | 0 | 3 | 2 | 0 | [ ] |
-| M17 – Job Readiness Engine | 5 | 0 | 2 | 3 | 0 | [ ] |
+| M15 – AI Mock Interview Engine | 7 | 6 | 1 | 0 | 0 | [ ] |
+| M16 – Report Generation | 5 | 5 | 0 | 0 | 0 | [ ] |
+| M17 – Job Readiness Engine | 5 | 5 | 0 | 0 | 0 | [ ] |
 | M18 – Placement Management | 12 | 11 | 0 | 1 | 0 | [ ] |
 | M19 – Group Discussion and Communication Simulator | 1 | 0 | 0 | 1 | 0 | [ ] |
 | M20 – Notification Centre | 9 | 5 | 3 | 1 | 0 | [ ] |
@@ -338,39 +338,39 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 ### M15 – AI Mock Interview Engine
 
 **Placement Officer side**
-- [ ] Configure or monitor mock interviews — ❌ Missing: students self-start; staff cannot configure or see them
-- [ ] Review interview reports — ❌ Missing for staff
+- [ ] Configure or monitor mock interviews — ✅ Built: staff set up an interview (type, mode, difficulty, length, language, job role, optional JD, due date) for a department or batch, students are notified, and staff see started/finished counts, scores and weakest areas per student (Assessments > Interviews)
+- [ ] Review interview reports — ✅ Built for assigned interviews: full transcript with the student's words separated from AI text, plus the report. A student's own practice interviews stay private and are never shown to staff (opening an assigned one is audited)
 
 **Student side**
-- [ ] Text mock interview for a role and topic, follow-up questions, scored feedback — ✅ Built (`/student/prep`, AI-powered)
-- [ ] Types (HR, technical, behavioural, etc.), difficulty, duration, language, JD-based — 🟡 Partial: role and topic only
-- [ ] Learning mode vs assessment mode — ❌ Missing
-- [ ] Voice or video, audio/video permission checks — ❌ Missing
-- [ ] Report with category scores and previous-attempt comparison — 🟡 Partial: summary, score, strengths, improvements, per-answer comments
+- [ ] Text mock interview for a role and topic, follow-up questions, scored feedback — ✅ Built (`/student/prep`)
+- [ ] Types, difficulty, duration, language, JD-based — ✅ Built: eight types (HR, technical, domain, behavioural, managerial, situational, internship, company-specific), three difficulty levels, 10 to 45 minutes, nine languages. JD-based only through a staff assignment (so students cannot read JDs they were not given)
+- [ ] Learning mode vs assessment mode — ✅ Built: learning gives hints and a coach's note with a stronger answer after each answer; assessment is timed (duration plus 2 minutes), no hints, evaluated at the end
+- [ ] Voice or video, audio/video permission checks — 🟡 Partial: optional voice answers by browser speech-to-text with a microphone check and consent; speech becomes text on the student's device and no audio is recorded or stored. **Video is not built**; nothing is inferred from voice, accent or face
+- [ ] Report with category scores and previous-attempt comparison — ✅ Built: nine categories (technical accuracy, relevance, clarity, structure, communication, problem solving, conceptual understanding, practical examples, behavioural), strengths, improvements, technical feedback, suggested answers, practice tasks, comparison with the previous interview of the same type. PDF/DOCX export belongs to M16
 
 ### M16 – Report Generation
 
 **Placement Officer side**
-- [ ] Student, batch and placement reports — 🟡 Partial: placement PDF and NIRF report, scheduled reports by email, Excel exports; no per-student or per-batch report generator
-- [ ] Mock test and mock interview reports — ❌ Missing for staff
-- [ ] DOCX export — ❌ Missing (PDF and Excel exist)
-- [ ] Separate student answers from AI comments — 🟡 Partial: done in the interview feedback; no formal report
+- [ ] Student, batch and placement reports — ✅ Built: per-student performance report (student profile > Analysis), group report by department and/or batch (Reports > Test and interview results) with the topics the group finds hardest; placement PDF, NIRF Excel and scheduled emails already existed. Coordinators get only their department
+- [ ] Mock test and mock interview reports — ✅ Built: full test report per attempt (student information, job role, test details, overall, topic and section scores, correct and incorrect answers, time, learning gaps, recommended materials, improvement plan) and full interview report (type, duration, questions, transcript, category scores, strengths, improvements, technical feedback, suggested answers, practice, previous-attempt comparison). Staff see interview reports only for interviews the placement office assigned
+- [ ] PDF, DOCX and online dashboard — ✅ Built: every report downloads as PDF or Word and the same content is available as JSON for an online view. There is no separate on-screen dashboard page for the new reports beyond the existing result pages
+- [ ] Separate student answers from AI comments — ✅ Built: every block is labelled (student's own words, AI-generated comment, staff comment, calculated by the system); AI text is shown in italics and colour
 
 **Student side**
-- [ ] View permitted personal assessment and performance reports — 🟡 Partial: assessment results and personality results; no consolidated report
+- [ ] View permitted personal assessment and performance reports — ✅ Built: test report, interview report and consolidated performance report with PDF/Word download. A test report shows only what the test's result visibility allows; personality results are never included
 
 ### M17 – Job Readiness Engine
 
 **Placement Officer side**
-- [ ] Review student readiness and gaps — 🟡 Partial: Student 360 intelligence shows scores, gaps and open-drive comparison; no readiness index
-- [ ] Career Readiness Index — ❌ Missing as a defined measure
-- [ ] Job-Specific Readiness Score — ❌ Missing
+- [ ] Review student readiness and gaps — ✅ Built: student profile > Analysis shows both measures part by part with evidence, gaps and what would raise them; a Readiness tab on each job's matching page and in each preparation campaign lists every student's job readiness beside their eligibility, weakest part and missing skills
+- [ ] Career Readiness Index — ✅ Built: eight weighted parts (verified profile, verified academics, skills with evidence, assessments, mock interviews, projects and internships, learning activity, improvement); parts that cannot be measured are left out and shown as lower coverage
+- [ ] Job-Specific Readiness Score — ✅ Built: skills the job asks for, mock tests (linked to the job, else general), mock interviews (assigned for the job, else general), project evidence, internship, preparation material completed, improvement; mandatory eligibility is a separate gate shown beside the score, never blended in, so an ineligible student is never shown as qualified
 
 **Student side**
-- [ ] View readiness progress — 🟡 Partial: a small summary (profile verified, assessments taken, drives attended, interviews done). It is a progress count, not an explainable score.
+- [ ] View readiness progress — ✅ Built (`/student/prep` > Readiness): both measures, explained, with next steps and progress over time (one saved score per day)
 
 **Connection**
-- [ ] M3, M4, M6, M8, M9, M14, M15 → M17 → M18 — ❌ Missing
+- [ ] M3, M4, M6, M8, M9, M14, M15 → M17 → M18 — ✅ Built for the data M17 reads (verified profile, academics, skills, tests, interviews, projects, internships, courses, resources). Honest limits: weights are fixed (not college-configurable); personality, career-interest and behavioural-style results are never used; staff see interview scores only from assigned interviews, so a student's own score can differ from the staff view; readiness is not used to filter or rank for selection
 
 ### M18 – Placement Management
 

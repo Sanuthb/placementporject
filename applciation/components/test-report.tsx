@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
+import { ReportButtons } from "@/components/report-buttons"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -47,6 +48,7 @@ export function TestReport({ id }: { id: string }) {
           </div>
           {r.provisional && <p className="text-sm text-muted-foreground">{r.pending} answer{r.pending > 1 ? "s are" : " is"} still being marked. This score will change and your pass result is decided once they are.</p>}
           {r.failedSections.length > 0 && <p className="text-sm text-destructive">Below the minimum in: {r.failedSections.join(", ")}</p>}
+          <div className="flex flex-wrap gap-2 pt-1"><ReportButtons path={`/api/student/reports/test/${id}`} label="Download this report" /><ReportButtons path="/api/student/reports/performance" label="My performance report" /></div>
           {data.comparison && <p className="text-sm text-muted-foreground">Compared with your previous attempt: {data.comparison.overallChange >= 0 ? "+" : ""}{data.comparison.overallChange} points.{data.comparison.improved.length > 0 && ` Better in ${data.comparison.improved.join(", ")}.`}{data.comparison.slipped.length > 0 && ` Lower in ${data.comparison.slipped.join(", ")}.`}</p>}
         </CardContent>
       </Card>

@@ -3,8 +3,9 @@ import { db } from "@/lib/db";
 import { DEFAULT_REQUIRED_SECTIONS } from "@/lib/verification";
 import { latestBy } from "@/lib/reassessment";
 import { completionOf } from "@/lib/profileCompletionLoad";
+import { careerFor, recordAndHistory } from "@/lib/readinessService";
 
-/** How ready I am, from things the platform already knows: profile, assessments, drives attended, mock interviews. */
+/** How ready I am: the Career Readiness Index (explained part by part, with my progress over time) beside the plain counts the platform already knew. */
 export const GET = studentRoute({ module: "STUDENT_PREP" }, async (_req, me) => {
   const [mods, settings, sections, attempts, attendance, mocks] = await Promise.all([
     db.collegeModule.findMany({ where: { collegeId: me.collegeId, enabled: true }, select: { module: true } }),
@@ -21,7 +22,10 @@ export const GET = studentRoute({ module: "STUDENT_PREP" }, async (_req, me) => 
   const scores = mocks.map((m) => (m.feedback as { score?: number } | null)?.score).filter((x): x is number => typeof x === "number");
   const avg = (x: number[]) => (x.length ? Math.round((x.reduce((a, b) => a + b, 0) / x.length) * 10) / 10 : null);
   const c = await completionOf(me.collegeId, me.studentId);
+  const index = (await careerFor(me.collegeId, [me.studentId], "student")).get(me.studentId)!;
+  const trend = await recordAndHistory(me.collegeId, me.studentId, { kind: "CAREER" }, index, true);
   return {
+    index, trend,
     profile: { verified, required: required.length, percent: c.percent, verifiedPercent: c.verifiedPercent, nextAction: c.nextAction },
     assessments: has.has("ASSESSMENTS") ? { taken: pcts.length, averagePercent: avg(pcts) } : null,
     drivesAttended: has.has("ATTENDANCE_BLOCKING") ? new Set(attendance.map((a) => a.driveId)).size : null,

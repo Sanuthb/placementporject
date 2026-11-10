@@ -5,6 +5,8 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 
 import { MatchBoard } from "@/components/match-board"
+import { JdReadiness } from "@/components/staff-readiness"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -13,7 +15,9 @@ function Page() {
   return (
     <div className="flex max-w-6xl flex-col gap-3">
       <div><Button variant="outline" size="sm" render={<Link href={`/staff/job-descriptions/${id}`} />}>Back to the job description</Button></div>
-      <MatchBoard id={id} />
+      <Tabs defaultValue="match"><TabsList><TabsTrigger value="match">Candidate matching</TabsTrigger><TabsTrigger value="readiness">Readiness</TabsTrigger></TabsList>
+        <TabsContent value="match"><MatchBoard id={id} /></TabsContent>
+        <TabsContent value="readiness"><JdReadiness jdId={id} /></TabsContent></Tabs>
     </div>
   )
 }

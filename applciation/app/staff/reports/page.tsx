@@ -3,6 +3,7 @@
 import * as React from "react"
 import { toast } from "sonner"
 
+import { GroupReports } from "@/components/group-reports"
 import { MasterTab } from "@/components/master-tab"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -22,10 +23,11 @@ type Import = { created?: number; skipped?: number; failed?: number; errors?: un
 
 export default function ReportsPage() {
   const { state } = useAuth()
+  const hasAssessments = state.status === "ready" && state.profile.modules.includes("ASSESSMENTS")
   const hasOnboarding = state.status === "ready" && state.profile.modules.includes("ONBOARDING")
   return (
     <Tabs defaultValue="download">
-      <TabsList><TabsTrigger value="download">Reports</TabsTrigger><TabsTrigger value="schedules">Scheduled emails</TabsTrigger>{hasOnboarding && <TabsTrigger value="history">Past placements</TabsTrigger>}</TabsList>
+      <TabsList><TabsTrigger value="download">Reports</TabsTrigger><TabsTrigger value="schedules">Scheduled emails</TabsTrigger>{hasAssessments && <TabsTrigger value="group">Test and interview results</TabsTrigger>}{hasOnboarding && <TabsTrigger value="history">Past placements</TabsTrigger>}</TabsList>
       <TabsContent value="download" className="grid max-w-3xl gap-4 sm:grid-cols-2">
         <Card><CardHeader><CardTitle>Placement report</CardTitle><CardDescription>A PDF summary for management.</CardDescription></CardHeader><CardContent><Button onClick={() => download("/api/reports/placement.pdf").catch(toastError)}>Download PDF</Button></CardContent></Card>
         <Card><CardHeader><CardTitle>NIRF-style data</CardTitle><CardDescription>Placement data in a NAAC/NIRF layout, as Excel.</CardDescription></CardHeader><CardContent><Button onClick={() => download("/api/reports/nirf").catch(toastError)}>Download Excel</Button></CardContent></Card>
@@ -37,6 +39,7 @@ export default function ReportsPage() {
           patchPath={(r) => `/api/reports/schedules/${r.id}`}
           columns={[{ label: "Report", cell: (r) => titleCase(r.type) }, { label: "Frequency", cell: (r) => titleCase(r.frequency) }, { label: "Recipients", cell: (r) => r.recipients.join(", ") }, { label: "Next run", cell: (r) => fmtDate(r.nextRunAt) }, { label: "State", cell: (r) => <Badge variant={r.isActive ? "default" : "outline"}>{r.isActive ? "On" : "Off"}</Badge> }]} />
       </TabsContent>
+      {hasAssessments && <TabsContent value="group"><GroupReports /></TabsContent>}
       {hasOnboarding && <TabsContent value="history"><HistoricalImport /></TabsContent>}
     </Tabs>
   )

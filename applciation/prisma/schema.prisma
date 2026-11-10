@@ -775,6 +775,7 @@ model Student {
   mentor                 User?                       @relation("StudentMentor", fields: [mentorId], references: [id], onDelete: SetNull)
   jdShortlists           JdShortlist[]
   campaignMembers        CampaignMember[]
+  readinessSnapshots     ReadinessSnapshot[]
   testImprovements       TestImprovement[]
 
   @@unique([collegeId, enrollmentNo])
@@ -1514,20 +1515,62 @@ model PsychAttempt {
 
 // A practice interview with an AI interviewer. The transcript alternates interviewer questions and the student's answers.
 model MockInterview {
-  id          String    @id @default(uuid()) @db.Uuid
-  collegeId   String    @db.Uuid
-  studentId   String    @db.Uuid
-  role        String
-  topic       String
-  status      String    @default("IN_PROGRESS")
-  transcript  Json      @default("[]")
-  feedback    Json?
-  createdAt   DateTime  @default(now())
-  completedAt DateTime?
+  id             String    @id @default(uuid()) @db.Uuid
+  collegeId      String    @db.Uuid
+  studentId      String    @db.Uuid
+  role           String
+  topic          String
+  status         String    @default("IN_PROGRESS")
+  transcript     Json      @default("[]")
+  feedback       Json?
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+  /// HR, TECHNICAL, DOMAIN, BEHAVIOURAL, MANAGERIAL, SITUATIONAL, INTERNSHIP or COMPANY.
+  type           String    @default("TECHNICAL")
+  /// LEARNING (hints and better answers as it goes) or ASSESSMENT (timed, no hints, evaluated at the end).
+  mode           String    @default("LEARNING")
+  difficulty     String    @default("MEDIUM")
+  language       String    @default("English")
+  durationMin    Int       @default(20)
+  questionCount  Int       @default(5)
+  /// The job the interview prepares for. Only set through an assignment, so a student cannot read a JD they were not given.
+  jdId           String?   @db.Uuid
+  /// Set when the placement office assigned it. Only those interviews are visible to staff.
+  assignmentId   String?   @db.Uuid
+  /// When the student agreed to using voice dictation. Audio is never stored, only the text.
+  voiceConsentAt DateTime?
+  voiceUsed      Boolean   @default(false)
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student    Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment InterviewAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
 
   @@index([studentId, createdAt])
+  @@index([assignmentId])
+}
+
+/// An interview the placement office sets up for a group of students. Its interviews and reports are visible to staff, and the student is told so before starting.
+model InterviewAssignment {
+  id                  String    @id @default(uuid()) @db.Uuid
+  collegeId           String    @db.Uuid
+  title               String
+  type                String
+  mode                String
+  difficulty          String    @default("MEDIUM")
+  durationMin         Int       @default(20)
+  language            String    @default("English")
+  role                String
+  topic               String
+  jdId                String?   @db.Uuid
+  dueAt               DateTime?
+  targetStudentIds    String[]
+  targetDepartmentIds String[]
+  targetBatchIds      String[]
+  createdById         String    @db.Uuid
+  createdAt           DateTime  @default(now())
+
+  interviews MockInterview[]
+
+  @@index([collegeId, createdAt])
 }
 
 // A drive a student bookmarked to look at later.
@@ -3742,4 +3785,25 @@ model TestImprovement {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
+}
+
+/// A saved readiness score, at most one per student, measure and day, so progress can be shown over time. `scopeKey` is "career" for the Career Readiness Index or the job description id for a Job-Specific Readiness Score.
+model ReadinessSnapshot {
+  id         String   @id @default(uuid()) @db.Uuid
+  collegeId  String   @db.Uuid
+  studentId  String   @db.Uuid
+  kind       String
+  jdId       String?  @db.Uuid
+  scopeKey   String
+  day        DateTime @db.Date
+  score      Int
+  coverage   Int
+  /// Each part's value (0 to 1) or null when it could not be measured.
+  components Json
+  createdAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, scopeKey, day])
+  @@index([collegeId, scopeKey])
 }

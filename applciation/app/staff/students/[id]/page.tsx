@@ -28,6 +28,8 @@ import { api, download, toastError } from "@/lib/web/api"
 import { hasRole, isCoordinatorOnly, useAuth } from "@/lib/web/auth"
 import { fmtDate, fmtDateTime, fmtLpa, statusVariant, titleCase } from "@/lib/web/format"
 import { AssessmentHistory } from "@/components/assessment-history"
+import { ReportButtons } from "@/components/report-buttons"
+import { StaffStudentReadiness } from "@/components/staff-readiness"
 import { CareerProfile } from "@/components/career-profile"
 import { RoadmapBoard } from "@/components/roadmap-board"
 import { StaffResumes } from "@/components/staff-resumes"
@@ -180,7 +182,9 @@ export default function StudentPage() {
         <TabsContent value="roadmap"><RoadmapBoard mode="review" base={`/api/students/${id}/roadmap`} studentName={p.name} /></TabsContent>
         <TabsContent value="analysis" className="flex flex-col gap-4">
           <CareerProfile endpoint={`/api/students/${id}/career-profile`} title="Career profile" />
-          <AssessmentHistory endpoint={`/api/students/${id}/assessment-history`} title="Assessment history" />
+          <div><ReportButtons path={`/api/reports/documents/student/${id}`} label="Performance report" /></div>
+          <StaffStudentReadiness studentId={id} />
+          <AssessmentHistory endpoint={`/api/students/${id}/assessment-history`} title="Assessment history" reportBase="/api/reports/documents/test" />
           {analysis.loading && !analysis.data ? <Skeleton className="h-64" /> : analysis.data && (
             <>
               {analysis.data.atRisk.flags.length > 0 && <Alert variant="destructive"><AlertTitle>At risk</AlertTitle><AlertDescription>{analysis.data.atRisk.flags.map((f) => f.detail).join(" · ")}</AlertDescription></Alert>}

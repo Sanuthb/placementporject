@@ -1,0 +1,660 @@
+▲ Next.js 16.4.3 (Turbopack)
+- Environments: .env
+✓ Running next.config.ts took 79ms
+- Cache Components enabled
+- Partial Prefetching enabled
+- Experiments (use with caution):
+  ✓ agentFeedback
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 44s
+  Running TypeScript ...
+  Finished TypeScript in 71s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/292) ...
+  Generating static pages using 3 workers (73/292) 
+  Generating static pages using 3 workers (146/292) 
+  Generating static pages using 3 workers (219/292) 
+✓ Generating static pages using 3 workers (292/292) in 7.9s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/analytics/drives/[id]
+├ ƒ /api/analytics/elimination
+├ ƒ /api/analytics/elimination/students
+├ ƒ /api/analytics/overview
+├ ƒ /api/announcements
+├ ƒ /api/announcements/[id]
+├ ƒ /api/approvals
+├ ƒ /api/approvals/[id]
+├ ƒ /api/approvals/[id]/decide
+├ ƒ /api/assessments/banks
+├ ƒ /api/assessments/banks/[id]/questions
+├ ƒ /api/assessments/baseline
+├ ƒ /api/assessments/marking
+├ ƒ /api/assessments/marking/[attemptId]
+├ ƒ /api/assessments/papers
+├ ƒ /api/assessments/papers/[id]
+├ ƒ /api/assessments/report
+├ ƒ /api/assessments/rules
+├ ƒ /api/assessments/schedules
+├ ƒ /api/assessments/schedules/[id]/results
+├ ƒ /api/assessments/starter
+├ ƒ /api/audit-logs
+├ ƒ /api/auth/login-event
+├ ƒ /api/blocking/blocks
+├ ƒ /api/blocking/blocks/[id]/lift
+├ ƒ /api/blocking/evaluate
+├ ƒ /api/blocking/policies
+├ ƒ /api/blocking/policies/[id]
+├ ƒ /api/campaigns
+├ ƒ /api/campaigns/[id]
+├ ƒ /api/campaigns/[id]/candidates
+├ ƒ /api/campaigns/[id]/events
+├ ƒ /api/campaigns/[id]/groups
+├ ƒ /api/campaigns/[id]/groups/[gid]
+├ ƒ /api/campaigns/[id]/invite
+├ ƒ /api/campaigns/[id]/members/[mid]
+├ ƒ /api/campaigns/[id]/members/[mid]/help
+├ ƒ /api/campaigns/[id]/members/[mid]/plan
+├ ƒ /api/campaigns/[id]/members/[mid]/plan/[iid]
+├ ƒ /api/campaigns/[id]/members/[mid]/plan/regenerate
+├ ƒ /api/campaigns/[id]/members/[mid]/ready
+├ ƒ /api/campaigns/[id]/remind
+├ ƒ /api/campaigns/[id]/status
+├ ƒ /api/communications/email
+├ ƒ /api/communications/messages
+├ ƒ /api/companies
+├ ƒ /api/companies/[id]
+├ ƒ /api/companies/[id]/notes
+├ ƒ /api/courses
+├ ƒ /api/courses/[id]
+├ ƒ /api/courses/[id]/analytics
+├ ƒ /api/courses/[id]/enrolments
+├ ƒ /api/courses/[id]/lessons
+├ ƒ /api/courses/[id]/lessons/[lid]
+├ ƒ /api/courses/[id]/lessons/[lid]/attendance
+├ ƒ /api/courses/[id]/lessons/[lid]/file
+├ ƒ /api/courses/[id]/modules
+├ ƒ /api/courses/[id]/modules/[mid]
+├ ƒ /api/courses/[id]/questions
+├ ƒ /api/courses/[id]/questions/[qid]
+├ ƒ /api/courses/[id]/status
+├ ƒ /api/courses/[id]/submissions
+├ ƒ /api/courses/[id]/submissions/[sid]
+├ ƒ /api/courses/summary
+├ ƒ /api/crm/follow-ups
+├ ƒ /api/crm/follow-ups/run
+├ ƒ /api/crm/pipeline
+├ ƒ /api/crm/prospects
+├ ƒ /api/crm/prospects/[id]
+├ ƒ /api/crm/prospects/[id]/activities
+├ ƒ /api/crm/prospects/[id]/stage
+├ ƒ /api/dashboard
+├ ƒ /api/drives
+├ ƒ /api/drives/[id]
+├ ƒ /api/drives/[id]/applications
+├ ƒ /api/drives/[id]/applications/[applicationId]/resume
+├ ƒ /api/drives/[id]/applications/decide
+├ ƒ /api/drives/[id]/applications/export
+├ ƒ /api/drives/[id]/attendance
+├ ƒ /api/drives/[id]/attendance/check-in
+├ ƒ /api/drives/[id]/attendance/close
+├ ƒ /api/drives/[id]/attendance/excuse
+├ ƒ /api/drives/[id]/attendance/mark
+├ ƒ /api/drives/[id]/attendance/rotate-code
+├ ƒ /api/drives/[id]/attendance/session
+├ ƒ /api/drives/[id]/cancel
+├ ƒ /api/drives/[id]/close
+├ ƒ /api/drives/[id]/documents
+├ ƒ /api/drives/[id]/duplicate
+├ ƒ /api/drives/[id]/eligibility
+├ ƒ /api/drives/[id]/eligibility/export
+├ ƒ /api/drives/[id]/exceptions
+├ ƒ /api/drives/[id]/exceptions/[studentId]
+├ ƒ /api/drives/[id]/feedback
+├ ƒ /api/drives/[id]/non-applicants
+├ ƒ /api/drives/[id]/panels
+├ ƒ /api/drives/[id]/panels/[panelId]
+├ ƒ /api/drives/[id]/publish
+├ ƒ /api/drives/[id]/reminders
+├ ƒ /api/drives/[id]/rounds
+├ ƒ /api/drives/[id]/rounds/[roundId]/candidates
+├ ƒ /api/drives/[id]/rounds/[roundId]/results
+├ ƒ /api/drives/[id]/rounds/[roundId]/results/upload
+├ ƒ /api/drives/[id]/rounds/[roundId]/shortlist-export
+├ ƒ /api/drives/[id]/slots
+├ ƒ /api/drives/[id]/slots/[slotId]
+├ ƒ /api/drives/[id]/slots/[slotId]/reschedule
+├ ƒ /api/events
+├ ƒ /api/events/[id]
+├ ƒ /api/events/[id]/cancel
+├ ƒ /api/events/[id]/complete
+├ ƒ /api/events/[id]/publish
+├ ƒ /api/events/[id]/registrations
+├ ƒ /api/events/[id]/results
+├ ƒ /api/faculty/me
+├ ƒ /api/faculty/students
+├ ƒ /api/faqs
+├ ƒ /api/faqs/[id]
+├ ƒ /api/health
+├ ƒ /api/internship-applications
+├ ƒ /api/internship-applications/[id]/decision
+├ ƒ /api/internship-feedback/[token]
+├ ƒ /api/internship-postings
+├ ƒ /api/internship-postings/[id]
+├ ƒ /api/internship-postings/[id]/applications
+├ ƒ /api/internship-postings/[id]/status
+├ ƒ /api/internships
+├ ƒ /api/internships/[id]
+├ ƒ /api/internships/[id]/attendance
+├ ƒ /api/internships/[id]/certificate
+├ ƒ /api/internships/[id]/evaluations
+├ ƒ /api/internships/[id]/feedback
+├ ƒ /api/internships/[id]/links
+├ ƒ /api/internships/[id]/logs/[logId]/review
+├ ƒ /api/internships/[id]/mentor
+├ ƒ /api/internships/[id]/ppo
+├ ƒ /api/internships/[id]/schedule
+├ ƒ /api/internships/[id]/tasks
+├ ƒ /api/internships/[id]/tasks/[taskId]
+├ ƒ /api/internships/summary
+├ ƒ /api/interviews/[interviewId]
+├ ƒ /api/interviews/assignments
+├ ƒ /api/interviews/assignments/[id]
+├ ƒ /api/invitations/accept
+├ ƒ /api/invitations/lookup
+├ ƒ /api/jds
+├ ƒ /api/jds/[id]
+├ ƒ /api/jds/[id]/drive
+├ ƒ /api/jds/[id]/extract
+├ ƒ /api/jds/[id]/matches
+├ ƒ /api/jds/[id]/matches/[studentId]
+├ ƒ /api/jds/[id]/review
+├ ƒ /api/jds/[id]/shortlist
+├ ƒ /api/jds/[id]/shortlist/[studentId]
+├ ƒ /api/job-alerts
+├ ƒ /api/job-alerts/[id]
+├ ƒ /api/job-alerts/[id]/close
+├ ƒ /api/job-alerts/[id]/publish
+├ ƒ /api/job-alerts/[id]/stats
+├ ƒ /api/learning/journeys
+├ ƒ /api/learning/programmes
+├ ƒ /api/learning/programmes/[id]
+├ ƒ /api/learning/programmes/[id]/members
+├ ƒ /api/me
+├ ƒ /api/me/logins
+├ ƒ /api/notifications
+├ ƒ /api/notifications/read
+├ ƒ /api/notifications/round-reminders/run
+├ ƒ /api/offers
+├ ƒ /api/offers/[id]
+├ ƒ /api/offers/[id]/joining
+├ ƒ /api/offers/[id]/joining-proof
+├ ƒ /api/offers/[id]/letter
+├ ƒ /api/offers/[id]/respond
+├ ƒ /api/offers/[id]/revoke
+├ ƒ /api/offers/export
+├ ƒ /api/participation-requests
+├ ƒ /api/participation-requests/[id]/decide
+├ ƒ /api/placements/historical-import
+├ ƒ /api/platform/institutions
+├ ƒ /api/platform/institutions/[id]
+├ ƒ /api/platform/me
+├ ƒ /api/platform/mfa
+├ ƒ /api/platform/mfa/enroll
+├ ƒ /api/platform/mfa/verify
+├ ƒ /api/prep/counselling
+├ ƒ /api/prep/counselling/[id]/cancel
+├ ƒ /api/prep/counselling/[id]/complete
+├ ƒ /api/prep/experiences
+├ ƒ /api/prep/experiences/[id]/moderate
+├ ƒ /api/project-review/[token]
+├ ƒ /api/projects
+├ ƒ /api/projects/[id]
+├ ƒ /api/projects/[id]/status
+├ ƒ /api/projects/[id]/teams
+├ ƒ /api/projects/[id]/teams/[tid]
+├ ƒ /api/projects/[id]/teams/[tid]/invites
+├ ƒ /api/projects/[id]/teams/[tid]/notes
+├ ƒ /api/projects/[id]/teams/[tid]/publish
+├ ƒ /api/projects/[id]/teams/[tid]/reviews
+├ ƒ /api/projects/[id]/teams/[tid]/sync
+├ ƒ /api/projects/guides
+├ ƒ /api/projects/summary
+├ ƒ /api/psychometrics/access-log
+├ ƒ /api/psychometrics/cohort
+├ ƒ /api/psychometrics/completion
+├ ƒ /api/psychometrics/reminders
+├ ƒ /api/psychometrics/students/[id]/result
+├ ƒ /api/recruiter-jobs
+├ ƒ /api/recruiter-jobs/[id]/review
+├ ƒ /api/recruiter/drives
+├ ƒ /api/recruiter/drives/[id]
+├ ƒ /api/recruiter/drives/[id]/candidates
+├ ƒ /api/recruiter/drives/[id]/candidates/[studentId]/match
+├ ƒ /api/recruiter/drives/[id]/candidates/[studentId]/resume.pdf
+├ ƒ /api/recruiter/drives/[id]/feedback
+├ ƒ /api/recruiter/drives/[id]/schedule
+├ ƒ /api/recruiter/jobs
+├ ƒ /api/recruiter/me
+├ ƒ /api/recruiters
+├ ƒ /api/recruiters/[id]
+├ ƒ /api/reports/documents/group
+├ ƒ /api/reports/documents/interview/[interviewId]
+├ ƒ /api/reports/documents/student/[studentId]
+├ ƒ /api/reports/documents/test/[attemptId]
+├ ƒ /api/reports/nirf
+├ ƒ /api/reports/placement.pdf
+├ ƒ /api/reports/schedules
+├ ƒ /api/reports/schedules/[id]
+├ ƒ /api/reports/schedules/run
+├ ƒ /api/resources
+├ ƒ /api/resources/[id]
+├ ƒ /api/resources/[id]/assignments
+├ ƒ /api/resources/[id]/assignments/[aid]
+├ ƒ /api/resources/[id]/file
+├ ƒ /api/resources/[id]/review
+├ ƒ /api/resources/analytics
+├ ƒ /api/resources/suggest-metadata
+├ ƒ /api/resumes/readiness
+├ ƒ /api/roadmaps
+├ ƒ /api/settings/academic-years
+├ ƒ /api/settings/academic-years/[id]
+├ ƒ /api/settings/batches
+├ ƒ /api/settings/batches/[id]
+├ ƒ /api/settings/branches
+├ ƒ /api/settings/branches/[id]
+├ ƒ /api/settings/campuses
+├ ƒ /api/settings/campuses/[id]
+├ ƒ /api/settings/college
+├ ƒ /api/settings/departments
+├ ƒ /api/settings/departments/[id]
+├ ƒ /api/settings/faculty
+├ ƒ /api/settings/faculty/[id]
+├ ƒ /api/settings/faculty/mentees
+├ ƒ /api/settings/integrity
+├ ƒ /api/settings/invitations
+├ ƒ /api/settings/policies
+├ ƒ /api/settings/programs
+├ ƒ /api/settings/programs/[id]
+├ ƒ /api/settings/security
+├ ƒ /api/settings/semesters
+├ ƒ /api/settings/semesters/[id]
+├ ƒ /api/settings/staff
+├ ƒ /api/settings/staff/[id]
+├ ƒ /api/settings/staff/[id]/logins
+├ ƒ /api/settings/staff/[id]/reset-access
+├ ƒ /api/settings/universities
+├ ƒ /api/settings/universities/[id]
+├ ƒ /api/settings/verification
+├ ƒ /api/showcase/[token]
+├ ƒ /api/showcase/[token]/resume.pdf
+├ ƒ /api/showcase/manage
+├ ƒ /api/showcase/manage/[id]/revoke
+├ ƒ /api/student/announcements
+├ ƒ /api/student/applications
+├ ƒ /api/student/assessments
+├ ƒ /api/student/assessments/[id]/answers
+├ ƒ /api/student/assessments/[id]/events
+├ ƒ /api/student/assessments/[id]/improvement
+├ ƒ /api/student/assessments/[id]/improvement/practice
+├ ƒ /api/student/assessments/[id]/report
+├ ƒ /api/student/assessments/[id]/result
+├ ƒ /api/student/assessments/[id]/start
+├ ƒ /api/student/assessments/[id]/submit
+├ ƒ /api/student/assessments/history
+├ ƒ /api/student/attendance/check-in
+├ ƒ /api/student/attendance/history
+├ ƒ /api/student/backlogs
+├ ƒ /api/student/backlogs/[id]
+├ ƒ /api/student/backlogs/[id]/attempts
+├ ƒ /api/student/blocks
+├ ƒ /api/student/campaigns
+├ ƒ /api/student/campaigns/[id]
+├ ƒ /api/student/campaigns/[id]/help
+├ ƒ /api/student/campaigns/[id]/plan/[iid]
+├ ƒ /api/student/campaigns/[id]/respond
+├ ƒ /api/student/career-profile
+├ ƒ /api/student/completion
+├ ƒ /api/student/courses
+├ ƒ /api/student/courses/[id]
+├ ƒ /api/student/courses/[id]/enrol
+├ ƒ /api/student/courses/[id]/lessons/[lid]/complete
+├ ƒ /api/student/courses/[id]/lessons/[lid]/quiz
+├ ƒ /api/student/courses/[id]/lessons/[lid]/submission
+├ ƒ /api/student/courses/[id]/questions
+├ ƒ /api/student/courses/[id]/tutor
+├ ƒ /api/student/courses/recommended
+├ ƒ /api/student/documents
+├ ƒ /api/student/documents/[docId]
+├ ƒ /api/student/documents/[docId]/reading
+├ ƒ /api/student/documents/[docId]/reading/decide
+├ ƒ /api/student/documents/[docId]/replace
+├ ƒ /api/student/drives
+├ ƒ /api/student/drives/[id]
+├ ƒ /api/student/drives/[id]/apply
+├ ƒ /api/student/drives/[id]/match
+├ ƒ /api/student/drives/[id]/save
+├ ƒ /api/student/drives/[id]/withdraw
+├ ƒ /api/student/education
+├ ƒ /api/student/education/[recordId]
+├ ƒ /api/student/events
+├ ƒ /api/student/events/[id]/cancel
+├ ƒ /api/student/events/[id]/register
+├ ƒ /api/student/faqs
+├ ƒ /api/student/instruments
+├ ƒ /api/student/instruments/[key]
+├ ƒ /api/student/instruments/[key]/attempt
+├ ƒ /api/student/instruments/[key]/result
+├ ƒ /api/student/internship-applications
+├ ƒ /api/student/internship-applications/[id]
+├ ƒ /api/student/internship-postings
+├ ƒ /api/student/internship-postings/[id]/apply
+├ ƒ /api/student/internships
+├ ƒ /api/student/internships/[id]
+├ ƒ /api/student/internships/[id]/attendance
+├ ƒ /api/student/internships/[id]/certificate
+├ ƒ /api/student/internships/[id]/logs
+├ ƒ /api/student/internships/[id]/tasks/[taskId]/submit
+├ ƒ /api/student/job-alerts
+├ ƒ /api/student/job-alerts/[id]/event
+├ ƒ /api/student/learning
+├ ƒ /api/student/learning/[programmeId]/steps/[index]/complete
+├ ƒ /api/student/me
+├ ƒ /api/student/notifications
+├ ƒ /api/student/notifications/read
+├ ƒ /api/student/offer-rules
+├ ƒ /api/student/offers
+├ ƒ /api/student/offers/[id]/joining
+├ ƒ /api/student/offers/[id]/respond
+├ ƒ /api/student/onboarding
+├ ƒ /api/student/onboarding/correction
+├ ƒ /api/student/onboarding/submit
+├ ƒ /api/student/participation-requests
+├ ƒ /api/student/portfolio
+├ ƒ /api/student/preferences
+├ ƒ /api/student/prep/counselling/[id]/book
+├ ƒ /api/student/prep/counselling/[id]/cancel
+├ ƒ /api/student/prep/counselling/mine
+├ ƒ /api/student/prep/counselling/slots
+├ ƒ /api/student/prep/experiences
+├ ƒ /api/student/prep/mock-interviews
+├ ƒ /api/student/prep/mock-interviews/[id]
+├ ƒ /api/student/prep/mock-interviews/[id]/answer
+├ ƒ /api/student/prep/mock-interviews/[id]/finish
+├ ƒ /api/student/prep/mock-interviews/[id]/hint
+├ ƒ /api/student/prep/mock-interviews/assigned
+├ ƒ /api/student/privacy/access-log
+├ ƒ /api/student/profile-view
+├ ƒ /api/student/project-teams/[tid]
+├ ƒ /api/student/project-teams/[tid]/files
+├ ƒ /api/student/project-teams/[tid]/files/[fid]
+├ ƒ /api/student/project-teams/[tid]/leave
+├ ƒ /api/student/project-teams/[tid]/member
+├ ƒ /api/student/project-teams/[tid]/milestones
+├ ƒ /api/student/project-teams/[tid]/milestones/[mid]
+├ ƒ /api/student/project-teams/[tid]/start
+├ ƒ /api/student/project-teams/[tid]/submit
+├ ƒ /api/student/project-teams/[tid]/sync
+├ ƒ /api/student/project-teams/[tid]/tasks
+├ ƒ /api/student/project-teams/[tid]/tasks/[taskId]
+├ ƒ /api/student/project-teams/[tid]/updates
+├ ƒ /api/student/projects
+├ ƒ /api/student/projects/[id]/teams
+├ ƒ /api/student/psychometrics/attempt
+├ ƒ /api/student/psychometrics/consent
+├ ƒ /api/student/psychometrics/instrument
+├ ƒ /api/student/psychometrics/result
+├ ƒ /api/student/psychometrics/sharing
+├ ƒ /api/student/readiness
+├ ƒ /api/student/reports
+├ ƒ /api/student/reports/interview/[id]
+├ ƒ /api/student/reports/performance
+├ ƒ /api/student/reports/test/[id]
+├ ƒ /api/student/resources
+├ ƒ /api/student/resources/[id]
+├ ƒ /api/student/resources/[id]/progress
+├ ƒ /api/student/resources/recommended
+├ ƒ /api/student/resume
+├ ƒ /api/student/resume.pdf
+├ ƒ /api/student/resume/master
+├ ƒ /api/student/resumes
+├ ƒ /api/student/resumes/[id]
+├ ƒ /api/student/resumes/[id]/approve
+├ ƒ /api/student/resumes/[id]/archive
+├ ƒ /api/student/resumes/[id]/duplicate
+├ ƒ /api/student/resumes/[id]/export
+├ ƒ /api/student/resumes/[id]/primary
+├ ƒ /api/student/resumes/[id]/suggest
+├ ƒ /api/student/roadmap
+├ ƒ /api/student/roadmap/goals
+├ ƒ /api/student/roadmap/goals/[id]
+├ ƒ /api/student/roadmap/milestones
+├ ƒ /api/student/roadmap/milestones/[id]
+├ ƒ /api/student/sections
+├ ƒ /api/student/sections/[section]
+├ ƒ /api/student/sections/[section]/documents
+├ ƒ /api/student/sections/[section]/documents/[docId]
+├ ƒ /api/student/semesters
+├ ƒ /api/student/semesters/[id]
+├ ƒ /api/student/showcase
+├ ƒ /api/student/showcase/rotate
+├ ƒ /api/student/tickets
+├ ƒ /api/student/tickets/[id]
+├ ƒ /api/student/tickets/[id]/attachments
+├ ƒ /api/student/tickets/[id]/messages
+├ ƒ /api/students
+├ ƒ /api/students/[id]
+├ ƒ /api/students/[id]/360
+├ ƒ /api/students/[id]/academic-records
+├ ƒ /api/students/[id]/analysis
+├ ƒ /api/students/[id]/assessment-history
+├ ƒ /api/students/[id]/career-profile
+├ ƒ /api/students/[id]/corrections/[cid]
+├ ƒ /api/students/[id]/documents
+├ ƒ /api/students/[id]/documents/[docId]
+├ ƒ /api/students/[id]/documents/[docId]/reading
+├ ƒ /api/students/[id]/education
+├ ƒ /api/students/[id]/education/[recordId]
+├ ƒ /api/students/[id]/history
+├ ƒ /api/students/[id]/intelligence
+├ ƒ /api/students/[id]/intelligence/generate
+├ ƒ /api/students/[id]/invitation
+├ ƒ /api/students/[id]/invitation/link
+├ ƒ /api/students/[id]/invitation/resend
+├ ƒ /api/students/[id]/invitation/revoke
+├ ƒ /api/students/[id]/logins
+├ ƒ /api/students/[id]/notes
+├ ƒ /api/students/[id]/onboard
+├ ƒ /api/students/[id]/onboarding
+├ ƒ /api/students/[id]/onboarding/reject
+├ ƒ /api/students/[id]/onboarding/request-corrections
+├ ƒ /api/students/[id]/onboarding/start-review
+├ ƒ /api/students/[id]/onboarding/verify
+├ ƒ /api/students/[id]/participation
+├ ƒ /api/students/[id]/progression
+├ ƒ /api/students/[id]/reset-access
+├ ƒ /api/students/[id]/resume
+├ ƒ /api/students/[id]/resume.pdf
+├ ƒ /api/students/[id]/resumes
+├ ƒ /api/students/[id]/resumes/[vid]/export
+├ ƒ /api/students/[id]/roadmap
+├ ƒ /api/students/[id]/roadmap/comments
+├ ƒ /api/students/[id]/roadmap/milestones/[mid]
+├ ƒ /api/students/[id]/sections
+├ ƒ /api/students/[id]/sections/[section]
+├ ƒ /api/students/[id]/sections/[section]/approve
+├ ƒ /api/students/[id]/sections/[section]/request-changes
+├ ƒ /api/students/[id]/verification-history
+├ ƒ /api/students/export
+├ ƒ /api/students/import/[jobId]
+├ ƒ /api/students/import/[jobId]/confirm
+├ ƒ /api/students/import/[jobId]/errors
+├ ƒ /api/students/import/[jobId]/mapping
+├ ƒ /api/students/import/[jobId]/rows
+├ ƒ /api/students/import/[jobId]/rows/[row]
+├ ƒ /api/students/import/preview
+├ ƒ /api/students/import/template
+├ ƒ /api/students/invitations
+├ ƒ /api/students/invites
+├ ƒ /api/students/progression
+├ ƒ /api/students/progression/overview
+├ ƒ /api/students/summary
+├ ƒ /api/templates
+├ ƒ /api/templates/[id]
+├ ƒ /api/tickets
+├ ƒ /api/tickets/[id]
+├ ƒ /api/tickets/[id]/assign
+├ ƒ /api/tickets/[id]/messages
+├ ƒ /api/tickets/[id]/resolve
+├ ƒ /api/verification/bulk-approve
+├ ƒ /api/verification/queue
+├ ○ /auth/accept-invite
+├ ○ /design
+├ ○ /forgot-password
+├   /internship-feedback/[token]
+│ └ ◐ /internship-feedback/[token]
+├ ○ /invite
+├ ○ /login
+├ ○ /manifest.webmanifest
+├   /mentor-review/[token]
+│ └ ◐ /mentor-review/[token]
+├ ○ /mfa
+├ ○ /platform
+├ ○ /recruiter
+├   /recruiter/drives/[id]
+│ └ ◐ /recruiter/drives/[id]
+├ ○ /recruiter/jobs
+├ ○ /staff
+├ ○ /staff/analytics
+├ ○ /staff/approvals
+├ ○ /staff/assessments
+├ ○ /staff/audit
+├ ○ /staff/blocking
+├ ○ /staff/campaigns
+├   /staff/campaigns/[id]
+│ └ ◐ /staff/campaigns/[id]
+├ ○ /staff/communications
+├ ○ /staff/companies
+├   /staff/companies/[id]
+│ └ ◐ /staff/companies/[id]
+├ ○ /staff/courses
+├   /staff/courses/[id]
+│ └ ◐ /staff/courses/[id]
+├ ○ /staff/crm
+├ ○ /staff/drives
+├   /staff/drives/[id]
+│ └ ◐ /staff/drives/[id]
+├   /staff/drives/[id]/attendance
+│ └ ◐ /staff/drives/[id]/attendance
+├   /staff/drives/[id]/interviews
+│ └ ◐ /staff/drives/[id]/interviews
+├ ○ /staff/drives/new
+├ ○ /staff/events
+├ ○ /staff/faculty
+├ ○ /staff/internships
+├   /staff/internships/[id]
+│ └ ◐ /staff/internships/[id]
+├ ○ /staff/job-alerts
+├ ○ /staff/job-descriptions
+├   /staff/job-descriptions/[id]
+│ └ ◐ /staff/job-descriptions/[id]
+├   /staff/job-descriptions/[id]/matches
+│ └ ◐ /staff/job-descriptions/[id]/matches
+├ ○ /staff/learning
+├ ○ /staff/notifications
+├ ○ /staff/offers
+├ ○ /staff/prep
+├ ○ /staff/projects
+├   /staff/projects/[id]
+│ └ ◐ /staff/projects/[id]
+├   /staff/projects/[id]/teams/[tid]
+│ └ ◐ /staff/projects/[id]/teams/[tid]
+├ ○ /staff/psychometrics
+├ ○ /staff/recruiters
+├ ○ /staff/reports
+├ ○ /staff/requests
+├ ○ /staff/resources
+├   /staff/resources/[id]
+│ └ ◐ /staff/resources/[id]
+├ ○ /staff/roadmaps
+├   /staff/roadmaps/[id]
+│ └ ◐ /staff/roadmaps/[id]
+├ ○ /staff/security
+├ ○ /staff/settings
+├ ○ /staff/showcase
+├ ○ /staff/students
+├   /staff/students/[id]
+│ └ ◐ /staff/students/[id]
+├ ○ /staff/students/import
+├ ○ /staff/students/invite
+├ ○ /staff/students/progression
+├ ○ /staff/tickets
+├   /staff/tickets/[id]
+│ └ ◐ /staff/tickets/[id]
+├ ○ /staff/verification
+├ ○ /student
+├ ○ /student/applications
+├ ○ /student/assessments
+├   /student/assessments/[id]
+│ └ ◐ /student/assessments/[id]
+├ ○ /student/blocks
+├ ○ /student/calendar
+├ ○ /student/campaigns
+├   /student/campaigns/[id]
+│ └ ◐ /student/campaigns/[id]
+├ ○ /student/career-profile
+├ ○ /student/courses
+├   /student/courses/[id]
+│ └ ◐ /student/courses/[id]
+├   /student/courses/[id]/certificate
+│ └ ◐ /student/courses/[id]/certificate
+├ ○ /student/drives
+├   /student/drives/[id]
+│ └ ◐ /student/drives/[id]
+├ ○ /student/events
+├   /student/events/[id]/certificate
+│ └ ◐ /student/events/[id]/certificate
+├ ○ /student/help
+├ ○ /student/internships
+├ ○ /student/job-alerts
+├ ○ /student/learning
+├ ○ /student/notifications
+├ ○ /student/offers
+├ ○ /student/onboarding
+├ ○ /student/overview
+├ ○ /student/personality
+├ ○ /student/portfolio
+├ ○ /student/prep
+├ ○ /student/privacy
+├ ○ /student/profile
+├   /student/profile/[section]
+│ └ ◐ /student/profile/[section]
+├ ○ /student/projects
+├   /student/projects/team/[tid]
+│ └ ◐ /student/projects/team/[tid]
+├ ○ /student/resources
+├ ○ /student/resume
+├   /student/resume/[id]
+│ └ ◐ /student/resume/[id]
+├ ○ /student/roadmap
+├ ○ /student/showcase
+├ ○ /student/status
+├ ○ /student/support
+├   /student/support/[id]
+│ └ ◐ /student/support/[id]
+├ ○ /student/tests
+└   /student/tests/[key]
+  └ ◐ /student/tests/[key]
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+
+exit 0

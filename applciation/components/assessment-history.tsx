@@ -1,5 +1,6 @@
 "use client"
 
+import { ReportButtons } from "@/components/report-buttons"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -8,7 +9,7 @@ import { fmtDate, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
 import { categoryLabel } from "@/lib/reassessment"
 
-type Point = { attemptNumber: number; at: string; percent: number; status: string }
+type Point = { id?: string; attemptNumber: number; at: string; percent: number; status: string }
 type Test = { scheduleId: string; title: string; category: string; isPractice: boolean; isBaseline: boolean; attempts: Point[]; latest: number | null; sinceFirst: number | null; sincePrevious: number | null; direction: "up" | "down" | "same" | null }
 type OwnPersonality = { attempts: { attemptNumber: number; at: string; isCurrent: boolean; aptitude: number; traits: Record<string, number> }[]; aptitudeTrend: { sinceFirst: number | null } }
 type History = { tests: Test[]; personality: OwnPersonality | { attempts: number; lastAt: string | null } | null }
@@ -21,7 +22,7 @@ function Change({ t }: { t: Test }) {
 }
 
 /** Results over time: each test with every attempt and the change since the previous one. Staff get test results only (personality stays private). */
-export function AssessmentHistory({ endpoint, title = "Your results over time" }: { endpoint: string; title?: string }) {
+export function AssessmentHistory({ endpoint, title = "Your results over time", reportBase }: { endpoint: string; title?: string; reportBase?: string }) {
   const { data, loading } = useApi<History>(endpoint)
   if (loading && !data) return <Skeleton className="h-40 rounded-xl" />
   if (!data) return null
@@ -45,7 +46,7 @@ export function AssessmentHistory({ endpoint, title = "Your results over time" }
                 {data.tests.filter((t) => t.category === c).map((t) => (
                   <TableRow key={t.scheduleId}>
                     <TableCell>{t.title} {t.isPractice && <Badge variant="outline">Practice</Badge>} {t.isBaseline && <Badge variant="secondary">Baseline</Badge>}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{t.attempts.map((a) => `${a.percent}% (${fmtDate(a.at)})`).join(" → ")}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{t.attempts.map((a) => `${a.percent}% (${fmtDate(a.at)})`).join(" → ")}{reportBase && <div className="flex flex-wrap gap-1 pt-1">{t.attempts.filter((a) => a.id).map((a) => <ReportButtons key={a.id} path={`${reportBase}/${a.id}`} label={`Attempt ${a.attemptNumber} report`} />)}</div>}</TableCell>
                     <TableCell className="text-right font-medium">{t.latest != null ? `${t.latest}%` : "—"}</TableCell>
                     <TableCell className="text-right"><Change t={t} /></TableCell>
                   </TableRow>
