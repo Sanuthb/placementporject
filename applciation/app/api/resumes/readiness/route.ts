@@ -27,5 +27,7 @@ export const GET = route({ module: "ONBOARDING" }, async (req, s) => {
     row.total++;
     if (a.ready) { row.ready++; ready++; } else notReady.push({ studentId: st.id, score: a.score });
   }
-  return { total: students.length, ready, percentage: students.length ? Math.round((ready / students.length) * 1000) / 10 : 0, byDepartment: [...by.values()], lowestScores: notReady.sort((a, b) => a.score - b.score).slice(0, 25) };
+  const approved = await db.resumeVersion.findMany({ where: { collegeId: s.collegeId, status: "APPROVED", studentId: { in: students.map((x) => x.id) } }, select: { studentId: true } });
+  const withApproved = new Set(approved.map((a) => a.studentId)).size;
+  return { withApprovedResume: withApproved, withApprovedResumePercent: students.length ? Math.round((withApproved / students.length) * 1000) / 10 : 0, total: students.length, ready, percentage: students.length ? Math.round((ready / students.length) * 1000) / 10 : 0, byDepartment: [...by.values()], lowestScores: notReady.sort((a, b) => a.score - b.score).slice(0, 25) };
 });

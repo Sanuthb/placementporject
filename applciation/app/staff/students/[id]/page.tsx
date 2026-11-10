@@ -30,6 +30,7 @@ import { fmtDate, fmtDateTime, fmtLpa, statusVariant, titleCase } from "@/lib/we
 import { AssessmentHistory } from "@/components/assessment-history"
 import { CareerProfile } from "@/components/career-profile"
 import { RoadmapBoard } from "@/components/roadmap-board"
+import { StaffResumes } from "@/components/staff-resumes"
 import { useApi } from "@/lib/web/use-api"
 
 type Name = { id: string; name: string; code?: string }
@@ -118,12 +119,14 @@ export default function StudentPage() {
           {d.offers && <TabsTrigger value="offers">Offers</TabsTrigger>}
           <TabsTrigger value="analysis">Analysis</TabsTrigger>
           <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
+          <TabsTrigger value="resumes">Resumes</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
 
         <TabsContent value="onboarding"><OnboardingReview studentId={id} name={p.name} canAct onChanged={full.reload} /></TabsContent>
         <TabsContent value="intelligence">{tab === "intelligence" && <StudentIntelligence studentId={id} />}</TabsContent>
+        <TabsContent value="resumes">{tab === "resumes" && <StaffResumes studentId={id} />}</TabsContent>
         <TabsContent value="education"><div className="flex flex-col gap-6"><EducationPanel studentId={id} canEdit={canEdit} /><AcademicRecordsPanel studentId={id} /></div></TabsContent>
         <TabsContent value="documents"><DocumentsPanel studentId={id} canEdit={canEdit} canReview={canEdit || (state.status === "ready" && isCoordinatorOnly(state.profile))} /></TabsContent>
         <TabsContent value="progression"><ProgressionPanel studentId={id} canEdit={canEdit} isAdmin={state.status === "ready" && hasRole(state.profile, "TPO_ADMIN")} /></TabsContent>

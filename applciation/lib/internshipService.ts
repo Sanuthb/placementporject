@@ -124,6 +124,6 @@ export async function myInternship(me: StudentSession, id: string) {
 
 /** A student's finished internships from the college's records, for the resume and the shareable profile. Only completed ones, and whether the certificate was verified. */
 export async function internshipRecords(studentId: string) {
-  const rows = await db.internship.findMany({ where: { studentId, status: "COMPLETED" }, orderBy: { endDate: "desc" }, take: 8, select: { companyName: true, role: true, startDate: true, endDate: true, certificateStatus: true, ppoStatus: true } });
-  return rows.map((r) => ({ company: r.companyName, role: r.role, from: r.startDate.toISOString().slice(0, 10), to: r.endDate.toISOString().slice(0, 10), certificateVerified: r.certificateStatus === "VERIFIED", preplacementOffer: r.ppoStatus === "ACCEPTED" }));
+  const rows = await db.internship.findMany({ where: { studentId, status: "COMPLETED" }, orderBy: { endDate: "desc" }, take: 8, select: { id: true, companyName: true, role: true, startDate: true, endDate: true, certificateStatus: true, ppoStatus: true } });
+  return rows.map((r) => ({ id: r.id, company: r.companyName, role: r.role, from: r.startDate.toISOString().slice(0, 10), to: r.endDate.toISOString().slice(0, 10), certificateVerified: r.certificateStatus === "VERIFIED", preplacementOffer: r.ppoStatus === "ACCEPTED" }));
 }

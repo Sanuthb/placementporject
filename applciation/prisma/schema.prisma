@@ -758,6 +758,7 @@ model Student {
   resourceProgress       ResourceProgress[]
   projectMemberships     ProjectMember[]
   internshipApplications InternshipApplication[]
+  resumeVersions         ResumeVersion[]
   internships            Internship[]
   eventRegistrations     EventRegistration[]
   learningMemberships    LearningMember[]
@@ -3418,4 +3419,56 @@ model InternshipMentorLink {
   internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
 
   @@index([internshipId])
+}
+
+// ---------- Dynamic resume engine (M10) ----------
+enum ResumeKind {
+  MASTER
+  TECHNICAL
+  MANAGEMENT
+  INTERNSHIP
+  FRESHER
+  PROJECT_BASED
+  COMPANY_SPECIFIC
+}
+
+enum ResumeStatus {
+  DRAFT
+  APPROVED
+  ARCHIVED
+}
+
+/// One resume a student made from their master profile. A draft is rebuilt from the live profile each time it is opened; approving it freezes `doc`.
+/// An approved version never changes: editing it makes a new draft, so the history of what was sent stays true.
+model ResumeVersion {
+  id            String       @id @default(uuid()) @db.Uuid
+  collegeId     String       @db.Uuid
+  studentId     String       @db.Uuid
+  number        Int
+  title         String
+  kind          ResumeKind   @default(MASTER)
+  template      String       @default("ATS")
+  targetCompany String?
+  targetRole    String?
+  targetText    String?
+  /// What the student changed by hand: { summary, headline, hide: [keys], text: { key: text } }.
+  edits         Json         @default("{}")
+  /// Only checked material (true) or everything the student entered (false).
+  verifiedOnly  Boolean      @default(false)
+  markEvidence  Boolean      @default(true)
+  status        ResumeStatus @default(DRAFT)
+  /// The finished document, kept when the version is approved.
+  doc           Json?
+  /// Keys of the profile items the document was made from, to tell later what is new.
+  profileKeys   String[]
+  approvedAt    DateTime?
+  isPrimary     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, number])
+  @@index([studentId, status])
+  @@index([collegeId])
 }
