@@ -5,8 +5,10 @@ import { departmentScope, type Session } from "@/lib/auth/session";
 import { paperQuestions } from "@/lib/assessments";
 import { cleanFeedback, weakCategories, type Turn } from "@/lib/interviewEngine";
 import { comparisonFor } from "@/lib/interviewService";
+import { comparisonFor as discussionComparison } from "@/lib/discussionService";
+import { cleanEvaluation as cleanDiscussion, type Turn as DiscussionTurn } from "@/lib/discussionEngine";
 import { buildReport, shapeReport, visibilityOf, compareAttempts, type Answer, type Marks } from "@/lib/mockTest";
-import { cohortDoc, cohortTopics, interviewDoc, performanceDoc, testDoc, type Person } from "@/lib/reportBuilders";
+import { discussionDoc, cohortDoc, cohortTopics, interviewDoc, performanceDoc, testDoc, type Person } from "@/lib/reportBuilders";
 import type { ReportDoc } from "@/lib/reportDoc";
 import { testHistory } from "@/lib/assessmentHistory";
 import { improvementPlan, myReport, reportOfAttempt } from "@/lib/testReportService";
@@ -121,5 +123,16 @@ export async function cohortReportDoc(s: Session, q: { batchId?: string; departm
     college: await collegeName(s.collegeId), scope, generatedFor: s.name ?? s.email ?? "Placement office",
     students: students.map((x) => ({ name: x.name, enrollmentNo: x.enrollmentNo, testsTaken: per.get(x.id)?.pct.length ?? 0, averagePercent: avg(per.get(x.id)?.pct ?? []), interviews: score.get(x.id)?.length ?? 0, averageInterview: avg(score.get(x.id) ?? []) })),
     topics: cohortTopics([...per.values()].map((x) => x.topics), 2),
+  });
+}
+
+/** A group discussion, debate or presentation report. Staff may open only sessions the placement office assigned. */
+export async function discussionReportDoc(v: Viewer, id: string): Promise<ReportDoc> {
+  const m = await db.discussionSession.findFirst({ where: v.kind === "student" ? { id, studentId: v.me.studentId } : { id, collegeId: v.s.collegeId, assignmentId: { not: null } } });
+  if (!m) throw notFound("Session not found");
+  const st = v.kind === "staff" ? await scopedFullStudent(v.s, m.studentId) : await studentFor(v);
+  return discussionDoc({
+    college: await collegeName(m.collegeId), student: personOf(st), transcript: m.transcript as DiscussionTurn[], evaluation: cleanDiscussion(m.feedback, m.kind as never), comparison: await discussionComparison(m),
+    session: { kind: m.kind as never, topic: m.topic, stance: m.stance, difficulty: m.difficulty, language: m.language, durationMin: m.durationMin, startedAt: m.createdAt, completedAt: m.completedAt, participants: m.participants as { name: string }[] },
   });
 }

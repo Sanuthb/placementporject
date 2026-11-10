@@ -41,7 +41,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M16 – Report Generation | 5 | 5 | 0 | 0 | 0 | [ ] |
 | M17 – Job Readiness Engine | 5 | 5 | 0 | 0 | 0 | [ ] |
 | M18 – Placement Management | 13 | 13 | 0 | 0 | 0 | [ ] |
-| M19 – Group Discussion and Communication Simulator | 1 | 0 | 0 | 1 | 0 | [ ] |
+| M19 – Group Discussion and Communication Simulator | 9 | 8 | 1 | 0 | 0 | [ ] |
 | M20 – Notification Centre | 9 | 5 | 3 | 1 | 0 | [ ] |
 | M21 – Dashboards and Analytics | 8 | 3 | 4 | 1 | 0 | [ ] |
 | **Total** | **202** | **110** | **37** | **53** | **2** | |
@@ -393,7 +393,18 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 
 ### M19 – Group Discussion and Communication Simulator
 
-- [ ] AI topics, multiple AI participants, voice discussion, debate, presentation practice, evaluation — ❌ Missing for both portals. (Group discussion exists only as a drive round type.)
+**Placement Officer side**
+- [ ] Set up and monitor sessions — ✅ Built: staff set up a group discussion, debate or presentation practice for a department or batch (Assessments > Discussions), students are notified and told staff will see their report; staff see started/finished counts, scores, weakest areas, full transcripts and a downloadable report. A student's own practice sessions stay private
+
+**Student side** (`/student/prep` > Group discussion)
+- [ ] AI-generated topics — ✅ Built: a curated neutral topic list that always works, plus fresh AI-written topics on request (falls back to the list if the AI is off)
+- [ ] Multiple AI participants — ✅ Built: 2 to 4 AI participants in a group discussion, each with a distinct way of taking part (data-driven, sceptical, collaborative, practical, devil's advocate)
+- [ ] Debate simulation and counterarguments — ✅ Built: the student argues for or against a motion and an AI opponent answers each argument with a specific counterargument
+- [ ] Presentation practice — ✅ Built: the student presents, then an AI audience member asks follow-up questions
+- [ ] Timed sessions — ✅ Built: 5 to 20 minutes plus two minutes for the last contribution; late contributions are not taken and the session is evaluated on what was said
+- [ ] Voice-based discussions — 🟡 Partial: optional voice by browser speech-to-text with a microphone check and consent; speech becomes text on the student's device and no audio or video is recorded or stored. The AI participants reply in text, not speech
+- [ ] Communication, listening and response evaluation, improvement recommendations — ✅ Built: scores out of 10 for clarity, content, structure, arguments and evidence, listening and response, handling counterarguments (or answering questions for a presentation) and language, plus strengths, improvements, a stronger version of up to five contributions, points that could have been raised, practice tasks, and counted participation facts. Evaluates words only; nothing is inferred from voice, accent, pace or appearance
+- [ ] Reports and progress — ✅ Built: PDF and Word report with the student's words and AI text labelled apart, and comparison with the previous session of the same kind; scores also count toward the readiness "mock interviews and discussions" part (M17)
 
 ### M20 – Notification Centre
 

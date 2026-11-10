@@ -3,6 +3,7 @@
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DiscussionPractice } from "@/components/discussion-practice"
 import { MockInterviews } from "@/components/mock-interviews"
 import { StudentReadiness } from "@/components/student-readiness"
 import { OptionSelect } from "@/components/option-select"
@@ -50,9 +51,10 @@ export default function PrepPage() {
 function PrepTabs() {
   return (
     <Tabs defaultValue="readiness">
-      <TabsList><TabsTrigger value="readiness">Readiness</TabsTrigger><TabsTrigger value="mock">Mock interviews</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="readiness">Readiness</TabsTrigger><TabsTrigger value="mock">Mock interviews</TabsTrigger><TabsTrigger value="discussion">Group discussion</TabsTrigger><TabsTrigger value="experiences">Interview experiences</TabsTrigger><TabsTrigger value="counselling">Counselling</TabsTrigger></TabsList>
       <TabsContent value="readiness"><StudentReadiness /></TabsContent>
       <TabsContent value="mock"><MockInterviews /></TabsContent>
+      <TabsContent value="discussion"><DiscussionPractice /></TabsContent>
       <TabsContent value="experiences"><Experiences /></TabsContent>
       <TabsContent value="counselling"><Counselling /></TabsContent>
     </Tabs>

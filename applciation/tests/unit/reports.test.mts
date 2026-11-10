@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { cohortDoc, cohortTopics, interviewDoc, performanceDoc, testDoc } from "../../lib/reportBuilders"
+import { discussionDoc, cohortDoc, cohortTopics, interviewDoc, performanceDoc, testDoc } from "../../lib/reportBuilders"
 import { renderDocx, renderPdf, latin1, safeName, type Block } from "../../lib/reportDoc"
 
 const student = { name: "Asha Rao", enrollmentNo: "21CS001", department: "CSE", batch: "2025" }
@@ -51,4 +51,12 @@ const long = { ...t, blocks: [...t.blocks, ...Array.from({ length: 80 }, (_, i) 
 assert.equal((await renderPdf(long)).subarray(0, 4).toString(), "%PDF", "long text and unbroken strings paginate")
 assert.equal(latin1("a–b “q” हिंदी"), 'a-b "q" ?????'.replace("?????", latin1("हिंदी")))
 assert.equal(safeName("Asha Rao / Quant #1"), "asha-rao-quant-1")
+
+// group discussion report: student words and AI participants are labelled apart, and measured facts are counted
+const dtx = [{ role: "ai" as const, speaker: "Priya", text: "Remote work helps focus." }, { role: "student" as const, speaker: "You", text: "I disagree because teams need contact", voice: true }, { role: "ai" as const, speaker: "Arjun", text: "What evidence do you have?" }]
+const dd = discussionDoc({ college: "C", student, session: { kind: "GD", topic: "Remote work", stance: null, difficulty: "MEDIUM", language: "English", durationMin: 10, startedAt: new Date("2026-02-01T10:00:00Z"), completedAt: new Date("2026-02-01T10:09:00Z"), participants: [{ name: "Priya" }, { name: "Arjun" }] }, transcript: dtx, evaluation: { summary: "Fair", score: 6, categories: [{ key: "listening", label: "Listening and response", score: 6, comment: "ok" }], strengths: ["clear"], improvements: ["evidence"], perContribution: [{ excerpt: "teams need contact", comment: "vague", better: "Cite a study" }], missedPoints: ["cost"], practice: ["Use data"] }, comparison: null })
+const dr = dd.blocks.filter((b): b is Extract<Block, { t: "response" }> => b.t === "response")
+assert.ok(dr.find((r) => r.source === "STUDENT" && r.label.includes("spoken")) && dr.filter((r) => r.source === "AI").length >= 3, "AI turns and suggested versions are labelled AI")
+assert.ok(JSON.stringify(dd.blocks).includes("counted, not judged") && JSON.stringify(dd.blocks).includes("Improvement recommendations") && JSON.stringify(dd.blocks).includes("9 min 0 s"))
+assert.equal((await renderPdf(dd)).subarray(0, 4).toString(), "%PDF"); assert.equal((await renderDocx(dd)).subarray(0, 2).toString(), "PK")
 console.log("reports ok")

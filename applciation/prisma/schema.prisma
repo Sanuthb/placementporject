@@ -776,6 +776,7 @@ model Student {
   jdShortlists           JdShortlist[]
   campaignMembers        CampaignMember[]
   readinessSnapshots     ReadinessSnapshot[]
+  discussionSessions     DiscussionSession[]
   testImprovements       TestImprovement[]
 
   @@unique([collegeId, enrollmentNo])
@@ -3806,4 +3807,58 @@ model ReadinessSnapshot {
 
   @@unique([studentId, scopeKey, day])
   @@index([collegeId, scopeKey])
+}
+
+/// A practice group discussion, debate or presentation with AI participants. Self-started ones are private; ones from an assignment are visible to staff.
+model DiscussionSession {
+  id                String    @id @default(uuid()) @db.Uuid
+  collegeId         String    @db.Uuid
+  studentId         String    @db.Uuid
+  /// GD, DEBATE or PRESENTATION.
+  kind              String
+  topic             String
+  /// FOR or AGAINST in a debate, otherwise null.
+  stance            String?
+  difficulty        String    @default("MEDIUM")
+  language          String    @default("English")
+  durationMin       Int       @default(10)
+  /// How many contributions the student is expected to make.
+  contributionCount Int       @default(4)
+  /// The AI participants and how each takes part: [{ name, style }].
+  participants      Json
+  status            String    @default("IN_PROGRESS")
+  transcript        Json      @default("[]")
+  feedback          Json?
+  assignmentId      String?   @db.Uuid
+  voiceConsentAt    DateTime?
+  voiceUsed         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  completedAt       DateTime?
+
+  student    Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment DiscussionAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, createdAt])
+  @@index([assignmentId])
+}
+
+/// A discussion the placement office sets up for a group of students. Its sessions and reports are visible to staff, and the student is told so before starting.
+model DiscussionAssignment {
+  id                  String    @id @default(uuid()) @db.Uuid
+  collegeId           String    @db.Uuid
+  title               String
+  kind                String
+  topic               String
+  difficulty          String    @default("MEDIUM")
+  language            String    @default("English")
+  durationMin         Int       @default(10)
+  dueAt               DateTime?
+  targetDepartmentIds String[]
+  targetBatchIds      String[]
+  createdById         String    @db.Uuid
+  createdAt           DateTime  @default(now())
+
+  sessions DiscussionSession[]
+
+  @@index([collegeId, createdAt])
 }

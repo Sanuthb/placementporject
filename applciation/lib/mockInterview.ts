@@ -3,13 +3,13 @@ import { ApiError } from "@/lib/api/errors";
 import { CRITERIA, TYPE_LABEL, cleanFeedback, conversation, type Feedback, type InterviewType, type Turn } from "@/lib/interviewEngine";
 
 export type { Feedback, Turn };
-const MODEL = "claude-opus-5-5";
+export const MODEL = "claude-opus-5-5";
 
 /** Everything the interviewer needs to know about the interview being run. */
 export type Config = { role: string; topic: string; type: InterviewType; mode: "LEARNING" | "ASSESSMENT"; difficulty: string; language: string; brief?: string | null };
 
 let client: Anthropic | null = null;
-function anthropic() {
+export function anthropic() {
   if (!process.env.ANTHROPIC_API_KEY) throw new ApiError(503, "AI_NOT_CONFIGURED", "AI mock interviews are not switched on for this college yet");
   return (client ??= new Anthropic());
 }
@@ -28,7 +28,7 @@ const toMessages = (t: Turn[]): Anthropic.MessageParam[] => [
 ];
 
 /** Wraps SDK failures in a clear message for the student; the cause stays in the server log. */
-async function call<T>(f: () => Promise<T>): Promise<T> {
+export async function call<T>(f: () => Promise<T>): Promise<T> {
   try { return await f(); }
   catch (e) {
     if (e instanceof ApiError) throw e;
@@ -37,7 +37,7 @@ async function call<T>(f: () => Promise<T>): Promise<T> {
     throw new ApiError(502, "AI_FAILED", "The interviewer could not answer just now. Try again");
   }
 }
-const textOf = (res: Anthropic.Message) => res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
+export const textOf = (res: Anthropic.Message) => res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
 
 /** The next question, given the conversation so far. */
 export async function nextQuestion(c: Config, transcript: Turn[]) {

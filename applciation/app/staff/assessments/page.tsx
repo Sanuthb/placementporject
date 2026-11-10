@@ -19,6 +19,7 @@ import { PaperCategory, RetakeRules } from "@/components/assessment-rules"
 import { ASSESSMENT_CATEGORIES } from "@/lib/reassessment"
 import { StarterBanks } from "@/components/starter-banks"
 import { AssessmentReport } from "@/components/assessment-report"
+import { DiscussionAdmin } from "@/components/discussion-admin"
 import { InterviewAdmin } from "@/components/interview-admin"
 import { AnswerMarking } from "@/components/answer-marking"
 import { PaperBuilder } from "@/components/paper-builder"
@@ -37,7 +38,7 @@ export default function AssessmentsPage() {
   const [build, setBuild] = React.useState(false)
   return (
     <Tabs defaultValue="banks">
-      <TabsList><TabsTrigger value="banks">Question banks</TabsTrigger><TabsTrigger value="papers">Papers</TabsTrigger><TabsTrigger value="marking">To mark</TabsTrigger><TabsTrigger value="interviews">Interviews</TabsTrigger><TabsTrigger value="schedules">Schedules and results</TabsTrigger><TabsTrigger value="reports">Reports</TabsTrigger><TabsTrigger value="rules">Retake rules</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="banks">Question banks</TabsTrigger><TabsTrigger value="papers">Papers</TabsTrigger><TabsTrigger value="marking">To mark</TabsTrigger><TabsTrigger value="interviews">Interviews</TabsTrigger><TabsTrigger value="discussions">Discussions</TabsTrigger><TabsTrigger value="schedules">Schedules and results</TabsTrigger><TabsTrigger value="reports">Reports</TabsTrigger><TabsTrigger value="rules">Retake rules</TabsTrigger></TabsList>
       <TabsContent value="reports"><AssessmentReport /></TabsContent>
       <TabsContent value="rules"><RetakeRules /></TabsContent>
       <TabsContent value="banks" className="flex flex-col gap-4">
@@ -53,6 +54,7 @@ export default function AssessmentsPage() {
       </TabsContent>
       <TabsContent value="marking"><AnswerMarking /></TabsContent>
       <TabsContent value="interviews"><InterviewAdmin /></TabsContent>
+      <TabsContent value="discussions"><DiscussionAdmin /></TabsContent>
       <TabsContent value="schedules">
         <MasterTab<Sched> endpoint="/api/assessments/schedules" addLabel="Schedule an assessment"
           fields={[{ name: "paperId", label: "Paper", type: "select", required: true, options: (papers.data ?? []).map((p) => ({ value: p.id, label: p.title })) }, { name: "title", label: "Title" }, { name: "date", label: "Date", type: "date" }, { name: "start", label: "Opens at (24h)" }, { name: "end", label: "Closes at (24h)" }, { name: "departmentId", label: "Department (optional)", type: "select", required: false, options: lk.departments }, { name: "batchId", label: "Batch (optional)", type: "select", required: false, options: lk.batches }, { name: "isBaseline", label: "This is the baseline diagnostic test", type: "checkbox" }, { name: "isPractice", label: "Practice test: students see answers and explanations right after submitting", type: "checkbox", required: false }, { name: "maxAttempts", label: "Attempts allowed (empty = follow the retake rule)", type: "number", required: false }, { name: "resultVisibility", label: "What students see afterwards", type: "select", required: false, options: [{ value: "SCORE_ONLY", label: "Score only" }, { value: "ANALYSIS", label: "Score and analysis (no answers)" }, { value: "AFTER_END", label: "Analysis now, answers after the window closes" }, { value: "IMMEDIATE", label: "Everything, straight away" }] }]}

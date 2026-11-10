@@ -26,11 +26,12 @@ async function extrasFor(collegeId: string, ids: string[], audience: Audience): 
   const out: Extras = { tests: new Map(), interviews: new Map(), resources: new Map(), courses: new Map() };
   for (let at = 0; at < ids.length; at += CHUNK) {
     const part = ids.slice(at, at + CHUNK);
-    const [attempts, ivs, rp, ce] = await Promise.all([
+    const [attempts, ivs, rp, ce, ds] = await Promise.all([
       db.assessmentAttempt.findMany({ where: { studentId: { in: part }, status: { not: "IN_PROGRESS" }, reviewStatus: { not: "PENDING" }, score: { not: null }, schedule: { collegeId, isPractice: false, paper: { category: { in: [...SCORED_CATEGORIES] } } } }, orderBy: { submittedAt: "asc" }, select: { studentId: true, score: true, maxScore: true, schedule: { select: { paper: { select: { id: true, title: true, category: true, jdId: true } } } } } }),
       db.mockInterview.findMany({ where: { studentId: { in: part }, status: "COMPLETED", ...(audience === "staff" ? { assignmentId: { not: null } } : {}) }, select: { studentId: true, jdId: true, feedback: true } }),
       db.resourceProgress.findMany({ where: { studentId: { in: part }, completedAt: { not: null } }, select: { studentId: true, resourceId: true } }),
       db.courseEnrolment.findMany({ where: { studentId: { in: part }, status: "COMPLETED" }, select: { studentId: true, courseId: true } }),
+      db.discussionSession.findMany({ where: { studentId: { in: part }, status: "COMPLETED", ...(audience === "staff" ? { assignmentId: { not: null } } : {}) }, select: { studentId: true, feedback: true } }),
     ]);
     const byStudent = new Map<string, Map<string, TestRow>>();
     for (const a of attempts) {
@@ -40,6 +41,8 @@ async function extrasFor(collegeId: string, ids: string[], audience: Audience): 
     }
     for (const [sid, m] of byStudent) out.tests.set(sid, [...m.values()]);
     for (const i of ivs) { const s = (i.feedback as { score?: unknown } | null)?.score; if (typeof s === "number") push(out.interviews, i.studentId, { score: s, jdId: i.jdId }); }
+    // Group discussions, debates and presentations count with mock interviews: spoken communication practice scored out of 10.
+    for (const x of ds) { const s = (x.feedback as { score?: unknown } | null)?.score; if (typeof s === "number") push(out.interviews, x.studentId, { score: s, jdId: null }); }
     for (const r of rp) (out.resources.get(r.studentId) ?? out.resources.set(r.studentId, new Set()).get(r.studentId)!).add(r.resourceId);
     for (const c of ce) (out.courses.get(c.studentId) ?? out.courses.set(c.studentId, new Set()).get(c.studentId)!).add(c.courseId);
   }

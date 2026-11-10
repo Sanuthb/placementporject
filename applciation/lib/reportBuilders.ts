@@ -130,3 +130,34 @@ export function cohortDoc(i: CohortInput): ReportDoc {
   b.push({ t: "p", text: "Only finished, fully marked tests and interviews set up by the placement office are counted. Students' own practice interviews are private and not included." });
   return { title: "Group Performance Report", subtitle: i.scope, blocks: b, fileBase: safeName(`group-report-${i.scope}`) };
 }
+
+// ---- group discussion, debate and presentation report ----
+import type { Evaluation, Turn as DTurn } from "@/lib/discussionEngine";
+import { KIND_LABEL as DKIND, participationStats } from "@/lib/discussionEngine";
+export type DiscussionInput = {
+  college: string; student: Person
+  session: { kind: "GD" | "DEBATE" | "PRESENTATION"; topic: string; stance: string | null; difficulty: string; language: string; durationMin: number; startedAt: Date | string; completedAt: Date | string | null; participants: { name: string }[] }
+  transcript: DTurn[]; evaluation: Evaluation | null; comparison: { overallChange: number; improved: string[]; slipped: string[] } | null
+};
+export function discussionDoc(i: DiscussionInput): ReportDoc {
+  const e = i.evaluation, s = i.session, b: Block[] = [];
+  const took = s.completedAt ? Math.round((new Date(s.completedAt).getTime() - new Date(s.startedAt).getTime()) / 1000) : null;
+  b.push({ t: "h", text: "Student" }, person(i.student, i.college));
+  b.push({ t: "h", text: "Session" }, { t: "kv", rows: [["Kind", DKIND[s.kind]], ["Topic", s.topic], ...(s.stance ? [["Side argued", s.stance === "FOR" ? "For the motion" : "Against the motion"] as [string, string]] : []), ["Difficulty", s.difficulty.toLowerCase()], ["Language", s.language], ["Date", d(s.startedAt)], ["Planned duration", `${s.durationMin} minutes`], ["Time taken", mins(took)], ["AI participants", s.participants.map((p) => p.name).join(", ")]] });
+  const st = participationStats(i.transcript);
+  b.push({ t: "h", text: "How the student took part (counted, not judged)" }, { t: "kv", rows: [["Contributions", String(st.contributions)], ["Words said", String(st.studentWords)], ["Share of all words", `${st.sharePercent}%`], ["Average length of a contribution", `${st.averageWords} words`], ["Shortest and longest", `${st.shortest} and ${st.longest} words`], ["Written down from speech", `${st.spokenContributions} of ${st.contributions}`]] });
+  if (e) {
+    b.push({ t: "h", text: "Overall score" }, { t: "kv", rows: [["Score", `${e.score} of 10`]] }, { t: "p", text: e.summary, source: "AI" });
+    if (e.categories.length) b.push({ t: "h", text: "Communication evaluation" }, { t: "table", head: ["Area", "Score", "Comment"], rows: e.categories.map((c) => [c.label, `${c.score} / 10`, c.comment]) });
+    if (e.strengths.length) b.push({ t: "h", text: "Strengths" }, { t: "list", items: e.strengths, source: "AI" });
+    if (e.improvements.length) b.push({ t: "h", text: "Areas to improve" }, { t: "list", items: e.improvements, source: "AI" });
+  } else b.push({ t: "h", text: "Overall score" }, { t: "p", text: "This session was not finished, so there is no evaluation." });
+  b.push({ t: "h", text: "Transcript" });
+  for (const t of i.transcript) b.push(t.role === "student" ? { t: "response", label: `${t.kind === "presentation" ? "Presentation" : "Contribution"}${t.voice ? " (spoken, written down by speech-to-text)" : ""}`, text: t.text, source: "STUDENT" } : { t: "response", label: t.speaker, text: t.text, source: "AI" });
+  if (e?.perContribution.length) { b.push({ t: "h", text: "Contribution-by-contribution feedback" }); for (const p of e.perContribution) { b.push({ t: "p", text: `"${p.excerpt}"` }); if (p.comment) b.push({ t: "p", text: p.comment, source: "AI" }); if (p.better) b.push({ t: "response", label: "A stronger version", text: p.better, source: "AI" }); } }
+  if (e?.missedPoints.length) b.push({ t: "h", text: "Points that could have been raised or answered" }, { t: "list", items: e.missedPoints, source: "AI" });
+  if (e?.practice.length) b.push({ t: "h", text: "Improvement recommendations" }, { t: "list", items: e.practice, source: "AI" });
+  if (i.comparison) b.push({ t: "h", text: "Previous session comparison" }, { t: "p", text: `${signed(i.comparison.overallChange)} overall.${i.comparison.improved.length ? ` Better: ${i.comparison.improved.join(", ")}.` : ""}${i.comparison.slipped.length ? ` Lower: ${i.comparison.slipped.join(", ")}.` : ""}`, source: "SYSTEM" });
+  b.push({ t: "p", text: "Comments are AI practice feedback on the words in the transcript. Nothing is inferred from voice, accent, pace or appearance, and the report does not predict any selection result." });
+  return { title: `${DKIND[s.kind]} Report`, subtitle: `${i.student.name} · ${s.topic.slice(0, 80)}`, blocks: b, fileBase: safeName(`${s.kind.toLowerCase()}-report-${i.student.name}`) };
+}
