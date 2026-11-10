@@ -8,10 +8,12 @@ import { db } from "@/lib/db";
 import { notifyStaff } from "@/lib/notify";
 import { hashToken } from "@/lib/internshipService";
 import { attendanceSummary } from "@/lib/internships";
+import { requireActiveCollege } from "@/lib/collegeActive";
 
 async function load(token: string) {
   const l = await db.internshipMentorLink.findUnique({ where: { tokenHash: hashToken(token) }, include: { internship: { include: { student: { select: { name: true } }, logs: { where: { status: "APPROVED" }, select: { hours: true } }, attendance: true, tasks: { select: { title: true, status: true, isFinalReport: true } } } } } });
   if (!l || l.usedAt || l.expiresAt < new Date() || l.internship.status === "TERMINATED") throw notFound("This link is not valid any more");
+  await requireActiveCollege(l.collegeId, () => notFound("This link is not valid any more")); // every request, GET and POST
   return l;
 }
 const json = (data: unknown) => NextResponse.json({ data }, { headers: { "cache-control": "no-store", "x-robots-tag": "noindex" } });

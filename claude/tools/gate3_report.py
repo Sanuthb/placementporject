@@ -72,10 +72,13 @@ RULES = [
 ]
 
 ISSUES = {
-  "A-02": ("G3-SEC-01", "Suspended institution stays reachable through six public token surfaces (showcase page, resume PDF, calendar feed, project mentor review, internship mentor feedback, invitation lookup). Defect A-02 confirmed live."),
-  "SA-45": ("G3-SYS-02", "Platform registration accepts a second institution with the same name (no duplicate-name warning), SA-TC-045."),
-  "SA-PARTIAL": ("G3-SYS-03", "Institution list endpoint exists but ignores search, filter, sort and page parameters."),
-  "SA-MISSING": ("G3-SYS-04", "System Administrator feature not built (analytics, audit-log viewer, monitoring, AI configuration, support, settings/integrations/roles/retention, institution detail/edit/usage)."),
+  "A-02": ("G3-SEC-01", "Suspended institution reachable through six public token surfaces (read and write). Fixed in Gate 4, verified by 58 regression assertions."),
+  "SA-45": ("G3-SYS-02", "Platform registration accepted a second institution with the same name (SA-TC-045). FIXED in Gate 4 Phase 3: names compared after trim, space collapse and case; checked before inviting and again under a per-name database lock; concurrent duplicates and slug races give clean 409s. Verified by unit, API and concurrency tests."),
+  "SA-PARTIAL": ("G3-SYS-03", "Institution list ignored search, status, sort and paging (SA-TC-041/042). FIXED in Gate 4 Phase 3, including LIKE-wildcard escaping found during testing (a search for % matched everything)."),
+  "G3-SYS-07": ("G3-SYS-07", "Scheduled jobs record no execution history (no last run, success, failure or duration), so SA-TC-055 fails. Proposal: JobRun table + withJobRun wrapper (docs/MONITORING.md), awaiting approval."),
+  "G3-SYS-08": ("G3-SYS-08", "The monitoring dashboard cannot show a database outage because authenticating the platform administrator needs the database; it shows 'could not load'. The unauthenticated readiness endpoint reports the outage."),
+  "G3-SYS-09": ("G3-SYS-09", "The application does not measure its own request latency or throughput, so no application-performance view exists (SA-TC-008)."),
+  "SA-MISSING": ("G3-SYS-04", "System Administrator feature not built (AI configuration, support, settings/integrations/roles/retention, institution detail/edit/usage). The audit-log viewer (4.1), platform analytics (4.2) and system monitoring (4.3, with three recorded gaps) are built."),
 }
 issue_label = lambda k: (ISSUES[k][0] if k in ISSUES else k)
 
@@ -174,11 +177,14 @@ def main():
     for r in sa: P(f"| {r['Test Case ID']} | {r['Feature'][:60]} | {r['_status']} | {(r['_fail'] or r['_block'] or r['_actual'])[:230].replace('|','/')} |")
     P("\n## 4. Security findings\n")
     P("| Issue | Severity | Finding | Cases | Evidence |\n|---|---|---|---|---|")
-    P("| G3-SEC-01 (A-02) | **Critical, confirmed** | A suspended institution remains reachable through public token surfaces. Verified live on the local stack and on a production build: each link works while the college is active, then after `College.isActive=false` it still returns **HTTP 200** for the showcase page, showcase resume PDF, calendar feed, project mentor review link, internship mentor feedback link and invitation lookup. Staff and student APIs are correctly refused (403) in the same state. Write probes (review submit, feedback submit, invitation accept) were **not run** under the stop rule, so write exposure is unproven (code reading says the handlers have no status check). | SA-TC-027/028/029, SRS-SECURITY-TC-039 | `tests/gate3/g3-01-suspended-institution.mjs`, `results/g3-01-suspended-institution.jsonl` |")
-    P("| G3-SYS-02 | Medium | Platform registration accepts a duplicate institution name (SA-TC-045). | SA-TC-045 | `g3-03-system-admin.mjs` |")
+    P("| G3-SEC-01 (A-02) | **Critical: FIXED and verified (Gate 4)** | Before the fix a suspended institution stayed reachable through six public token surfaces, for reads (HTTP 200) and for writes: an internship feedback submission, a project mentor review and an invitation acceptance were all accepted while suspended (evaluation, feedback, PPO status, review rows written; a login created and a student linked; view counter incremented). After the fix (shared `requireActiveCollege`, checked on every request before any read or write) all six surfaces return the same refusal as an unknown link, no database row changes while suspended, and everything works again on reactivation with tokens unspent. 58/58 assertions pass; before the fix 30/58 failed. | SA-TC-027/028/029, SRS-SECURITY-TC-039/040 | `tests/gate3/g3-01-suspended-institution.mjs`; `results/evidence/a02-before-fix.*`, `a02-after-fix.log` |")
+    P("| G3-SYS-02 | Medium: FIXED (Gate 4 Phase 3) | Duplicate institution names were accepted (SA-TC-045); institution list ignored search/sort/paging (SA-TC-041/042); a search for `%` matched every institution (found while testing the new search). | SA-TC-041/042/045 | `g3-05-institution-registry.mjs` (90 assertions) |")
+    P("| G3-SYS-05 (audit viewer) | Built (Gate 4 Phase 4.1) | Platform audit-log viewer: SA-TC-052/053. 112 API assertions, 2 browser tests, 55 unit assertions; credentials masked; no write route. | SA-TC-052/053 | `g3-06-platform-audit.mjs`, `tests/web/platform-audit.spec.ts` |")
+    P("| G3-SYS-06 (analytics) | Built (Gate 4 Phase 4.2) | Platform-wide analytics: SA-TC-047 to 051 and SA-TC-009. 140 API/database-comparison assertions, 2 browser tests, 43 unit assertions; dashboard values compared with independent SQL; read-only; aggregates only. | SA-TC-009, 047-051 | `g3-07-platform-analytics.mjs`, `tests/web/platform-analytics.spec.ts` |")
+    P("| G3-SYS-10 (monitoring) | Built (Gate 4 Phase 4.3) | System health: SA-TC-054 to 057 and SA-TC-008. 122 integration assertions against real controlled failures (database via TCP proxy, storage, SMTP and AI mocks), 152 unit assertions, 2 browser tests. **3 recorded failures:** SA-TC-055 (no job history, G3-SYS-07), SA-TC-054 database-outage step (G3-SYS-08), SA-TC-008 (no request-latency metrics, G3-SYS-09). SA-TC-056 and 057 pass. | SA-TC-054..057, 008 | `g3-08-monitoring.mjs`, `tests/web/platform-monitoring.spec.ts` |")
     P("| (reviewed, no defect) | Info | Read-only principal can call `POST /api/notifications/read` (returns 400 on an empty body): by design (`principalOk`, a viewer marks their own notifications read). Allow-listed in the sweep with this reason. | ROLE-PRN-TC-005 | `g3-02-access-sweep.mjs` |")
     P("\nWhat passed (no defect found): all 654 protected endpoints refuse anonymous callers; every staff/recruiter route refuses a student token; every student route refuses a staff token; platform-admin token is refused on all college routes; staff roles outside a route's documented roles are refused (792 probes); principal cannot write (255 probes); institution B cannot list, read, patch or delete any of institution A's records across the 33 collections that held data (59 probes); SQL-injection strings return no error and no extra rows; error responses carry no stack or SQL.\n")
-    P("Not covered yet: browser-level XSS rendering, write exposure on the six public surfaces (stop rule), public frontend pages for them (they are thin clients of the same APIs), cross-institution probes for modules with no seeded data (listed as Blocked).\n")
+    P("Not covered yet: browser-level XSS rendering, a Playwright run of the public frontend pages for them (they are thin clients of the same APIs), cross-institution probes for modules with no seeded data (listed as Blocked).\n")
     P("## 5. Supporting suite-level evidence (not counted as case passes)\n")
     P("| Suite | Result | Note |\n|---|---|---|")
     sup = []
@@ -195,6 +201,22 @@ def main():
         sup.append((n, f"{p} pass, {f_} fail", note))
     for n, r_, note in sup: P(f"| {n} | {r_} | {note} |")
     P("\nThe four failing existing suites were verified by hand to be out-of-date tests (section count and completion rules changed in later modules), not application defects. They are left unmodified and listed as test maintenance for Gate 4.\n")
+    tf = f"{RES}/g3-07-timings.json"
+    if os.path.exists(tf):
+        tj = json.load(open(tf)); ds = tj["dataset"]
+        P("## 5b. Performance measurements (platform analytics, measured)\n")
+        P(f"Dataset: {ds['colleges']} institutions, {ds['students']} students, {ds['apps']} applications, {ds['offers']} offers, {ds['drives']} drives, {ds['users']} staff. {tj['note']}\n")
+        P("| Call | Median ms | Max ms | Runs |\n|---|---|---|---|")
+        for x in tj["timings"]: P(f"| {x['name']} | {x['medianMs']} | {x['maxMs']} | {x['runs']} |")
+        so = tj.get("staleStatisticsObservation")
+        if so: P(f"\nStale-statistics observation: {so['note']} First call in this run before ANALYZE: {so['firstCallBeforeAnalyzeMs']} ms.\n")
+    tf2 = f"{RES}/g3-08-timings.json"
+    if os.path.exists(tf2):
+        tj = json.load(open(tf2))
+        P("## 5c. Performance measurements (system monitoring, measured)\n"); P(tj["note"] + "\n")
+        P("| Call | Median ms | Max ms | Runs |\n|---|---|---|---|")
+        for x in tj["timings"]: P(f"| {x['name']} | {x['medianMs']} | {x['maxMs']} | {x['runs']} |")
+        P("")
     P("## 6. Environment and infrastructure\n")
     for t in [
         "Isolated Docker stack from `tests/e2e/stack` (Postgres 54330, Auth/Storage gateway 54321, mail sink 54325). All 21+ migrations applied locally, including the M14 to M21 migrations that are still unapplied on the hosted database. No hosted Supabase or production data was touched. No real email, SMS or WhatsApp was sent (SMS and WhatsApp remain ON HOLD).",

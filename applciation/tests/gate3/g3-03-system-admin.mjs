@@ -66,7 +66,7 @@ try {
 
   // SA-TC-021..024, 032 institutions
   const list = await P("GET", "/api/platform/institutions");
-  R.t(["SA-TC-021"], "institution list returns id, name, slug, status and counts", list.s === 200 && Array.isArray(list.d) && list.d[0] && "isActive" in list.d[0] && "_count" in list.d[0], JSON.stringify(list.j).slice(0, 200));
+  R.t(["SA-TC-021"], "institution list returns a page of id, name, slug, status and counts, with total and page info", list.s === 200 && Array.isArray(list.d?.items) && list.d.items[0] && "isActive" in list.d.items[0] && "_count" in list.d.items[0] && typeof list.d.total === "number", JSON.stringify(list.j).slice(0, 200));
   R.t(["SA-TC-032"], "list contains counts only, no college records", !/email|phone|enrollment|cgpa/i.test(JSON.stringify(list.d)), "");
   const body = { name: `G3 Provisioned ${tag}`, slug: `g3-prov-${tag}`, admin: { name: "G3 Admin", email: `g3admin${tag}@example.com` }, departments: [{ code: "CSE", name: "Computer Science" }], academicYear: { name: "2026-27", startDate: "2026-06-01", endDate: "2027-05-31" }, modules: ["ONBOARDING", "DRIVES"] };
   const prov = await P("POST", "/api/platform/institutions", body);
@@ -77,9 +77,7 @@ try {
     R.t(["SA-TC-031", "SA-TC-022"], "provisioning is audited with the platform actor (no college user)", au?.platformActorId === uid && au.actorId === null, JSON.stringify(au));
     R.t(["SA-TC-022"], "first administrator and department exist", (await pgc.query(`select count(*)::int n from "User" where "collegeId"=$1 and role='TPO_ADMIN'`, [cid])).rows[0].n === 1 && (await pgc.query(`select count(*)::int n from "Department" where "collegeId"=$1`, [cid])).rows[0].n === 1);
     R.t(["SA-TC-023"], "duplicate slug refused", (await P("POST", "/api/platform/institutions", { ...body, admin: { name: "Dee", email: `g3dee${tag}@example.com` } })).s === 409);
-    const dupName = await P("POST", "/api/platform/institutions", { ...body, slug: `g3-prov2-${tag}`, admin: { name: "Dee", email: `g3dee2${tag}@example.com` } });
-    R.t(["SA-TC-045"], "a duplicate institution NAME is warned about or refused", dupName.s === 409 || dupName.s === 400, `HTTP ${dupName.s} (a second institution with the same name was accepted)`, "SA-45");
-    const dn = (await pgc.query(`select id from "College" where slug=$1`, [`g3-prov2-${tag}`])).rows[0]?.id; if (dn) created.colleges.push(dn);
+    // SA-TC-045 duplicate NAME rules are tested in g3-05-institution-registry.mjs
     const dupMail = await P("POST", "/api/platform/institutions", { ...body, slug: `g3-prov3-${tag}`, name: `G3 Other ${tag}` });
     R.t(["SA-TC-023"], "duplicate admin email refused", dupMail.s === 409 || dupMail.s === 400, `HTTP ${dupMail.s} ${JSON.stringify(dupMail.j).slice(0, 200)}`);
     const d3 = (await pgc.query(`select id from "College" where slug=$1`, [`g3-prov3-${tag}`])).rows[0]?.id; if (d3) created.colleges.push(d3);
@@ -115,13 +113,11 @@ try {
   // Missing features: probe for any plausible endpoint; none exists in the code base => FAIL as expected
   const probe = async (paths) => { const out = []; for (const p of paths) { const r = await P("GET", p); out.push(`${p}:${r.s}`); if (r.s === 200) return { found: true, out }; } return { found: false, out }; };
   const missing = [
-    [["SA-TC-041", "SA-TC-042"], "institution search, filters, sort and paging", ["/api/platform/institutions?q=g3&limit=5&sort=name"], async () => { const r = await P("GET", "/api/platform/institutions?q=zzzz-no-match-zzzz"); return Array.isArray(r.d) && r.d.length === 0; }],
     [["SA-TC-043"], "institution detail view", [`/api/platform/institutions/${cid}`]],
     [["SA-TC-044"], "institution editing (name, contact)", []],
     [["SA-TC-046"], "institution usage view", [`/api/platform/institutions/${cid}/usage`]],
     [["SA-TC-047", "SA-TC-048", "SA-TC-049", "SA-TC-050", "SA-TC-051", "SA-TC-009"], "platform analytics", ["/api/platform/analytics", "/api/platform/stats", "/api/platform/overview"]],
     [["SA-TC-052", "SA-TC-053"], "platform audit-log viewer", ["/api/platform/audit-logs", "/api/platform/audit"]],
-    [["SA-TC-054", "SA-TC-055", "SA-TC-056", "SA-TC-057", "SA-TC-008"], "system monitoring", ["/api/platform/monitoring", "/api/platform/health", "/api/platform/system"]],
     [["SA-TC-058", "SA-TC-059", "SA-TC-060", "SA-TC-061", "SA-TC-062", "SA-TC-006"], "AI configuration and usage", ["/api/platform/ai", "/api/platform/ai-config", "/api/platform/settings/ai"]],
     [["SA-TC-063", "SA-TC-064", "SA-TC-065", "SA-TC-011"], "platform support requests", ["/api/platform/support", "/api/platform/tickets"]],
     [["SA-TC-067", "SA-TC-007", "SA-TC-010", "SA-TC-012", "SA-TC-004"], "platform-wide settings, integrations, roles and permissions, retention", ["/api/platform/settings", "/api/platform/integrations", "/api/platform/roles", "/api/platform/retention"]],

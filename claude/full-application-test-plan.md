@@ -112,9 +112,9 @@ Scope follows your Gate 2 decisions: institution search, editing, activation and
 | `GET /api/platform/institutions?search&status&page (search, filter, sort, paging)` | Proposed | SA-TC-041, SA-TC-042, SA-TC-049 |
 | `GET /api/platform/institutions/[id] (detail, usage)` | Proposed | SA-TC-043, SA-TC-046 |
 | `PATCH /api/platform/institutions/[id] (edit details and modules)` | Proposed | SA-TC-044, SA-TC-045 |
-| `GET /api/platform/analytics (+ date filters)` | Proposed | SA-TC-009, SA-TC-047, SA-TC-048, SA-TC-049, SA-TC-050, SA-TC-051 |
-| `GET /api/platform/audit-logs` | Proposed | SA-TC-052, SA-TC-053 |
-| `GET /api/platform/monitoring (health, jobs, errors)` | Proposed | SA-TC-054, SA-TC-055, SA-TC-056, SA-TC-057 |
+| `GET /api/platform/analytics (+ date filters)` | Proposed; **built in Gate 4 Phase 4.2 (2026-11-10)**; results in `full-application-test-results.md` | SA-TC-009, SA-TC-047, SA-TC-048, SA-TC-049, SA-TC-050, SA-TC-051 |
+| `GET /api/platform/audit-logs` | Proposed; **built in Gate 4 Phase 4.1 (2026-11-10)**, with `/:id`, `/facets` and page `/platform/audit`. Results in `full-application-test-results.md` | SA-TC-052, SA-TC-053 |
+| `GET /api/platform/monitoring (health, jobs, errors)` | Proposed; **built in Gate 4 Phase 4.3 (2026-11-10)**; results in `full-application-test-results.md` | SA-TC-054, SA-TC-055, SA-TC-056, SA-TC-057 |
 | `GET/PUT /api/platform/ai-config, usage` | Proposed | SA-TC-058, SA-TC-059, SA-TC-060, SA-TC-061, SA-TC-062 |
 | `GET/POST /api/platform/support/* (list, assign, notes, resolve)` | Proposed | SA-TC-011, SA-TC-063, SA-TC-064, SA-TC-065 |
 

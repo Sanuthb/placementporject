@@ -9,11 +9,11 @@ Generated 2026-11-10 by `claude/tools/gate3_report.py` from the recorded asserti
 | Measure | Count |
 |---|---|
 | Total test cases | 1386 |
-| Executed (Pass + Fail) | 154 |
-| Pass | 118 |
-| Fail | 36 |
+| Executed (Pass + Fail) | 159 |
+| Pass | 138 |
+| Fail | 21 |
 | Blocked | 19 |
-| Not Run | 1213 |
+| Not Run | 1208 |
 
 `Executed` does not include Blocked. Case-level statuses are decided only from assertions tagged to the case; whole-suite results are listed separately in section 5 and are not counted as case passes.
 
@@ -43,14 +43,14 @@ Generated 2026-11-10 by `claude/tools/gate3_report.py` from the recorded asserti
 | M20 Notification Centre | 19 | 2 | 0 | 0 | 17 |
 | M21 Dashboards and Analytics | 40 | 1 | 0 | 1 | 38 |
 | Roles (ROLE-*) | 113 | 13 | 0 | 0 | 100 |
-| SRS sections (cross-cutting, security, NFR, UI, data...) | 591 | 21 | 1 | 1 | 568 |
-| System Administrator (SA) | 67 | 21 | 35 | 7 | 4 |
+| SRS sections (cross-cutting, security, NFR, UI, data...) | 591 | 27 | 0 | 1 | 563 |
+| System Administrator (SA) | 67 | 35 | 21 | 7 | 4 |
 
 A low executed count for a module means its cases have not yet been turned into data-specific tests, not that they were tested and passed.
 
 ## 3. System Administrator results
 
-67 SA cases: Pass 21, Fail 35, Blocked 7, Not Run 4.
+67 SA cases: Pass 35, Fail 21, Blocked 7, Not Run 4.
 
 | Case | Feature | Status | Detail |
 |---|---|---|---|
@@ -61,8 +61,8 @@ A low executed count for a module means its cases have not yet been turned into 
 | SA-TC-005 | Super Administrator: Manage subscriptions and billing, if ap | Not Run |  |
 | SA-TC-006 | Super Administrator: Configure AI services | Fail | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 |
 | SA-TC-007 | Super Administrator: Manage platform-wide settings | Fail | System Administrator: platform-wide settings, integrations, roles and permissions, retention exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/settings:404, /api/platform/integrations:404, /api/plat |
-| SA-TC-008 | Super Administrator: Monitor application performance | Fail | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 |
-| SA-TC-009 | Super Administrator: View platform-level analytics | Fail | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 |
+| SA-TC-008 | Super Administrator: Monitor application performance | Fail | EXPECTED BY THE CASE: application performance is shown (request latency and error rate per endpoint): The dashboard shows dependency latencies (database, storage, AI, email) and error counts, but the application does not measure i |
+| SA-TC-009 | Super Administrator: View platform-level analytics | Pass | 33 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-010 | Super Administrator: Manage integrations | Fail | System Administrator: platform-wide settings, integrations, roles and permissions, retention exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/settings:404, /api/platform/integrations:404, /api/plat |
 | SA-TC-011 | Super Administrator: Manage support requests | Fail | System Administrator: platform support requests exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/support:404, /api/platform/tickets:404 |
 | SA-TC-012 | Super Administrator: Configure data retention and security s | Fail | System Administrator: platform-wide settings, integrations, roles and permissions, retention exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/settings:404, /api/platform/integrations:404, /api/plat |
@@ -76,41 +76,41 @@ A low executed count for a module means its cases have not yet been turned into 
 | SA-TC-020 | GET /api/platform/me | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-021 | GET /api/platform/institutions | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-022 | POST /api/platform/institutions (register) | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |
-| SA-TC-023 | Duplicate institution | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-023 | Duplicate institution | Pass | 25 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-024 | Registration validation | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-025 | Registration rollback | Blocked | rollback through a forced mid-transaction failure: Only an input-level failure was exercised; a forced mid-transaction fault needs a fault-injection seam |
 | SA-TC-026 | Activate and deactivate institution | Pass | 5 assertion(s) passed, 0 failed, 0 blocked. |
-| SA-TC-027 | Suspension blocks all sessions at once | Pass | 4 assertion(s) passed, 0 failed, 0 blocked. |
-| SA-TC-028 | Reactivation restores access | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |
-| SA-TC-029 | Suspended institution: public token pages | Fail | SUSPENDED showcase page: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED showcase resume PDF: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED calendar feed: read refused: HTTP  |
+| SA-TC-027 | Suspension blocks all sessions at once | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-028 | Reactivation restores access | Pass | 8 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-029 | Suspended institution: public token pages | Pass | 45 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-030 | Suspended institution: scheduled jobs | Blocked | suspended institution: scheduled jobs: Cron-secret routes need a run against seeded due work; planned for the next Gate 3 pass |
 | SA-TC-031 | Platform audit trail for privileged actions | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |
-| SA-TC-032 | Platform responses never contain college records | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-032 | Platform responses never contain college records | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-033 | Platform session expiry and logout | Blocked | platform session expiry and logout: Needs a token expiry clock control or a signed-out token revocation check; test not built yet |
 | SA-TC-034 | Rate limits on platform endpoints | Blocked | rate limits on platform endpoints: Dev server runs with RATE_LIMIT_DISABLED=true; needs the production-mode server (:3112) and a flood harness |
-| SA-TC-035 | Permission matrix for all platform APIs | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-035 | Permission matrix for all platform APIs | Pass | 107 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-036 | Platform administrator cannot use college routes | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |
-| SA-TC-037 | Institution isolation through platform pages | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-037 | Institution isolation through platform pages | Pass | 16 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-038 | Page /platform states | Blocked | /platform page states, create/suspend flow, accessibility: Browser (Playwright) run not built in this pass; the page is a client of the APIs tested above |
 | SA-TC-039 | Page /platform: create and suspend flow | Blocked | /platform page states, create/suspend flow, accessibility: Browser (Playwright) run not built in this pass; the page is a client of the APIs tested above |
 | SA-TC-040 | Page /platform accessibility and responsiveness | Blocked | /platform page states, create/suspend flow, accessibility: Browser (Playwright) run not built in this pass; the page is a client of the APIs tested above |
-| SA-TC-041 | Institution search | Fail | System Administrator: institution search, filters, sort and paging exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions?q=g3&limit=5&sort=name:200 |
-| SA-TC-042 | Institution filters, sort and paging | Fail | System Administrator: institution search, filters, sort and paging exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions?q=g3&limit=5&sort=name:200 |
-| SA-TC-043 | Institution detail view | Fail | System Administrator: institution detail view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/2de6c280-da4f-42e4-bf75-ae4fc0652239:405 |
+| SA-TC-041 | Institution search | Pass | 32 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-042 | Institution filters, sort and paging | Pass | 34 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-043 | Institution detail view | Fail | System Administrator: institution detail view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/d016ffc8-d087-4e22-8d7e-728593322616:405 |
 | SA-TC-044 | Institution editing | Fail | System Administrator: institution editing (name, contact) exists and works: Feature not built (Gate 1 audit: Missing). Probed no endpoint exists |
-| SA-TC-045 | Duplicate institution warning by name | Fail | a duplicate institution NAME is warned about or refused: HTTP 200 (a second institution with the same name was accepted) |
-| SA-TC-046 | Institution usage view | Fail | System Administrator: institution usage view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/2de6c280-da4f-42e4-bf75-ae4fc0652239/usage:404 |
-| SA-TC-047 | Platform analytics: totals | Fail | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 |
-| SA-TC-048 | Platform analytics: distribution | Fail | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 |
-| SA-TC-049 | Platform analytics: trends and date filters | Fail | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 |
-| SA-TC-050 | Platform analytics: recent activity | Fail | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 |
-| SA-TC-051 | Platform analytics: not hardcoded | Fail | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 |
-| SA-TC-052 | Platform audit-log viewer | Fail | System Administrator: platform audit-log viewer exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/audit-logs:404, /api/platform/audit:404 |
-| SA-TC-053 | Audit trails unified | Fail | System Administrator: platform audit-log viewer exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/audit-logs:404, /api/platform/audit:404 |
-| SA-TC-054 | System monitoring: health checks | Fail | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 |
-| SA-TC-055 | System monitoring: scheduled jobs | Fail | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 |
-| SA-TC-056 | System monitoring: errors | Fail | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 |
-| SA-TC-057 | System monitoring: safe output | Fail | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 |
+| SA-TC-045 | Duplicate institution warning by name | Pass | 23 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-046 | Institution usage view | Fail | System Administrator: institution usage view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/d016ffc8-d087-4e22-8d7e-728593322616/usage:404 |
+| SA-TC-047 | Platform analytics: totals | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-048 | Platform analytics: distribution | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-049 | Platform analytics: trends and date filters | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-050 | Platform analytics: recent activity | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-051 | Platform analytics: not hardcoded | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-052 | Platform audit-log viewer | Pass | 108 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-053 | Audit trails unified | Pass | 8 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-054 | System monitoring: health checks | Fail | EXPECTED BY THE CASE: with the database offline the monitoring dashboard itself reports 'database unavailable': HTTP 500: the dashboard cannot authenticate the platform administrator without the database, so it shows 'could not lo |
+| SA-TC-055 | System monitoring: scheduled jobs | Fail | EXPECTED BY THE CASE: after a job has run, the dashboard shows that job's last run time, result and duration: The job just returned HTTP 200 but its row shows lastRunAt=null, lastSuccessAt=null, durationMs=null. Jobs record no exe |
+| SA-TC-056 | System monitoring: errors | Pass | 25 assertion(s) passed, 0 failed, 0 blocked. |
+| SA-TC-057 | System monitoring: safe output | Pass | 7 assertion(s) passed, 0 failed, 0 blocked. |
 | SA-TC-058 | AI configuration: masked secrets | Fail | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 |
 | SA-TC-059 | AI configuration: change and fallback | Fail | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 |
 | SA-TC-060 | AI configuration: limits and health | Fail | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 |
@@ -126,13 +126,16 @@ A low executed count for a module means its cases have not yet been turned into 
 
 | Issue | Severity | Finding | Cases | Evidence |
 |---|---|---|---|---|
-| G3-SEC-01 (A-02) | **Critical, confirmed** | A suspended institution remains reachable through public token surfaces. Verified live on the local stack and on a production build: each link works while the college is active, then after `College.isActive=false` it still returns **HTTP 200** for the showcase page, showcase resume PDF, calendar feed, project mentor review link, internship mentor feedback link and invitation lookup. Staff and student APIs are correctly refused (403) in the same state. Write probes (review submit, feedback submit, invitation accept) were **not run** under the stop rule, so write exposure is unproven (code reading says the handlers have no status check). | SA-TC-027/028/029, SRS-SECURITY-TC-039 | `tests/gate3/g3-01-suspended-institution.mjs`, `results/g3-01-suspended-institution.jsonl` |
-| G3-SYS-02 | Medium | Platform registration accepts a duplicate institution name (SA-TC-045). | SA-TC-045 | `g3-03-system-admin.mjs` |
+| G3-SEC-01 (A-02) | **Critical: FIXED and verified (Gate 4)** | Before the fix a suspended institution stayed reachable through six public token surfaces, for reads (HTTP 200) and for writes: an internship feedback submission, a project mentor review and an invitation acceptance were all accepted while suspended (evaluation, feedback, PPO status, review rows written; a login created and a student linked; view counter incremented). After the fix (shared `requireActiveCollege`, checked on every request before any read or write) all six surfaces return the same refusal as an unknown link, no database row changes while suspended, and everything works again on reactivation with tokens unspent. 58/58 assertions pass; before the fix 30/58 failed. | SA-TC-027/028/029, SRS-SECURITY-TC-039/040 | `tests/gate3/g3-01-suspended-institution.mjs`; `results/evidence/a02-before-fix.*`, `a02-after-fix.log` |
+| G3-SYS-02 | Medium: FIXED (Gate 4 Phase 3) | Duplicate institution names were accepted (SA-TC-045); institution list ignored search/sort/paging (SA-TC-041/042); a search for `%` matched every institution (found while testing the new search). | SA-TC-041/042/045 | `g3-05-institution-registry.mjs` (90 assertions) |
+| G3-SYS-05 (audit viewer) | Built (Gate 4 Phase 4.1) | Platform audit-log viewer: SA-TC-052/053. 112 API assertions, 2 browser tests, 55 unit assertions; credentials masked; no write route. | SA-TC-052/053 | `g3-06-platform-audit.mjs`, `tests/web/platform-audit.spec.ts` |
+| G3-SYS-06 (analytics) | Built (Gate 4 Phase 4.2) | Platform-wide analytics: SA-TC-047 to 051 and SA-TC-009. 140 API/database-comparison assertions, 2 browser tests, 43 unit assertions; dashboard values compared with independent SQL; read-only; aggregates only. | SA-TC-009, 047-051 | `g3-07-platform-analytics.mjs`, `tests/web/platform-analytics.spec.ts` |
+| G3-SYS-10 (monitoring) | Built (Gate 4 Phase 4.3) | System health: SA-TC-054 to 057 and SA-TC-008. 122 integration assertions against real controlled failures (database via TCP proxy, storage, SMTP and AI mocks), 152 unit assertions, 2 browser tests. **3 recorded failures:** SA-TC-055 (no job history, G3-SYS-07), SA-TC-054 database-outage step (G3-SYS-08), SA-TC-008 (no request-latency metrics, G3-SYS-09). SA-TC-056 and 057 pass. | SA-TC-054..057, 008 | `g3-08-monitoring.mjs`, `tests/web/platform-monitoring.spec.ts` |
 | (reviewed, no defect) | Info | Read-only principal can call `POST /api/notifications/read` (returns 400 on an empty body): by design (`principalOk`, a viewer marks their own notifications read). Allow-listed in the sweep with this reason. | ROLE-PRN-TC-005 | `g3-02-access-sweep.mjs` |
 
 What passed (no defect found): all 654 protected endpoints refuse anonymous callers; every staff/recruiter route refuses a student token; every student route refuses a staff token; platform-admin token is refused on all college routes; staff roles outside a route's documented roles are refused (792 probes); principal cannot write (255 probes); institution B cannot list, read, patch or delete any of institution A's records across the 33 collections that held data (59 probes); SQL-injection strings return no error and no extra rows; error responses carry no stack or SQL.
 
-Not covered yet: browser-level XSS rendering, write exposure on the six public surfaces (stop rule), public frontend pages for them (they are thin clients of the same APIs), cross-institution probes for modules with no seeded data (listed as Blocked).
+Not covered yet: browser-level XSS rendering, a Playwright run of the public frontend pages for them (they are thin clients of the same APIs), cross-institution probes for modules with no seeded data (listed as Blocked).
 
 ## 5. Supporting suite-level evidence (not counted as case passes)
 
@@ -153,6 +156,33 @@ Not covered yet: browser-level XSS rendering, write exposure on the six public s
 | unit | 34 unit files, exit 0, 233 PASS lines | All unit suites pass (one logged error is an expected negative test). |
 
 The four failing existing suites were verified by hand to be out-of-date tests (section count and completion rules changed in later modules), not application defects. They are left unmodified and listed as test maintenance for Gate 4.
+
+## 5b. Performance measurements (platform analytics, measured)
+
+Dataset: 376 institutions, 30201 students, 72081 applications, 7530 offers, 2440 drives, 3735 staff. Median and maximum of 5 sequential requests per call, production build, local Docker Postgres, this machine, after ANALYZE. Measured, not estimated.
+
+| Call | Median ms | Max ms | Runs |
+|---|---|---|---|
+| GET /api/platform/analytics (all institutions, no range) | 217 | 245 | 5 |
+| GET /api/platform/analytics (all institutions, 90-day range) | 151 | 330 | 5 |
+| GET /api/platform/analytics/institutions (page 1, size 10, sort students) | 100 | 123 | 5 |
+| GET /api/platform/analytics/institutions (size 100, sort rate) | 87 | 124 | 5 |
+| GET /api/platform/analytics/institutions (search + range) | 118 | 135 | 5 |
+
+Stale-statistics observation: Observed on the first call after a bulk insert, before planner statistics existed. A separate run measured 7.6-8.7 s before ANALYZE and about 0.14 s after, for the same query. First call in this run before ANALYZE: 10858 ms.
+
+## 5c. Performance measurements (system monitoring, measured)
+
+Median and maximum of sequential requests per call, production build on port 3114, local Docker Postgres/Auth, mocks for SMTP/AI/storage on loopback. Measured, not estimated. Mock providers answer instantly, so a forced full check here shows the application's own overhead, not real network latency.
+
+| Call | Median ms | Max ms | Runs |
+|---|---|---|---|
+| GET /api/health/live | 6 | 9 | 20 |
+| GET /api/health/ready (cached 5 s) | 6 | 7 | 20 |
+| GET /api/platform/monitoring (shared result) | 16 | 22 | 20 |
+| GET /api/platform/monitoring?refresh=1 (all dependencies checked, mocks local) | 57 | 64 | 5 |
+| GET /api/platform/monitoring/errors (page of 25) | 17 | 23 | 20 |
+| GET /api/platform/monitoring?refresh=1 with 120537 delivery-log rows | 191 | 191 | 1 |
 
 ## 6. Environment and infrastructure
 
@@ -248,8 +278,8 @@ None were resolved or invented. Cases that depend on them are not executed (stay
 | SA-TC-004 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform-wide settings, integrations, roles and permissions, retention exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/settings:404, /api/platform/integrations:404, /api/platform/roles:404, /api/platform/retention:404 | g3-03-system-admin | G3-SYS-04 |
 | SA-TC-006 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 | g3-03-system-admin | G3-SYS-04 |
 | SA-TC-007 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform-wide settings, integrations, roles and permissions, retention exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/settings:404, /api/platform/integrations:404, /api/platform/roles:404, /api/platform/retention:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-008 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-009 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 | g3-03-system-admin | G3-SYS-04 |
+| SA-TC-008 | 2026-11-10 | local stack | Fail | 1 assertion(s) passed, 1 failed, 0 blocked. | EXPECTED BY THE CASE: application performance is shown (request latency and error rate per endpoint): The dashboard shows dependency latencies (database, storage, AI, email) and error counts, but the application does not measure its own request latency or throughput, so there is nothing to show. | g3-08-monitoring | G3-SYS-09 |
+| SA-TC-009 | 2026-11-10 | local stack | Pass | 33 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-07-platform-analytics |  |
 | SA-TC-010 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform-wide settings, integrations, roles and permissions, retention exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/settings:404, /api/platform/integrations:404, /api/platform/roles:404, /api/platform/retention:404 | g3-03-system-admin | G3-SYS-04 |
 | SA-TC-011 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform support requests exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/support:404, /api/platform/tickets:404 | g3-03-system-admin | G3-SYS-04 |
 | SA-TC-012 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform-wide settings, integrations, roles and permissions, retention exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/settings:404, /api/platform/integrations:404, /api/platform/roles:404, /api/platform/retention:404 | g3-03-system-admin | G3-SYS-04 |
@@ -263,42 +293,42 @@ None were resolved or invented. Cases that depend on them are not executed (stay
 | SA-TC-020 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
 | SA-TC-021 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
 | SA-TC-022 | 2026-11-10 | local stack | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
-| SA-TC-023 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
+| SA-TC-023 | 2026-11-10 | local stack | Pass | 25 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-05-institution-registry | G3-SYS-02 |
 | SA-TC-024 | 2026-11-10 | local stack | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
 | SA-TC-025 | 2026-11-10 | local stack | Blocked | 1 assertion(s) passed, 0 failed, 1 blocked. | rollback through a forced mid-transaction failure: Only an input-level failure was exercised; a forced mid-transaction fault needs a fault-injection seam | g3-03-system-admin |  |
 | SA-TC-026 | 2026-11-10 | local stack | Pass | 5 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
-| SA-TC-027 | 2026-11-10 | local stack | Pass | 4 assertion(s) passed, 0 failed, 0 blocked. |  | g3-01-suspended-institution |  |
-| SA-TC-028 | 2026-11-10 | local stack | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |  | g3-01-suspended-institution |  |
-| SA-TC-029 | 2026-11-10 | local stack | Fail | 7 assertion(s) passed, 6 failed, 3 blocked. | SUSPENDED showcase page: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED showcase resume PDF: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED calendar feed: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED project mentor | g3-01-suspended-institution | G3-SEC-01 |
+| SA-TC-027 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-01-suspended-institution | G3-SEC-01 |
+| SA-TC-028 | 2026-11-10 | local stack | Pass | 8 assertion(s) passed, 0 failed, 0 blocked. |  | g3-01-suspended-institution | G3-SEC-01 |
+| SA-TC-029 | 2026-11-10 | local stack | Pass | 45 assertion(s) passed, 0 failed, 0 blocked. |  | g3-01-suspended-institution | G3-SEC-01 |
 | SA-TC-030 | 2026-11-10 | local stack | Blocked | 0 assertion(s) passed, 0 failed, 1 blocked. | suspended institution: scheduled jobs: Cron-secret routes need a run against seeded due work; planned for the next Gate 3 pass | g3-03-system-admin |  |
 | SA-TC-031 | 2026-11-10 | local stack | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
-| SA-TC-032 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
+| SA-TC-032 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-05-institution-registry |  |
 | SA-TC-033 | 2026-11-10 | local stack | Blocked | 0 assertion(s) passed, 0 failed, 1 blocked. | platform session expiry and logout: Needs a token expiry clock control or a signed-out token revocation check; test not built yet | g3-03-system-admin |  |
 | SA-TC-034 | 2026-11-10 | local stack | Blocked | 0 assertion(s) passed, 0 failed, 1 blocked. | rate limits on platform endpoints: Dev server runs with RATE_LIMIT_DISABLED=true; needs the production-mode server (:3112) and a flood harness | g3-03-system-admin |  |
-| SA-TC-035 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-02-access-sweep, g3-03-system-admin |  |
+| SA-TC-035 | 2026-11-10 | local stack | Pass | 107 assertion(s) passed, 0 failed, 0 blocked. |  | g3-02-access-sweep, g3-03-system-admin, g3-05-institution-registry, g3-06-platform-audit, g3-07-platform-analytics, g3-08-monitoring | G3-SYS-02, G3-SYS-03 |
 | SA-TC-036 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-02-access-sweep |  |
-| SA-TC-037 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin |  |
+| SA-TC-037 | 2026-11-10 | local stack | Pass | 16 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-05-institution-registry | G3-SYS-02, G3-SYS-03 |
 | SA-TC-038 | 2026-11-10 | local stack | Blocked | 0 assertion(s) passed, 0 failed, 1 blocked. | /platform page states, create/suspend flow, accessibility: Browser (Playwright) run not built in this pass; the page is a client of the APIs tested above | g3-03-system-admin |  |
 | SA-TC-039 | 2026-11-10 | local stack | Blocked | 0 assertion(s) passed, 0 failed, 1 blocked. | /platform page states, create/suspend flow, accessibility: Browser (Playwright) run not built in this pass; the page is a client of the APIs tested above | g3-03-system-admin |  |
 | SA-TC-040 | 2026-11-10 | local stack | Blocked | 0 assertion(s) passed, 0 failed, 1 blocked. | /platform page states, create/suspend flow, accessibility: Browser (Playwright) run not built in this pass; the page is a client of the APIs tested above | g3-03-system-admin |  |
-| SA-TC-041 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: institution search, filters, sort and paging exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions?q=g3&limit=5&sort=name:200 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-042 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: institution search, filters, sort and paging exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions?q=g3&limit=5&sort=name:200 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-043 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: institution detail view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/2de6c280-da4f-42e4-bf75-ae4fc0652239:405 | g3-03-system-admin | G3-SYS-04 |
+| SA-TC-041 | 2026-11-10 | local stack | Pass | 32 assertion(s) passed, 0 failed, 0 blocked. |  | g3-05-institution-registry | G3-SYS-03 |
+| SA-TC-042 | 2026-11-10 | local stack | Pass | 34 assertion(s) passed, 0 failed, 0 blocked. |  | g3-05-institution-registry | G3-SYS-03 |
+| SA-TC-043 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: institution detail view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/d016ffc8-d087-4e22-8d7e-728593322616:405 | g3-03-system-admin | G3-SYS-04 |
 | SA-TC-044 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: institution editing (name, contact) exists and works: Feature not built (Gate 1 audit: Missing). Probed no endpoint exists | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-045 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | a duplicate institution NAME is warned about or refused: HTTP 200 (a second institution with the same name was accepted) | g3-03-system-admin | G3-SYS-02 |
-| SA-TC-046 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: institution usage view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/2de6c280-da4f-42e4-bf75-ae4fc0652239/usage:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-047 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-048 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-049 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-050 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-051 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform analytics exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/analytics:404, /api/platform/stats:404, /api/platform/overview:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-052 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform audit-log viewer exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/audit-logs:404, /api/platform/audit:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-053 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: platform audit-log viewer exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/audit-logs:404, /api/platform/audit:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-054 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-055 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-056 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-057 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: system monitoring exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/monitoring:404, /api/platform/health:404, /api/platform/system:404 | g3-03-system-admin | G3-SYS-04 |
-| SA-TC-058 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 | g3-03-system-admin | G3-SYS-04 |
+| SA-TC-045 | 2026-11-10 | local stack | Pass | 23 assertion(s) passed, 0 failed, 0 blocked. |  | g3-05-institution-registry | G3-SYS-02 |
+| SA-TC-046 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: institution usage view exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/institutions/d016ffc8-d087-4e22-8d7e-728593322616/usage:404 | g3-03-system-admin | G3-SYS-04 |
+| SA-TC-047 | 2026-11-10 | local stack | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-07-platform-analytics |  |
+| SA-TC-048 | 2026-11-10 | local stack | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-07-platform-analytics |  |
+| SA-TC-049 | 2026-11-10 | local stack | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-07-platform-analytics |  |
+| SA-TC-050 | 2026-11-10 | local stack | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-07-platform-analytics |  |
+| SA-TC-051 | 2026-11-10 | local stack | Pass | 109 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-07-platform-analytics |  |
+| SA-TC-052 | 2026-11-10 | local stack | Pass | 108 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-06-platform-audit |  |
+| SA-TC-053 | 2026-11-10 | local stack | Pass | 8 assertion(s) passed, 0 failed, 0 blocked. |  | g3-03-system-admin, g3-06-platform-audit |  |
+| SA-TC-054 | 2026-11-10 | local stack | Fail | 44 assertion(s) passed, 1 failed, 0 blocked. | EXPECTED BY THE CASE: with the database offline the monitoring dashboard itself reports 'database unavailable': HTTP 500: the dashboard cannot authenticate the platform administrator without the database, so it shows 'could not load'. The unauthenticated /api/health/ready (503) is what reports the o | g3-08-monitoring | G3-SYS-08 |
+| SA-TC-055 | 2026-11-10 | local stack | Fail | 9 assertion(s) passed, 1 failed, 0 blocked. | EXPECTED BY THE CASE: after a job has run, the dashboard shows that job's last run time, result and duration: The job just returned HTTP 200 but its row shows lastRunAt=null, lastSuccessAt=null, durationMs=null. Jobs record no execution history (needs the proposed JobRun table, awaiting approval). | g3-08-monitoring | G3-SYS-07 |
+| SA-TC-056 | 2026-11-10 | local stack | Pass | 25 assertion(s) passed, 0 failed, 0 blocked. |  | g3-08-monitoring |  |
+| SA-TC-057 | 2026-11-10 | local stack | Pass | 7 assertion(s) passed, 0 failed, 0 blocked. |  | g3-08-monitoring |  |
+| SA-TC-058 | 2026-11-10 | local stack | Fail | 5 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 | g3-03-system-admin, g3-08-monitoring | G3-SYS-04 |
 | SA-TC-059 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 | g3-03-system-admin | G3-SYS-04 |
 | SA-TC-060 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 | g3-03-system-admin | G3-SYS-04 |
 | SA-TC-061 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 1 failed, 0 blocked. | System Administrator: AI configuration and usage exists and works: Feature not built (Gate 1 audit: Missing). Probed /api/platform/ai:404, /api/platform/ai-config:404, /api/platform/settings/ai:404 | g3-03-system-admin | G3-SYS-04 |
@@ -330,6 +360,9 @@ None were resolved or invented. Cases that depend on them are not executed (stay
 | SRS-SECURITY-TC-016 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation |  |
 | SRS-SECURITY-TC-017 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation |  |
 | SRS-SECURITY-TC-019 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | existing suite 13-institutions |  |
+| SRS-SECURITY-TC-022 | 2026-11-10 | local stack | Pass | 91 assertion(s) passed, 0 failed, 0 blocked. |  | g3-06-platform-audit, g3-07-platform-analytics, g3-08-monitoring |  |
+| SRS-SECURITY-TC-023 | 2026-11-10 | local stack | Pass | 91 assertion(s) passed, 0 failed, 0 blocked. |  | g3-06-platform-audit, g3-07-platform-analytics, g3-08-monitoring |  |
+| SRS-SECURITY-TC-024 | 2026-11-10 | local stack | Pass | 91 assertion(s) passed, 0 failed, 0 blocked. |  | g3-06-platform-audit, g3-07-platform-analytics, g3-08-monitoring |  |
 | SRS-SECURITY-TC-026 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation |  |
 | SRS-SECURITY-TC-027 | 2026-11-10 | local stack | Blocked | 1 assertion(s) passed, 0 failed, 1 blocked. | stored XSS: the page escapes the payload when rendered: Needs a browser run (Playwright); not built in this pass | g3-04-tenant-isolation |  |
 | SRS-SECURITY-TC-028 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation |  |
@@ -338,9 +371,11 @@ None were resolved or invented. Cases that depend on them are not executed (stay
 | SRS-SECURITY-TC-031 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | existing suite 09-security |  |
 | SRS-SECURITY-TC-032 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation |  |
 | SRS-SECURITY-TC-034 | 2026-11-10 | local stack | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |  | existing suite 09-security |  |
-| SRS-SECURITY-TC-035 | 2026-11-10 | local stack | Pass | 4 assertion(s) passed, 0 failed, 0 blocked. |  | existing suite 09-security, g3-04-tenant-isolation |  |
+| SRS-SECURITY-TC-035 | 2026-11-10 | local stack | Pass | 14 assertion(s) passed, 0 failed, 0 blocked. |  | existing suite 09-security, g3-04-tenant-isolation, g3-06-platform-audit, g3-08-monitoring |  |
 | SRS-SECURITY-TC-036 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation |  |
 | SRS-SECURITY-TC-037 | 2026-11-10 | local stack | Pass | 4 assertion(s) passed, 0 failed, 0 blocked. |  | existing suite 09-security |  |
-| SRS-SECURITY-TC-039 | 2026-11-10 | local stack | Fail | 0 assertion(s) passed, 6 failed, 3 blocked. | SUSPENDED showcase page: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED showcase resume PDF: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED calendar feed: read refused: HTTP 200  <-- EXPOSED to a suspended institution / SUSPENDED project mentor | g3-01-suspended-institution | G3-SEC-01 |
+| SRS-SECURITY-TC-038 | 2026-11-10 | local stack | Pass | 3 assertion(s) passed, 0 failed, 0 blocked. |  | g3-06-platform-audit |  |
+| SRS-SECURITY-TC-039 | 2026-11-10 | local stack | Pass | 45 assertion(s) passed, 0 failed, 0 blocked. |  | g3-01-suspended-institution | G3-SEC-01 |
+| SRS-SECURITY-TC-040 | 2026-11-10 | local stack | Pass | 54 assertion(s) passed, 0 failed, 0 blocked. |  | g3-01-suspended-institution | G3-SEC-01 |
 | SRS-SECURITY-TC-042 | 2026-11-10 | local stack | Pass | 9 assertion(s) passed, 0 failed, 0 blocked. |  | existing suite 09-security |  |
-| SRS-SECURITY-TC-043 | 2026-11-10 | local stack | Pass | 1 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation |  |
+| SRS-SECURITY-TC-043 | 2026-11-10 | local stack | Pass | 2 assertion(s) passed, 0 failed, 0 blocked. |  | g3-04-tenant-isolation, g3-08-monitoring |  |

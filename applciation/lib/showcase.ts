@@ -5,6 +5,7 @@ import { listOf } from "@/lib/resume";
 import { sortedAchievements } from "@/lib/achievements";
 import { portfolioFor } from "@/lib/projectService";
 import { internshipRecords } from "@/lib/internshipService";
+import { requireActiveCollege } from "@/lib/collegeActive";
 
 export const newToken = () => randomBytes(32).toString("base64url");
 
@@ -13,6 +14,7 @@ export async function publicProfile(token: string) {
   const p = await db.showcaseProfile.findUnique({ where: { token }, include: { student: { include: { department: { select: { name: true } }, batch: { select: { name: true } }, sections: { where: { status: "VERIFIED" }, select: { section: true, data: true } } } } } });
   const live = p && p.isEnabled && (!p.expiresAt || p.expiresAt > new Date()) && p.student.isActive && !p.student.isArchived;
   if (!live) throw notFound("Profile not found");
+  await requireActiveCollege(p.collegeId, () => notFound("Profile not found")); // suspended institution: same 404 as an unknown link, before the view counter moves
   const mod = await db.collegeModule.findUnique({ where: { collegeId_module: { collegeId: p.collegeId, module: "TALENT_SHOWCASE" } } });
   if (!mod?.enabled) throw notFound("Profile not found");
   const sec = (name: string) => p.student.sections.find((x) => x.section === name)?.data as Record<string, unknown> | undefined;

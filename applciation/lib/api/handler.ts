@@ -4,6 +4,7 @@ import { ApiError, forbidden } from "@/lib/api/errors";
 import { getSession, isFacultyOnly, isPrincipalOnly, requireModule, requireRole, type Session } from "@/lib/auth/session";
 import type { ModuleKey, Role } from "@/generated/prisma/client";
 import { rateLimit, type LimitOpt } from "@/lib/rateLimit";
+import { recordError } from "@/lib/monitorStore";
 
 type Opts = { roles?: Role[]; /** Let a faculty-only session through without listing FACULTY in `roles` (read-only routes any staff member may use). */ facultyOk?: boolean; /** Lets a principal-only session through. Only for routes that are safe for a read-only viewer. */ principalOk?: boolean; module?: ModuleKey; limit?: LimitOpt; /** For the few routes a person must reach before finishing two-step sign-in. */ skipMfa?: boolean };
 type Ctx<P> = { params: Promise<P> };
@@ -35,10 +36,12 @@ export function route<P = Record<string, string>>(
 export function toErrorResponse(e: unknown, req?: Request) {
   const requestId = req?.headers.get("x-request-id") ?? undefined;
   if (e instanceof ApiError) {
+    if (e.status >= 500) recordError({ status: e.status, code: e.code, message: e.message, method: req?.method ?? null, path: req ? new URL(req.url).pathname : null, requestId: requestId ?? null }); // monitoring memory: service failures only, sanitized there
     const retry = (e.details as { retryAfter?: number } | undefined)?.retryAfter;
     return NextResponse.json({ error: { code: e.code, message: e.message, details: e.details, requestId } }, { status: e.status, headers: retry ? { "retry-after": String(retry) } : undefined });
   }
   if (e instanceof ZodError) return NextResponse.json({ error: { code: "VALIDATION", message: validationMessage(e), details: e.issues, requestId } }, { status: 400 });
+  recordError({ status: 500, code: "INTERNAL", message: (e as Error)?.message, method: req?.method ?? null, path: req ? new URL(req.url).pathname : null, requestId: requestId ?? null });
   console.error(JSON.stringify({ level: "error", requestId, path: req ? new URL(req.url).pathname : undefined, method: req?.method, message: (e as Error)?.message, stack: (e as Error)?.stack }));
   return NextResponse.json({ error: { code: "INTERNAL", message: "Something went wrong", requestId } }, { status: 500 });
 }

@@ -1,0 +1,59 @@
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 setup: every token issued 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE showcase page works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE showcase resume PDF works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE calendar feed works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE project mentor review (read) works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE internship mentor feedback (read) works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE invitation lookup works 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED showcase page refused HTTP 200
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED showcase resume PDF refused HTTP 200
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED calendar feed refused HTTP 200
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED project mentor review (read) refused HTTP 200
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED internship mentor feedback (read) refused HTTP 200
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED invitation lookup refused HTTP 200
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED refusal bodies reveal no institution, student, mentor or suspension state {"data":{"college":{"name":"E2E College","logoUrl":null,"brandColor":null},"name | {"data":{"mentor":"Mentor P","project":{"title":"G3 project","problemStatement": | {"data":{"mentor":"Mentor I","stud
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED showcase refusal is identical to an unknown link's 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED project mentor review submission refused HTTP 200 {"data":{"ok":true}}
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED internship feedback submission refused HTTP 200 {"data":{"ok":true}}
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED invitation acceptance refused HTTP 200 {"data":{"accepted":true}}
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED invitation accept with a wrong email is refused the same way (no attempt counted) HTTP 410
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: views 2 -> 6
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: lastRead 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: reviews 0 -> 1
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: pUsed 0 -> 1
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: evals 0 -> 1
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: fb 0 -> 1
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: iUsed 0 -> 1
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: ppo NONE -> EXPECTED
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: invRow {"status":"SENT","failedAttempts":0,"acceptedAt":null} -> {"status":"ACCEPTED","failedAttempts":0,"acceptedAt":"2026-11-10T07:49:53.826Z"}
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: invUser null -> d23f3df8-e29c-4b67-afbd-3a0e3e136f62
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: onboarding INVITATION_SENT -> INVITATION_ACCEPTED
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED no login was created by the invitation attempt 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED no audit rows were written by refused public requests 1243 -> 1244
+PASS SRS-SECURITY-TC-040 SUSPENDED expired project mentor token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED expired internship token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown project token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown internship token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown showcase token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown calendar token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED garbage invitation token rejected 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED showcase page works again 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED showcase resume PDF works again 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED calendar feed works again 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED project mentor review (read) works again HTTP 404
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED internship mentor feedback (read) works again HTTP 404
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED invitation lookup works again HTTP 410
+PASS SA-TC-028 REACTIVATED staff API works with the old token 
+PASS SA-TC-028 REACTIVATED student API works with the old token 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED the mentor review link was not spent by the suspended attempt and now accepts the review HTTP 404 {"error":{"code":"NOT_FOUND","message":"This review link is not valid any more","requestId":"d9fb757c-aa9c-4c49-bf4d-960
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED a used review link is rejected the second time 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED the internship feedback link was not spent and now accepts feedback HTTP 404 {"error":{"code":"NOT_FOUND","message":"This link is not valid any more","requestId":"85b968ed-1868-4afc-a167-0e4c476f26
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED a used feedback link is rejected the second time 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED expired tokens are still rejected 
+FAIL SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED the invitation was not spent and can now be accepted HTTP 410 {"error":{"code":"INVITATION_INVALID","message":"This invitation link is not valid. Ask your placement cell to send a ne
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED an accepted invitation cannot be reused 
+PASS SRS-SECURITY-TC-040 a revoked invitation is rejected (active institution) 
+PASS SRS-SECURITY-TC-040 a malformed invitation token is rejected (active institution) 
+PASS SA-TC-027 SUSPENDED a new student sign-in cannot use the API 
+PASS SA-TC-027 SUSPENDED staff API refused 
+58 assertions, 30 failed

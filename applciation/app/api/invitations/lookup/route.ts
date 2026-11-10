@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { limitBy } from "@/lib/rateLimit";
 import { expireStale } from "@/lib/invitations/service";
 import { hashToken, looksLikeToken, maskEmail } from "@/lib/invitations/token";
+import { requireActiveCollege } from "@/lib/collegeActive";
 
 const body = z.object({ token: z.string().max(200) });
 const INVALID = () => new ApiError(410, "INVITATION_INVALID", "This invitation link is not valid. Ask your placement cell to send a new one");
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
       },
     });
     if (!inv || inv.status === "REVOKED" || inv.status === "ACCEPTED" || inv.student.userId) throw INVALID();
+    await requireActiveCollege(inv.collegeId, INVALID); // suspended institution: identical to an invalid link
     if (inv.status === "EXPIRED" || inv.expiresAt < new Date()) throw new ApiError(410, "INVITATION_EXPIRED", "This invitation has expired. Ask your placement cell to send a new one");
     const st = inv.student;
     return NextResponse.json({

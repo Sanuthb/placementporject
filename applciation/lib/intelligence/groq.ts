@@ -1,6 +1,8 @@
 import { ApiError } from "@/lib/api/errors";
+import { recordAiCall } from "@/lib/monitorStore";
 
-const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+/** GROQ_API_BASE lets a test point this at a local mock provider; unset, it is the real Groq endpoint. */
+const ENDPOINT = `${process.env.GROQ_API_BASE?.trim() || "https://api.groq.com/openai/v1"}/chat/completions`;
 export const groqModel = () => process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
 export const groqConfigured = () => !!process.env.GROQ_API_KEY?.trim();
 
@@ -19,6 +21,7 @@ export async function groqJsonMessages(model: string, messages: GroqMessage[], o
   const key = process.env.GROQ_API_KEY?.trim();
   if (!key) throw new ApiError(503, "AI_NOT_CONFIGURED", "AI analysis is not switched on. Add GROQ_API_KEY to the server settings");
   let res: Response;
+  const t0 = performance.now();
   try {
     res = await fetch(ENDPOINT, {
       method: "POST",
@@ -27,9 +30,11 @@ export async function groqJsonMessages(model: string, messages: GroqMessage[], o
       signal: AbortSignal.timeout(o.timeoutMs ?? 50_000),
     });
   } catch (e) {
+    recordAiCall({ ok: false, timeout: (e as Error)?.name === "TimeoutError" || (e as Error)?.name === "AbortError", ms: performance.now() - t0 }); // outcome and time only
     console.error(JSON.stringify({ level: "error", msg: "groq request failed", error: (e as Error).message }));
     throw new ApiError(502, "AI_FAILED", "The AI service did not respond. Try again in a moment");
   }
+  recordAiCall({ ok: res.ok, ms: performance.now() - t0, status: res.status });
   if (res.status === 429) throw new ApiError(429, "AI_BUSY", "The AI service is busy. Try again in a minute");
   if (res.status === 401 || res.status === 403) throw new ApiError(503, "AI_NOT_CONFIGURED", "The AI key was refused. Check GROQ_API_KEY");
   if (!res.ok) {

@@ -9,6 +9,7 @@ import { limitBy, rateLimit } from "@/lib/rateLimit";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { expireStale } from "@/lib/invitations/service";
 import { hashToken, looksLikeToken } from "@/lib/invitations/token";
+import { requireActiveCollege } from "@/lib/collegeActive";
 
 const MAX_WRONG_EMAIL = 5;
 const body = z.object({
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
 
     const inv = await db.studentInvitation.findUnique({ where: { tokenHash }, include: { student: { select: { id: true, userId: true, name: true, email: true, isActive: true, isArchived: true } } } });
     if (!inv || inv.status === "REVOKED" || inv.status === "ACCEPTED" || inv.student.userId || !inv.student.isActive || inv.student.isArchived) throw INVALID();
+    await requireActiveCollege(inv.collegeId, INVALID); // before the wrong-email counter moves and before any login is created
     if (inv.status === "EXPIRED" || inv.expiresAt < new Date()) throw new ApiError(410, "INVITATION_EXPIRED", "This invitation has expired. Ask your placement cell to send a new one");
     if (inv.failedAttempts >= MAX_WRONG_EMAIL) throw new ApiError(423, "INVITATION_LOCKED", "Too many incorrect attempts. Ask your placement cell to send a new invitation");
     if (email !== inv.invitedEmail.toLowerCase()) {

@@ -85,13 +85,43 @@ This is the least complete area. Verified by reading the code:
 | Area (prompt section) | Finding |
 |---|---|
 | B. Institution management | No search, filter or pagination on the list. No edit of institution details or module set by the platform admin (name, colour and logo are edited by the college's own TPO; modules are fixed at creation). No "registration status", no usage view. Duplicate check is by slug only, not by name |
-| C. Platform analytics | **None.** No endpoint or page. No totals, trends, recent registrations or recent admin activity |
+| C. Platform analytics | **UPDATE 2026-11-10 (Gate 4 Phase 4.2): BUILT.** Was: none. Now `/platform/analytics` with `GET /api/platform/analytics` and `/institutions`: institution, user, institution-wise, placement and activity statistics, date-range / institution / status filters, charts, tables, empty, loading and error states. Every figure is a database aggregate; no new table. Metric definitions in `applciation/docs/PLATFORM_ANALYTICS.md`; see 4.2 below |
 | D. Subscriptions and plans | **None.** No tables, no limits, no billing. Not named as in scope in the SRS beyond "if applicable" |
-| E. Health and monitoring | Only the public `/api/health` (database check, latency). No admin view of storage, AI provider, email, scheduled job status, failures or error summaries. Errors go to JSON logs only. No error-tracking service |
+| E. Health and monitoring | **UPDATE 2026-11-10 (Gate 4 Phase 4.3): BUILT, with three recorded gaps.** Was: only the public `/api/health`. Now `/platform/monitoring` with `GET /api/platform/monitoring` and `/errors`, plus unauthenticated `/api/health/live` and `/ready`: application, database, storage, AI provider, email, scheduled jobs, background jobs and server errors, each with a status (healthy / degraded / unavailable / unknown / not configured) and its evidence. No database change. **Gaps:** jobs record no execution history (SA-TC-055 fails; schema proposal awaiting approval), the dashboard cannot show a database outage (it cannot authenticate without the database; readiness reports it), and the application does not measure its own request latency (SA-TC-008 fails). See 4.3 below and `applciation/docs/MONITORING.md` |
 | F. AI configuration | Environment variables only. No admin interface, no usage statistics, limits or fallbacks. Model names are not recorded on AI evaluations (only the Student 360 report keeps one) |
 | G. Support and monitoring | College-level tickets exist (students raise them, staff answer). **No platform-level support view** |
-| H. Audit | `PlatformAuditLog` exists but **there is no screen or API to read it**. Institution activation and provisioning are written to the college `AuditLog` with the platform actor id, not to `PlatformAuditLog`, so the two trails are split |
+| H. Audit | **UPDATE 2026-11-10 (Gate 4 Phase 4.1): BUILT.** Was: `PlatformAuditLog` had no screen or API to read it, and institution actions by a platform administrator sat in the college `AuditLog` (split trails). Now `GET /api/platform/audit-logs` (+ `/:id`, `/facets`) and the page `/platform/audit` show both existing trails as one read-only timeline: search, filters (event type, administrator, institution, kind, outcome, date range), sort, paging, details, credential masking. Mutating methods return 405. No new table or migration; institution staff events are not included. See section 4.1 below |
 | Logout and session expiry | Sign-out is the shared Supabase client; session lifetime is Supabase's. No platform-specific idle timeout |
+
+### 4.1 Platform audit-log viewer (added 2026-11-10, Gate 4 Phase 4.1)
+
+**Architecture (unchanged, extended by reading):** two existing trails. `PlatformAuditLog` (no college): `platform.admin.created`, `platform.mfa.enroll_started|enrolled|enroll_failed|challenge_ok|challenge_failed|removed|remove_failed|recovery`, with administrator id and email, source address and a detail JSON. `AuditLog` rows with `platformActorId` set: `institution.provision|activate|deactivate`, with college, entity, before and after. The viewer is a `UNION ALL` of exactly those two reads (`lib/platformAuditView.ts`); it creates and changes nothing.
+
+**Outcome:** recorded only through the action name (`..._failed` is a failure; everything written is otherwise a completed action). Refused or failed institution actions that never reach the database are **not** recorded today, so they cannot be shown (see limitations).
+
+**Access:** `platformRoute` only: authenticated platform administrator with the second step complete. Anonymous 401; college Head TPO, officer, coordinator, faculty, principal, student and recruiter 403; password-only platform session 403 `MFA_REQUIRED`; administrator without an authenticator 403 `MFA_SETUP_REQUIRED`.
+
+**Masking:** `redact()` hides values under keys that look like credentials (password, secret, token, key, authorization, cookie, session, otp, code, hash, private, credential, bearer, signature) and any value shaped like a JWT, `sk-` key, bearer string or long opaque blob, at any depth. The list never returns detail bodies.
+
+**Known limitations:** no export; no free-text search inside the detail body; outcome of institution actions is always "succeeded" because failures are not logged; platform actions that are only refused (for example a rejected duplicate registration) are not audited; the page is tested in Chrome only; ordering by actor or institution uses the database collation.
+
+### 4.2 Platform analytics (added 2026-11-10, Gate 4 Phase 4.2)
+
+**Sources used (no new tracking):** `College` (institutions, status, registration date), `Student`, `User` (staff), `Recruiter`, `PlatformAdmin`, `Drive`, `Application`, `Offer`, `LoginEvent` (recorded sign-in sessions), and the two audit trails for recent administrative activity.
+
+**Placement rate:** placed students ÷ students registered for placement (active, not archived, `participationStatus = REGISTERED`), the population the institution dashboards already use; null when nobody is registered. The SRS gives no formula. Platform rate is pooled. With a date range the numerator becomes distinct registered students with an offer accepted in the range.
+
+**Snapshots vs flows:** people and institution totals are as of now; registrations, drives, applications, offers, placements and sign-ins follow the range (UTC days).
+
+**Known limitations:** "active users" is distinct people with a recorded sign-in session (last 30 days by default), not every request; platform administrators are not in `LoginEvent`; placed-with-range needs an accepted offer; no export; charts use the theme's single-hue palette. Stale planner statistics after a bulk load can make the institution search+range query slow until `ANALYZE` (measured 7.6-8.7 s vs 0.14 s).
+
+### 4.3 System health and monitoring (added 2026-11-10, Gate 4 Phase 4.3)
+
+**Existing infrastructure found:** `/api/health` (one `SELECT 1`, unauthenticated), `lib/env.ts` (startup configuration check), Prisma/pg pool (`DB_POOL_MAX`), Supabase storage client (single bucket `student-documents`), Groq client with a 50 s timeout (`lib/intelligence/groq.ts`), nodemailer SMTP with a dry-run switch (`lib/mailer.ts`), five Vercel cron jobs in `vercel.json` (cron-secret endpoints), request ids set in `proxy.ts` and returned in error bodies, JSON error logs to the console. **Not found:** any record of cron runs, any stored application errors, any AI or storage outcome history, any job queue. **Durable data that does exist:** `InvitationEmailLog`, `MessageLog` (email deliveries), `ImportJob` (bulk imports).
+
+**Built without a migration:** bounded live probes (database, storage, AI, SMTP, with limits of 2-4 s), an in-memory per-instance error ring and AI call tally (clearly labelled not durable), the job registry from `vercel.json`, email history and import states from existing tables, liveness and readiness endpoints, throttling (15 s shared result, forced refresh at most every 5 s).
+
+**Recorded failures (not hidden):** SA-TC-055 (no job history), SA-TC-054 database-outage step (dashboard cannot authenticate without the database), SA-TC-008 (no application request-latency metrics). **Proposal awaiting approval:** two additive tables `JobRun` and `MonitorEvent` (`docs/MONITORING.md`).
 
 **Possible security findings to verify in Gate 3** (not yet tested)
 1. **Suspended institution, public pages:** `lib/showcase.ts` checks the student and the link but not `college.isActive`, so a suspended institution's student showcase links may keep working. Same question for the mentor-review, internship-feedback and calendar-feed token routes.

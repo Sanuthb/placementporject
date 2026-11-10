@@ -1,0 +1,48 @@
+{
+ "dataset": {
+  "colleges": 376,
+  "students": 30201,
+  "apps": 72081,
+  "offers": 7530,
+  "drives": 2440,
+  "users": 3735
+ },
+ "note": "Median and maximum of 5 sequential requests per call, production build, local Docker Postgres, this machine, after ANALYZE. Measured, not estimated.",
+ "staleStatisticsObservation": {
+  "call": "institution table, search + date range",
+  "firstCallBeforeAnalyzeMs": 10858,
+  "note": "Observed on the first call after a bulk insert, before planner statistics existed. A separate run measured 7.6-8.7 s before ANALYZE and about 0.14 s after, for the same query."
+ },
+ "timings": [
+  {
+   "name": "GET /api/platform/analytics (all institutions, no range)",
+   "medianMs": 217,
+   "maxMs": 245,
+   "runs": 5
+  },
+  {
+   "name": "GET /api/platform/analytics (all institutions, 90-day range)",
+   "medianMs": 151,
+   "maxMs": 330,
+   "runs": 5
+  },
+  {
+   "name": "GET /api/platform/analytics/institutions (page 1, size 10, sort students)",
+   "medianMs": 100,
+   "maxMs": 123,
+   "runs": 5
+  },
+  {
+   "name": "GET /api/platform/analytics/institutions (size 100, sort rate)",
+   "medianMs": 87,
+   "maxMs": 124,
+   "runs": 5
+  },
+  {
+   "name": "GET /api/platform/analytics/institutions (search + range)",
+   "medianMs": 118,
+   "maxMs": 135,
+   "runs": 5
+  }
+ ]
+}

@@ -27,5 +27,17 @@ Existing and retained, unchanged in behaviour: college profile, campuses, depart
 - Recovery (lost phone): `PLATFORM_ADMIN_EMAIL=… PLATFORM_RECOVERY_CONFIRM=… npm run db:platform-mfa-recovery` (needs the service-role key; audited as `platform.mfa.recovery`, with the operator). Do it with the administrator present and identity confirmed out of band, because whoever signs in next with the password can enrol.
 - The `/platform` page is a client shell with no data of its own; every byte of platform data comes from the API, which does the enforcing.
 
+## Platform audit log (read-only viewer)
+- `GET /api/platform/audit-logs`, `GET /api/platform/audit-logs/:id`, `GET /api/platform/audit-logs/facets`; page `/platform/audit`. Platform administrators with the second step only; there is no write route (other methods return 405).
+- One timeline over the two existing trails: `PlatformAuditLog` (administrator security events) and `AuditLog` rows with `platformActorId` (institution actions by a platform administrator). No new table. Institution staff's own actions are not shown.
+- Query: `q` (event, administrator email, institution name, target id, event id), `action`, `admin`, `institution`, `source` (PLATFORM|INSTITUTION), `outcome` (success|failure), `from`, `to` (date-only `to` includes the whole day), `sort` (createdAt|action|actor|institution|source), `order`, `page`, `pageSize` (1-100). Fixed allow-lists; invalid values give 400.
+- Detail hides anything credential-shaped (`lib/platformAuditView.ts` `redact`). Code: `lib/platformAuditView.ts`. Tests: `tests/unit/platformaudit.test.mts`, `tests/gate3/g3-06-platform-audit.mjs`, `tests/web/platform-audit.spec.ts`.
+
+## Platform analytics
+Page `/platform/analytics`, APIs `GET /api/platform/analytics` and `/institutions`. Platform administrators with the second step only; read-only; aggregates only, no personal records. Definitions of every metric, the placement-rate denominator, date and timezone rules and the filters: `docs/PLATFORM_ANALYTICS.md`. Code `lib/platformAnalytics.ts`; no migration.
+
+## System health and monitoring
+Page `/platform/monitoring`; `GET /api/platform/monitoring`, `/errors`; unauthenticated `GET /api/health/live` and `/ready`. Meaning of each status, thresholds, evidence, data sources, limitations and the (unapplied) schema proposal for durable job and error history: `docs/MONITORING.md`. No migration.
+
 ## Local, isolated end-to-end stack
 `bash tests/e2e/stack/up.sh` starts Postgres, Supabase Auth (GoTrue), Storage and a mail sink in Docker, applies all migrations and seeds one college. `source tests/e2e/stack/env.sh` points the app and tests at it. `tests/e2e/run.mjs` refuses to run unless `SUPABASE_URL` and `DIRECT_URL` are local.

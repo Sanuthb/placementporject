@@ -26,7 +26,17 @@ type Institution = { id: string; name: string; slug: string; isActive: boolean; 
  * administrators can use it, and the API refuses everyone else, including college administrators.
  */
 function InstitutionsView() {
-  const { data, loading, reload } = useApi<Institution[]>("/api/platform/institutions")
+  const [q, setQ] = React.useState("")
+  const [dq, setDq] = React.useState("")
+  const [status, setStatus] = React.useState<"all" | "active" | "inactive">("all")
+  const [sort, setSort] = React.useState<"name" | "createdAt" | "staff" | "students">("createdAt")
+  const [order, setOrder] = React.useState<"asc" | "desc">("desc")
+  const [page, setPage] = React.useState(1)
+  React.useEffect(() => { const t = setTimeout(() => { setDq(q.trim()); setPage(1) }, 300); return () => clearTimeout(t) }, [q])
+  const { data: list, loading, reload } = useApi<{ items: Institution[]; page: number; total: number; totalPages: number }>("/api/platform/institutions", { q: dq || undefined, status, sort, order, page, pageSize: 20 })
+  const data = list?.items
+  const sortBy = (k: typeof sort) => { if (k === sort) setOrder(order === "asc" ? "desc" : "asc"); else { setSort(k); setOrder(k === "name" ? "asc" : "desc") } setPage(1) }
+  const arrow = (k: typeof sort) => (k === sort ? (order === "asc" ? " ▲" : " ▼") : "")
   const [v, setV] = React.useState({ name: "", slug: "", adminName: "", adminEmail: "", departments: "" })
   const [busy, setBusy] = React.useState(false)
 
@@ -63,10 +73,16 @@ function InstitutionsView() {
           </form>
         </CardContent>
       </Card>
-      {loading ? <Skeleton className="h-32 w-full" /> : (
+      <div className="flex flex-wrap items-center gap-2">
+        <Input aria-label="Search institutions" className="max-w-xs" placeholder="Search name, address or administrator email" value={q} onChange={(e) => setQ(e.target.value)} />
+        {(["all", "active", "inactive"] as const).map((st) => <Button key={st} size="sm" variant={status === st ? "default" : "outline"} onClick={() => { setStatus(st); setPage(1) }}>{st === "all" ? "All" : st === "active" ? "Active" : "Inactive"}</Button>)}
+      </div>
+      {loading && !list ? <Skeleton className="h-32 w-full" /> : data && data.length === 0 ? (
+        <p className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{dq || status !== "all" ? "No institutions match your search." : "No institutions yet."}</p>
+      ) : (
         <div className="overflow-x-auto rounded-lg border">
           <Table>
-            <TableHeader><TableRow><TableHead>Institution</TableHead><TableHead>Created</TableHead><TableHead>Staff</TableHead><TableHead>Students</TableHead><TableHead>State</TableHead><TableHead /></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead><button type="button" onClick={() => sortBy("name")}>Institution{arrow("name")}</button></TableHead><TableHead><button type="button" onClick={() => sortBy("createdAt")}>Created{arrow("createdAt")}</button></TableHead><TableHead><button type="button" onClick={() => sortBy("staff")}>Staff{arrow("staff")}</button></TableHead><TableHead><button type="button" onClick={() => sortBy("students")}>Students{arrow("students")}</button></TableHead><TableHead>State</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody>
               {data?.map((i) => (
                 <TableRow key={i.id}>
@@ -78,6 +94,12 @@ function InstitutionsView() {
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+      {list && list.total > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{list.total} institution{list.total === 1 ? "" : "s"} · page {list.page} of {list.totalPages}</span>
+          <div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><Button size="sm" variant="outline" disabled={page >= list.totalPages} onClick={() => setPage(page + 1)}>Next</Button></div>
         </div>
       )}
     </div>
@@ -170,7 +192,7 @@ export default function PlatformPage() {
   return (
     <>
       <InstitutionsView />
-      <div className="mx-auto max-w-4xl px-4 pb-8 md:px-8"><RemoveMfa onDone={reload} /></div>
+      <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-4 pb-8 md:px-8"><Button variant="outline" size="sm" render={<Link href="/platform/analytics" />}>Analytics</Button><Button variant="outline" size="sm" render={<Link href="/platform/monitoring" />}>System health</Button><Button variant="outline" size="sm" render={<Link href="/platform/audit" />}>Audit log</Button><RemoveMfa onDone={reload} /></div>
     </>
   )
 }

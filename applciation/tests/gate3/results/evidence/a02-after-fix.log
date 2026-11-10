@@ -1,0 +1,59 @@
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 setup: every token issued 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE showcase page works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE showcase resume PDF works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE calendar feed works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE project mentor review (read) works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE internship mentor feedback (read) works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 ACTIVE invitation lookup works 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED showcase page refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED showcase resume PDF refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED calendar feed refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED project mentor review (read) refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED internship mentor feedback (read) refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED invitation lookup refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED refusal bodies reveal no institution, student, mentor or suspension state 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED showcase refusal is identical to an unknown link's 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED project mentor review submission refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED internship feedback submission refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED invitation acceptance refused 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED invitation accept with a wrong email is refused the same way (no attempt counted) 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: views 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: lastRead 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: reviews 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: pUsed 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: evals 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: fb 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: iUsed 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: ppo 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: invRow 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: invUser 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED nothing changed: onboarding 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED no login was created by the invitation attempt 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 SUSPENDED no audit rows were written by refused public requests 
+PASS SRS-SECURITY-TC-040 SUSPENDED expired project mentor token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED expired internship token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown project token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown internship token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown showcase token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED unknown calendar token rejected 
+PASS SRS-SECURITY-TC-040 SUSPENDED garbage invitation token rejected 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED showcase page works again 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED showcase resume PDF works again 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED calendar feed works again 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED project mentor review (read) works again 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED internship mentor feedback (read) works again 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040,SA-TC-028 REACTIVATED invitation lookup works again 
+PASS SA-TC-028 REACTIVATED staff API works with the old token 
+PASS SA-TC-028 REACTIVATED student API works with the old token 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED the mentor review link was not spent by the suspended attempt and now accepts the review 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED a used review link is rejected the second time 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED the internship feedback link was not spent and now accepts feedback 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED a used feedback link is rejected the second time 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED expired tokens are still rejected 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED the invitation was not spent and can now be accepted 
+PASS SA-TC-029,SRS-SECURITY-TC-039,SRS-SECURITY-TC-040 REACTIVATED an accepted invitation cannot be reused 
+PASS SRS-SECURITY-TC-040 a revoked invitation is rejected (active institution) 
+PASS SRS-SECURITY-TC-040 a malformed invitation token is rejected (active institution) 
+PASS SA-TC-027 SUSPENDED a new student sign-in cannot use the API 
+PASS SA-TC-027 SUSPENDED staff API refused 
+58 assertions, 0 failed

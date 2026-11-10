@@ -5,6 +5,7 @@ import { badRequest, notFound } from "@/lib/api/errors";
 import { limitBy } from "@/lib/rateLimit";
 import { db } from "@/lib/db";
 import { hashToken, signedUrl } from "@/lib/projectService";
+import { requireActiveCollege } from "@/lib/collegeActive";
 import { CRITERIA, scoreRubric, teamProgress, type RepoStats } from "@/lib/projects";
 import { z } from "zod";
 
@@ -13,6 +14,7 @@ const submit = z.object({ scores: z.record(z.string(), z.number()), comments: z.
 async function load(token: string) {
   const inv = await db.projectMentorInvite.findUnique({ where: { tokenHash: hashToken(token) }, include: { team: { include: { project: true, members: { include: { student: { select: { name: true } } } }, milestones: true, tasks: true, files: true, updates: { orderBy: { createdAt: "desc" }, take: 10 } } } } });
   if (!inv || inv.usedAt || inv.expiresAt < new Date() || inv.team.resultPublishedAt || inv.team.status === "FORMING") throw notFound("This review link is not valid any more");
+  await requireActiveCollege(inv.collegeId, () => notFound("This review link is not valid any more")); // every request, GET and POST
   return inv;
 }
 const json = (data: unknown) => NextResponse.json({ data }, { headers: { "cache-control": "no-store", "x-robots-tag": "noindex" } });

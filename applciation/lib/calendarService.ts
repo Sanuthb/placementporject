@@ -50,8 +50,8 @@ export async function rotateFeed(me: StudentSession) {
 }
 /** The student a link belongs to, or a not-found error (the same one for a wrong and a revoked link). */
 export async function sessionForFeed(token: string): Promise<StudentSession> {
-  const f = await db.calendarFeed.findUnique({ where: { tokenHash: hash(token) }, select: { id: true, student: { select: { id: true, collegeId: true, departmentId: true, batchId: true, name: true, email: true, userId: true, isActive: true } } } });
-  if (!f || !f.student.isActive) throw notFound("Calendar not found");
+  const f = await db.calendarFeed.findUnique({ where: { tokenHash: hash(token) }, select: { id: true, student: { select: { id: true, collegeId: true, college: { select: { isActive: true } }, departmentId: true, batchId: true, name: true, email: true, userId: true, isActive: true } } } });
+  if (!f || !f.student.isActive || !f.student.college.isActive) throw notFound("Calendar not found"); // suspended institution looks like an unknown feed, and lastReadAt is not touched
   await db.calendarFeed.update({ where: { id: f.id }, data: { lastReadAt: new Date() } });
   const s = f.student;
   return { studentId: s.id, userId: s.userId ?? "", collegeId: s.collegeId, departmentId: s.departmentId, batchId: s.batchId, name: s.name, email: s.email };

@@ -5,11 +5,12 @@ import { audit } from "@/lib/audit";
 import { ApiError, badRequest } from "@/lib/api/errors";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { PlatformSession } from "@/lib/auth/platform";
+import { assertNameAvailable, cleanName, lockName } from "@/lib/institutionName";
 
 const code = z.string().trim().toUpperCase().min(1).max(20);
 
 export const provisionInput = z.object({
-  name: z.string().trim().min(3).max(200),
+  name: z.string().trim().min(3).max(200).transform(cleanName),
   slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use lower-case letters, numbers and hyphens").min(3).max(60).optional(),
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   logoUrl: z.url().nullable().optional(),
@@ -32,6 +33,7 @@ export const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-"
  */
 export async function provisionInstitution(platform: PlatformSession, input: ProvisionInput) {
   const slug = input.slug ?? slugify(input.name);
+  await assertNameAvailable(db, input.name); // name first: a repeated name is a duplicate institution, whatever address it would get
   if (await db.college.findUnique({ where: { slug } })) throw new ApiError(409, "CONFLICT", `An institution with the address "${slug}" already exists`);
   const dup = new Set<string>();
   for (const d of input.departments ?? []) { if (dup.has(d.code)) throw badRequest(`Department code ${d.code} is used twice`); dup.add(d.code); }
@@ -43,6 +45,9 @@ export async function provisionInstitution(platform: PlatformSession, input: Pro
 
   try {
     return await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await lockName(tx, input.name); // concurrent registrations of one name queue here
+      await assertNameAvailable(tx, input.name);
+      if (await tx.college.findUnique({ where: { slug }, select: { id: true } })) throw new ApiError(409, "CONFLICT", `An institution with the address "${slug}" already exists`);
       const college = await tx.college.create({ data: { name: input.name, slug, brandColor: input.brandColor ?? null, logoUrl: input.logoUrl ?? null } });
       const actor = { collegeId: college.id, userId: null, platformActorId: platform.adminId };
       await tx.collegeSettings.create({ data: { collegeId: college.id } });
@@ -56,6 +61,8 @@ export async function provisionInstitution(platform: PlatformSession, input: Pro
     });
   } catch (e) {
     await supabaseAdmin().auth.admin.deleteUser(invited.user.id);
+    // Two requests raced past the checks to the same unique address: the database stopped the second. Say so plainly, without its details.
+    if ((e as { code?: string })?.code === "P2002") throw new ApiError(409, "CONFLICT", "An institution with this address already exists");
     throw e;
   }
 }
