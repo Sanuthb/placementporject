@@ -3,6 +3,7 @@
 import * as React from "react"
 import { toast } from "sonner"
 
+import Link from "next/link"
 import { MatchEvidence, type Param, type Req } from "@/components/match-evidence"
 import { OptionSelect } from "@/components/option-select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -68,7 +69,7 @@ export function MatchBoard({ id }: { id: string }) {
           <div className="flex flex-wrap items-center gap-3">
             <OptionSelect className="w-52" value={dept} onChange={setDept} options={[{ value: "", label: "All departments" }, ...lk.departments]} placeholder="All departments" />
             <label className="flex items-center gap-2 text-sm"><Switch checked={onlyMet} onCheckedChange={setOnlyMet} />Only students who meet every required criterion</label>
-            <div className="ml-auto flex gap-2"><Button variant="outline" disabled={picked.size < 2 || picked.size > 4} onClick={() => setCmp(true)}>Compare ({picked.size})</Button><Button disabled={picked.size === 0} onClick={() => setDlg(true)}>Shortlist {picked.size || ""}</Button></div>
+            <div className="ml-auto flex gap-2"><Button variant="outline" render={<Link href={`/staff/campaigns?jd=${id}`} />}>Start a preparation campaign</Button><Button variant="outline" disabled={picked.size < 2 || picked.size > 4} onClick={() => setCmp(true)}>Compare ({picked.size})</Button><Button disabled={picked.size === 0} onClick={() => setDlg(true)}>Shortlist {picked.size || ""}</Button></div>
           </div>
           <Table>
             <TableHeader><TableRow><TableHead /><TableHead>#</TableHead><TableHead>Student</TableHead><TableHead className="w-44">Match score</TableHead><TableHead>Required criteria</TableHead><TableHead>Skills</TableHead><TableHead /></TableRow></TableHeader>
@@ -139,7 +140,7 @@ function Evidence({ jdId, studentId, onClose }: { jdId: string; studentId: strin
   )
 }
 
-function Compare({ jdId, ids, onClose }: { jdId: string; ids: string[]; onClose: () => void }) {
+export function Compare({ jdId, ids, onClose }: { jdId: string; ids: string[]; onClose: () => void }) {
   const [rows, setRows] = React.useState<Detail[] | null>(null)
   React.useEffect(() => { Promise.all(ids.map((i) => api<Detail>(`/api/jds/${jdId}/matches/${i}`))).then(setRows, (e) => { toastError(e); onClose() }) }, [jdId, ids, onClose])
   return (

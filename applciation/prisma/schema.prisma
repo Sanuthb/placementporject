@@ -774,6 +774,7 @@ model Student {
   intelligenceReports    StudentIntelligenceReport[]
   mentor                 User?                       @relation("StudentMentor", fields: [mentorId], references: [id], onDelete: SetNull)
   jdShortlists           JdShortlist[]
+  campaignMembers        CampaignMember[]
 
   @@unique([collegeId, enrollmentNo])
   @@unique([collegeId, email])
@@ -3518,8 +3519,9 @@ model JobDescription {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
 
-  drive     Drive?        @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  drive     Drive?         @relation(fields: [driveId], references: [id], onDelete: SetNull)
   shortlist JdShortlist[]
+  campaigns PrepCampaign[]
 
   @@index([collegeId, status])
 }
@@ -3544,4 +3546,154 @@ model JdShortlist {
 
   @@unique([jdId, studentId])
   @@index([studentId])
+}
+
+// ---------- Job-specific preparation campaigns (M13) ----------
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignMemberStatus {
+  SELECTED
+  INVITED
+  ACCEPTED
+  DECLINED
+  REMOVED
+}
+
+enum PlanItemKind {
+  LEARN
+  COURSE
+  RESOURCE
+  PRACTICE
+  MOCK_TEST
+  MOCK_INTERVIEW
+  REVISION
+}
+
+enum PlanItemStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+/// A preparation drive for one job: chosen candidates, a personal day-by-day plan for each, trainers, mock tests and interviews, and progress tracking.
+/// `config` holds { mockTests: [{ scheduleId, title, date, kind }], mockInterviews: [{ title, date, kind }], resourceIds: [], milestones: [{ title, dueAt }], notify: { email, remindBehind } }.
+model PrepCampaign {
+  id          String         @id @default(uuid()) @db.Uuid
+  collegeId   String         @db.Uuid
+  jdId        String         @db.Uuid
+  driveId     String?        @db.Uuid
+  name        String
+  company     String
+  jobRole     String
+  description String?
+  ownerId     String         @db.Uuid
+  status      CampaignStatus @default(DRAFT)
+  startsAt    DateTime       @db.Date
+  deadline    DateTime       @db.Date
+  trainerIds  String[]       @db.Uuid
+  config      Json           @default("{}")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
+
+  jd      JobDescription     @relation(fields: [jdId], references: [id])
+  groups  CampaignGroup[]
+  members CampaignMember[]
+  events  CampaignEvent[]
+  items   CampaignPlanItem[]
+
+  @@index([collegeId, status])
+  @@index([jdId])
+}
+
+model CampaignGroup {
+  id         String  @id @default(uuid()) @db.Uuid
+  campaignId String  @db.Uuid
+  name       String
+  trainerId  String? @db.Uuid
+  sortOrder  Int     @default(0)
+
+  campaign PrepCampaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  members  CampaignMember[]
+
+  @@index([campaignId])
+}
+
+model CampaignMember {
+  id              String               @id @default(uuid()) @db.Uuid
+  campaignId      String               @db.Uuid
+  studentId       String               @db.Uuid
+  groupId         String?              @db.Uuid
+  status          CampaignMemberStatus @default(SELECTED)
+  addedManually   Boolean              @default(false)
+  scoreAtAdd      Int?
+  /// The skill gap report as it was when the student was invited: score, skills matched, partly matched and missing, and the explanation.
+  gapReport       Json?
+  invitedAt       DateTime?
+  respondedAt     DateTime?
+  declineReason   String?
+  startedAt       DateTime?
+  helpNote        String?
+  helpRequestedAt DateTime?
+  helpResponse    String?
+  helpRespondedAt DateTime?
+  readyMarkedAt   DateTime?
+  readyMarkedById String?              @db.Uuid
+  createdAt       DateTime             @default(now())
+
+  campaign PrepCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  group    CampaignGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  student  Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  items    CampaignPlanItem[]
+
+  @@unique([campaignId, studentId])
+  @@index([studentId])
+}
+
+/// One thing a student is to do on a given day. Items tied to a course, study material, mock test or mock interview tick themselves when the student finishes it there.
+model CampaignPlanItem {
+  id         String         @id @default(uuid()) @db.Uuid
+  campaignId String         @db.Uuid
+  memberId   String         @db.Uuid
+  day        Int
+  dueAt      DateTime
+  kind       PlanItemKind
+  title      String
+  detail     String?
+  skill      String?
+  refType    String?
+  refId      String?        @db.Uuid
+  optional   Boolean        @default(false)
+  status     PlanItemStatus @default(PENDING)
+  doneAt     DateTime?
+  autoDone   Boolean        @default(false)
+  /// PLANNER (made by the rules), STAFF (added or changed by a person) or STUDENT.
+  source     String         @default("PLANNER")
+  createdAt  DateTime       @default(now())
+
+  campaign PrepCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  member   CampaignMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, dueAt])
+  @@index([campaignId])
+}
+
+/// Everything that changes in a campaign, with who did it.
+model CampaignEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  campaignId String   @db.Uuid
+  memberId   String?  @db.Uuid
+  actorType  String
+  actorId    String?  @db.Uuid
+  action     String
+  detail     Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  campaign PrepCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, createdAt])
 }

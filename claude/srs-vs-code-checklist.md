@@ -35,7 +35,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M10 – Dynamic Resume Engine | 9 | 9 | 0 | 0 | 0 | [ ] |
 | M11 – Job Description Management and AI Analysis | 7 | 7 | 0 | 0 | 0 | [ ] |
 | M12 – AI Candidate Matching Engine | 8 | 8 | 0 | 0 | 0 | [ ] |
-| M13 – Job-Specific Preparation Campaign | 8 | 0 | 0 | 8 | 0 | [ ] |
+| M13 – Job-Specific Preparation Campaign | 8 | 7 | 1 | 0 | 0 | [ ] |
 | M14 – Mock Test Engine | 9 | 3 | 4 | 2 | 0 | [ ] |
 | M15 – AI Mock Interview Engine | 7 | 1 | 2 | 4 | 0 | [ ] |
 | M16 – Report Generation | 5 | 0 | 3 | 2 | 0 | [ ] |
@@ -302,21 +302,22 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 **Connection**
 - [ ] Evidence from M3, M4, M8, M9, M10 compared to requirements — ✅ Built: the engine reads the master profile (profile sections, assessments, college projects, internships, courses, achievements) for every student; recruiters can open "why they match" with the same evidence for candidates the college shortlisted to their drive. Not live-tested.
 
-### M13 – Job-Specific Preparation Campaign
+### M13 – Job-Specific Preparation Campaign (`/staff/campaigns`, `/student/campaigns`)
 
 **Placement Officer side**
-- [ ] Create campaign from an approved JD; select, invite (bulk) and remove candidates — ❌ Missing
-- [ ] Campaign dashboard (invited, accepted, declined, ready, needing help) — ❌ Missing
-- [ ] Assign trainers, tests, interviews, resources, milestones — ❌ Missing
-- [ ] Record all campaign changes — ❌ Missing
+- [ ] Create campaign from an approved JD; select, invite (bulk) and remove candidates — ✅ Built: a campaign starts from an approved job description (company, role and the drive link come from it). Candidates come from the M12 ranking (eligible only, filter by department and lowest score, compare two to four, add) or are added by hand (even if not eligible, marked "added by hand"). Groups with their own trainer. Invite everyone, a chosen few, or one at a time, once the campaign is active. Removing keeps the history. Tested: unit (planner, progress, invitation steps, dashboard).
+- [ ] Campaign dashboard (invited, accepted, declined, ready, needing help) — ✅ Built: selected, invited (and waiting), accepted, declined, preparation started, resources completed, mock tests completed, mock interviews completed, needing support, ready for the final interview, falling behind, average progress, and match score at invitation against now; one row per student, with a "remind students behind" button (at most daily each).
+- [ ] Assign trainers, tests, interviews, resources, milestones — ✅ Built: trainers on the campaign and per group (faculty trainers can follow candidates, edit plans, answer support requests and mark ready); mock tests chosen from the scheduled assessments; mock interviews with dates; study material for everyone; milestones; notification settings (email invitations, reminders).
+- [ ] Record all campaign changes — ✅ Built: a History tab lists every change with who made it (also kept in the audit log for the main actions).
 
 **Student side**
-- [ ] Receive, accept or decline a campaign invitation; request support — ❌ Missing
-- [ ] AI-made individual preparation plan — ❌ Missing
-- [ ] Skill gap report — ❌ Missing
+- [ ] Receive, accept or decline a campaign invitation; request support — ✅ Built: the invitation shows the company, the job's requirements, the preparation details, the skill gap report, the plan and the schedule; accept, decline (with a reason, can change their mind), ask for support and read the answer. Students see only their own plan.
+- [ ] AI-made individual preparation plan — ✅ Built, with a note: the day-by-day plan is made by fixed rules from the student's skill gaps (required and missing skills first, then partly matched), the college's own courses and study material for each gap, the campaign's tests and interviews, an HR and a technical mock interview near the end, and revision on the last day. It is not written by a language model, so each item's reason can be seen; staff can edit, move, add, skip or remake it. Items too many for the window are marked optional.
+- [ ] Skill gap report — ✅ Built: score, skills matched, partly matched and missing, and why, kept as it was at invitation.
+- Progress updates itself: a finished course, completed study material, a submitted mock test or a completed mock interview ticks its plan item; study, practice and revision items are ticked by the student.
 
 **Connection**
-- [ ] M12 → M13 → M14/M15 — ❌ Missing
+- [ ] M12 → M13 → M14/M15 — 🟡 Partial: campaigns use M12 matches and gaps, M6 courses, M7 material, the existing scheduled assessments as mock tests and the existing AI mock interviews; the dedicated M14 mock test engine and M15 interview engine are not built.
 
 ### M14 – Mock Test Engine
 
@@ -474,8 +475,8 @@ Changes in behaviour: the old resume PDF printed the whole Personal details sect
 | 9 | M11 → M12 | Structured job requirements | 🟡 Eligibility thresholds only | [ ] |
 | 10 | M3 + M4 + M8 + M9 + M10 → M12 | Student evidence for matching | 🟡 Thresholds from M3; Student 360 page shows evidence but no matching | [ ] |
 | 11 | M12 → M13 | Matched and eligible candidates | 🟡 Match results, gaps and preparation suggestions exist per student; M13 campaigns are not built | [ ] |
-| 12 | M13 → M14 | Assigned job-specific tests | ❌ | [ ] |
-| 13 | M13 → M15 | Assigned mock interview preparation | ❌ | [ ] |
+| 12 | M13 → M14 | Assigned job-specific tests | 🟡 Campaigns assign existing scheduled assessments; no mock test engine yet | [ ] |
+| 13 | M13 → M15 | Assigned mock interview preparation | 🟡 Plans include technical and HR mock interviews using the existing AI interviewer, tracked automatically | [ ] |
 | 14 | M14 + M15 → M16 | Test and interview results | 🟡 Results exist in each module; no combined report | [ ] |
 | 15 | M3 + M4 + M6 + M8 + M9 + M14 + M15 → M17 | Career readiness evidence | 🟡 Student 360 reads M3, M4, M9 data, mock interviews and tests; no readiness score | [ ] |
 | 16 | M17 → M18 | Readiness information for placement review | ❌ | [ ] |

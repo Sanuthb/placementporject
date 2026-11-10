@@ -1,4 +1,4 @@
-import { FileSearchIcon, FolderKanbanIcon, LibraryIcon, ClipboardCheckIcon, GraduationCapIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, PresentationIcon, type LucideIcon } from "lucide-react"
+import { RocketIcon, FileSearchIcon, FolderKanbanIcon, LibraryIcon, ClipboardCheckIcon, GraduationCapIcon, GlobeIcon, NewspaperIcon, BookOpenIcon, BriefcaseBusinessIcon, CalendarDaysIcon, ClipboardListIcon, BrainIcon, MegaphoneIcon, NotebookPenIcon, SparklesIcon, TargetIcon, InboxIcon, UsersRoundIcon, MailIcon, ScrollTextIcon, TicketIcon, FileBarChartIcon, UserCheckIcon, BarChart3Icon, BellIcon, FileTextIcon, LifeBuoyIcon, SlidersHorizontalIcon, UserIcon, BanIcon, BriefcaseIcon, BuildingIcon, CheckCheckIcon, HandshakeIcon, LayoutDashboardIcon, SettingsIcon, ShieldCheckIcon, UsersIcon, PresentationIcon, type LucideIcon } from "lucide-react"
 
 import type { Kind } from "@/lib/web/auth"
 
@@ -29,6 +29,7 @@ export const NAV: Record<Kind, NavSection[]> = {
         { title: "Companies", href: "/staff/companies", icon: BuildingIcon, module: "DRIVES" },
         { title: "Drives", href: "/staff/drives", icon: BriefcaseIcon, module: "DRIVES" },
         { title: "Job descriptions", href: "/staff/job-descriptions", icon: FileSearchIcon, module: "DRIVES", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
+        { title: "Preparation campaigns", href: "/staff/campaigns", icon: RocketIcon, module: "DRIVES", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "FACULTY"] },
         { title: "Offers", href: "/staff/offers", icon: HandshakeIcon, module: "DRIVES" },
         { title: "Job alerts", href: "/staff/job-alerts", icon: MegaphoneIcon, module: "DRIVES" },
         { title: "Employer CRM", href: "/staff/crm", icon: TargetIcon, module: "EMPLOYER_CRM", roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
@@ -75,6 +76,7 @@ export const NAV: Record<Kind, NavSection[]> = {
         { title: "My roadmap", href: "/student/roadmap", icon: ClipboardListIcon, module: "ONBOARDING" },
         { title: "Preparation", href: "/student/prep", icon: NotebookPenIcon, module: "STUDENT_PREP" },
         { title: "Study material", href: "/student/resources", icon: LibraryIcon, module: "STUDENT_PREP" },
+        { title: "My preparation", href: "/student/campaigns", icon: RocketIcon, module: "DRIVES" },
         { title: "Projects", href: "/student/projects", icon: FolderKanbanIcon, module: "LEARNING" },
         { title: "Portfolio", href: "/student/portfolio", icon: BriefcaseIcon, module: "LEARNING" },
         { title: "Courses", href: "/student/courses", icon: GraduationCapIcon, module: "LEARNING" },
