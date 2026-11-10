@@ -28,7 +28,7 @@ Last checked against the code: 2026-11-08 (M3, M4 and M5 checked 2026-11-09).
 | M3 – Student Registration and Profile | 19 | 19 | 0 | 0 | 0 | [ ] |
 | M4 – Student Assessment and Career Profiling | 21 | 20 | 0 | 1 | 0 | [ ] |
 | M5 – Career Roadmap and Student Development | 10 | 7 | 2 | 1 | 0 | [ ] |
-| M6 – Learning Management System | 11 | 0 | 4 | 7 | 0 | [ ] |
+| M6 – Learning Management System | 11 | 9 | 2 | 0 | 0 | [ ] |
 | M7 – Resource Management System | 9 | 1 | 1 | 7 | 0 | [ ] |
 | M8 – Project Management and Portfolio | 7 | 0 | 2 | 5 | 0 | [ ] |
 | M9 – Internship Management | 7 | 4 | 3 | 0 | 0 | [ ] |
@@ -184,26 +184,26 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 
 **Connection**
 - [ ] M4 → M5: assessment results feed the roadmap — ✅ Built: results tick milestones, create suggested milestones, and suggest target roles. Tested: unit; not live.
-- [ ] M5 → M6/M7 (goals to courses and resources) — ❌ Missing (no course or resource modules yet).
+- [ ] M5 → M6/M7 (goals to courses and resources) — 🟡 Partial: courses are recommended from goals and finishing one ticks the roadmap; no resource module (M7).
 
 ### M6 – Learning Management System
 
 **Placement Officer side**
-- [ ] Create, edit, publish, archive courses with modules and chapters — ❌ Missing
-- [ ] Upload videos/documents, external links — ❌ Missing for courses
-- [ ] Assignments and quizzes inside courses — ❌ Missing
-- [ ] Live sessions — ❌ Missing
-- [ ] Certificates — 🟡 Partial: certificates exist for events only
+- [ ] Create, edit, publish, archive courses with modules and chapters — ✅ Built (`/staff/courses`): draft, publish (blocked until every lesson is complete), archive (enrolled students keep access), reorder, optional audience by department/batch, self-enrol or staff-enrol only. Tested: unit (rules); not live.
+- [ ] Upload videos/documents, external links — ✅ Built: MP4/WebM video up to 50 MB, PDF/PNG/JPEG up to 10 MB (type read from the bytes), or an external link; download only when the teacher allows it. Not live-tested.
+- [ ] Assignments and quizzes inside courses — ✅ Built: assignments take text and/or a file, are graded with marks and feedback or sent back, late work is flagged; quizzes are multiple choice with a pass mark and optional attempt limit, the answer key is withheld until the student passes or runs out of attempts. Tested: unit (marking, limits); not live.
+- [ ] Live sessions — 🟡 Partial: a scheduled session with a meeting link (shown 15 minutes before) and staff-marked attendance that finishes the lesson. No video conferencing of its own.
+- [ ] Certificates — ✅ Built: issued automatically when a student finishes every required lesson (if the course gives one), numbered, printable (`/student/courses/:id/certificate`). Issued when work is handed in, not when it is graded.
 - [ ] Training programmes with members and step progress — 🟡 Partial: `/staff/learning` (programmes, journeys, members, progress)
-- [ ] Learning analytics (enrolment, completion, gaps, engagement) — 🟡 Partial: programme progress only
+- [ ] Learning analytics (enrolment, completion, gaps, engagement) — ✅ Built (course Analytics tab): enrolment, completion, progress, quiz averages, hardest questions, where students stop, assignments waiting, stalled students (14 days idle). Per course only; no college-wide learning dashboard yet (M21).
 
 **Student side**
-- [ ] Browse and enrol in courses, view lessons, assignments, quizzes, ask questions — ❌ Missing
+- [ ] Browse and enrol in courses, view lessons, assignments, quizzes, ask questions — ✅ Built (`/student/courses`): search, join, lesson player, quizzes, hand in work, questions answered by staff, leave and rejoin keeping progress. Not live-tested.
 - [ ] See assigned programme and tick off steps — 🟡 Partial: `/student/learning`
-- [ ] AI tutor — ❌ Missing
+- [ ] AI tutor — ✅ Built: students in a course ask the tutor about the course or current lesson (Groq, the same service as other AI features). It sees the lesson text, never quiz questions or the answer key, will not do assignments, ignores instructions in the student's text. Checked live with synthetic text (on-topic answer, off-topic and injection attempt refused). Student screen not live-tested.
 
 **Connection**
-- [ ] M6 → M21 course progress; M6 → M10 completed courses update the resume — ❌ Missing
+- [ ] M6 → M21 course progress; M6 → M10 completed courses update the resume — ✅ Built: college-wide learning figures on `/staff/courses` (learners, completion, active/stalled, by department, busiest courses); the generated resume PDF gets a "Courses completed" block; finishing a course ticks the roadmap. Not shown on the main analytics dashboard (M21) itself.
 
 ### M7 – Resource Management System
 
@@ -423,7 +423,7 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 - [ ] 2. Access assigned academic structure (M2) — ✅ Built (department coordinators are limited to their department)
 - [ ] 3. Assign and monitor assessments (M4) — ✅ Built
 - [ ] 4. Monitor career roadmaps (M5) — ✅ Built (`/staff/roadmaps`)
-- [ ] 5. Monitor learning and training (M6, M7) — 🟡 Partial
+- [ ] 5. Monitor learning and training (M6, M7) — 🟡 Partial: courses and programmes yes, resource library no (M7)
 - [ ] 6. Track projects and internships (M8, M9) — 🟡 Partial: internships yes, projects no
 - [ ] 7. Monitor student resumes (M10) — ✅ Built
 - [ ] 8. Manage JDs and candidate matching (M11, M12) — 🟡 Partial
@@ -438,7 +438,7 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 - [ ] 2. Complete profile and documents (M3) — ✅ Built
 - [ ] 3. Complete Student 360 assessments (M4) — ✅ Built: personality, aptitude, career interests, behavioural style, technical, digital literacy, communication, teamwork
 - [ ] 4. View career roadmap (M5) — ✅ Built (`/student/roadmap`)
-- [ ] 5. Access courses and resources (M6, M7) — 🟡 Partial: programmes and a link list
+- [ ] 5. Access courses and resources (M6, M7) — 🟡 Partial: courses and programmes yes, resource library no (M7)
 - [ ] 6. Build projects and portfolio (M8) — 🟡 Partial: text section and shareable page
 - [ ] 7. Participate in internships (M9) — ✅ Built
 - [ ] 8. Build resume (M10) — 🟡 Partial
@@ -458,9 +458,9 @@ Built 2026-11-09. "Tested" says how each line was checked: **unit** = `npm run t
 |---|---|---|---|---|
 | 1 | M3 → M4 | Verified academic and profile information | ✅ Built: intelligence reads it | [ ] |
 | 2 | M4 → M5 | Personality, aptitude, interests, career profile | ✅ Built: results tick milestones, suggest milestones and target roles | [ ] |
-| 3 | M5 → M6 | Learning goals and recommended courses | ❌ No course module yet; a learning-programme step does tick a roadmap milestone | [ ] |
+| 3 | M5 → M6 | Learning goals and recommended courses | ✅ Finishing a course ticks a roadmap milestone; courses are recommended from the target role, goal and weak assessment areas (`/student/courses`, with reasons) | [ ] |
 | 4 | M5 → M7 | Recommended resources | ❌ | [ ] |
-| 5 | M6 → M21 | Course progress and completion | 🟡 Programme progress only | [ ] |
+| 5 | M6 → M21 | Course progress and completion | ✅ Per-course analytics and a college-wide summary on the courses page | [ ] |
 | 6 | M8 → M10 | Project information and portfolio evidence | 🟡 Only the self-entered Projects text section | [ ] |
 | 7 | M9 → M10 | Internship experience | 🟡 Resume reads the self-entered section, not internship records | [ ] |
 | 8 | M3 + M6 + M8 + M9 → M10 | Resume information | 🟡 M3 only (profile sections) | [ ] |

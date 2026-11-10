@@ -754,6 +754,7 @@ model Student {
   psychAttempts         PsychAttempt[]
   instrumentAttempts    InstrumentAttempt[]
   roadmap               StudentRoadmap?
+  courseEnrolments      CourseEnrolment[]
   internships           Internship[]
   eventRegistrations    EventRegistration[]
   learningMemberships   LearningMember[]
@@ -1789,19 +1790,19 @@ model Question {
 }
 
 model AssessmentPaper {
-  id           String   @id @default(uuid()) @db.Uuid
-  collegeId    String   @db.Uuid
+  id           String             @id @default(uuid()) @db.Uuid
+  collegeId    String             @db.Uuid
   title        String
   instructions String?
   durationMin  Int
   questions    Json
-  shuffle      Boolean  @default(true)
+  shuffle      Boolean            @default(true)
   proctoring   Json
   passPercent  Int?
   /// Which part of the career profile this paper measures. Its schedules and attempts inherit it.
   category     AssessmentCategory @default(OTHER)
-  createdById  String   @db.Uuid
-  createdAt    DateTime @default(now())
+  createdById  String             @db.Uuid
+  createdAt    DateTime           @default(now())
 
   schedules AssessmentSchedule[]
 }
@@ -2147,19 +2148,19 @@ model BacklogAttempt {
 
 /// A single uploaded academic document with its own verification state.
 model StudentDocument {
-  id           String          @id @default(uuid()) @db.Uuid
-  collegeId    String          @db.Uuid
-  studentId    String          @db.Uuid
-  category     DocCategory
-  storagePath  String
-  fileName     String
-  mimeType     String
-  sizeBytes    Int
-  status       DocVerification @default(PENDING)
-  verifiedById String?         @db.Uuid
-  verifiedAt   DateTime?
-  rejectReason String?
-  createdAt    DateTime        @default(now())
+  id            String          @id @default(uuid()) @db.Uuid
+  collegeId     String          @db.Uuid
+  studentId     String          @db.Uuid
+  category      DocCategory
+  storagePath   String
+  fileName      String
+  mimeType      String
+  sizeBytes     Int
+  status        DocVerification @default(PENDING)
+  verifiedById  String?         @db.Uuid
+  verifiedAt    DateTime?
+  rejectReason  String?
+  createdAt     DateTime        @default(now())
   /// SHA-256 of the file bytes: stops the same file being uploaded twice and proves a replacement really differs.
   sha256        String?
   /// The document this one replaced. The older file is kept, archived, and never removed from storage.
@@ -2496,16 +2497,16 @@ enum RoadmapGoalStatus {
 
 /// One roadmap per student, built from the programme's own length. The student owns it and may change it; every change is kept in RoadmapEvent.
 model StudentRoadmap {
-  id                String   @id @default(uuid()) @db.Uuid
-  collegeId         String   @db.Uuid
-  studentId         String   @unique @db.Uuid
+  id              String   @id @default(uuid()) @db.Uuid
+  collegeId       String   @db.Uuid
+  studentId       String   @unique @db.Uuid
   /// Semesters in the student's programme when the roadmap was made.
-  totalSemesters    Int
-  targetRole        String?
-  careerGoal        String?
-  templateVersion   String   @default("1")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  totalSemesters  Int
+  targetRole      String?
+  careerGoal      String?
+  templateVersion String   @default("1")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   student    Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
   milestones RoadmapMilestone[]
@@ -2596,4 +2597,235 @@ model RoadmapEvent {
   roadmap StudentRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
 
   @@index([roadmapId, createdAt])
+}
+
+// ---------- Learning management: courses (M6) ----------
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LessonType {
+  VIDEO
+  DOCUMENT
+  LINK
+  TEXT
+  ASSIGNMENT
+  QUIZ
+  LIVE
+}
+
+enum EnrolmentStatus {
+  ENROLLED
+  COMPLETED
+  WITHDRAWN
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  RETURNED
+}
+
+/// A course made by staff: modules, then lessons (chapters). Students browse published courses and enrol, or staff enrol a group.
+model Course {
+  id                 String       @id @default(uuid()) @db.Uuid
+  collegeId          String       @db.Uuid
+  title              String
+  summary            String?
+  description        String?
+  category           String?
+  level              String?
+  skills             String[]
+  /// Who may see and join it. Empty means every student of the college.
+  departmentId       String?      @db.Uuid
+  batchId            String?      @db.Uuid
+  status             CourseStatus @default(DRAFT)
+  certificateEnabled Boolean      @default(true)
+  /// When false only staff can enrol students.
+  selfEnrol          Boolean      @default(true)
+  createdById        String       @db.Uuid
+  publishedAt        DateTime?
+  archivedAt         DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  modules      CourseModule[]
+  lessons      CourseLesson[]
+  enrolments   CourseEnrolment[]
+  certificates CourseCertificate[]
+
+  @@index([collegeId, status])
+}
+
+model CourseModule {
+  id        String @id @default(uuid()) @db.Uuid
+  courseId  String @db.Uuid
+  title     String
+  sortOrder Int    @default(0)
+
+  course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons CourseLesson[]
+
+  @@index([courseId])
+}
+
+/// One chapter. What it needs depends on its type: VIDEO and DOCUMENT use a link or an uploaded file, TEXT uses body, ASSIGNMENT uses body/dueAt/maxMarks,
+/// QUIZ uses questions/passPercent/maxAttempts, LIVE uses url (meeting link), startsAt and durationMin.
+model CourseLesson {
+  id           String     @id @default(uuid()) @db.Uuid
+  courseId     String     @db.Uuid
+  moduleId     String     @db.Uuid
+  collegeId    String     @db.Uuid
+  type         LessonType
+  title        String
+  body         String?
+  url          String?
+  filePath     String?
+  fileName     String?
+  mimeType     String?
+  sizeBytes    Int?
+  downloadable Boolean    @default(false)
+  /// Counts towards finishing the course.
+  required     Boolean    @default(true)
+  sortOrder    Int        @default(0)
+  maxMarks     Int?
+  dueAt        DateTime?
+  startsAt     DateTime?
+  durationMin  Int?
+  passPercent  Int?
+  maxAttempts  Int?
+  questions    Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  course      Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module      CourseModule           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress    LessonProgress[]
+  attempts    QuizAttempt[]
+  submissions AssignmentSubmission[]
+  doubts      CourseQuestion[]
+
+  @@index([courseId])
+  @@index([moduleId])
+}
+
+model CourseEnrolment {
+  id             String          @id @default(uuid()) @db.Uuid
+  courseId       String          @db.Uuid
+  studentId      String          @db.Uuid
+  collegeId      String          @db.Uuid
+  status         EnrolmentStatus @default(ENROLLED)
+  /// The staff user who enrolled the student, or null when the student joined on their own.
+  enrolledById   String?         @db.Uuid
+  enrolledAt     DateTime        @default(now())
+  completedAt    DateTime?
+  lastActivityAt DateTime        @default(now())
+
+  course      Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student     Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  progress    LessonProgress[]
+  attempts    QuizAttempt[]
+  submissions AssignmentSubmission[]
+  doubts      CourseQuestion[]
+  certificate CourseCertificate?
+
+  @@unique([courseId, studentId])
+  @@index([studentId])
+  @@index([collegeId])
+}
+
+model LessonProgress {
+  id          String   @id @default(uuid()) @db.Uuid
+  enrolmentId String   @db.Uuid
+  lessonId    String   @db.Uuid
+  completedAt DateTime @default(now())
+
+  enrolment CourseEnrolment @relation(fields: [enrolmentId], references: [id], onDelete: Cascade)
+  lesson    CourseLesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrolmentId, lessonId])
+  @@index([lessonId])
+}
+
+model QuizAttempt {
+  id            String   @id @default(uuid()) @db.Uuid
+  lessonId      String   @db.Uuid
+  enrolmentId   String   @db.Uuid
+  studentId     String   @db.Uuid
+  attemptNumber Int
+  /// The chosen option per question (null = skipped).
+  answers       Json
+  score         Int
+  total         Int
+  percent       Int
+  passed        Boolean
+  createdAt     DateTime @default(now())
+
+  lesson    CourseLesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrolment CourseEnrolment @relation(fields: [enrolmentId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, enrolmentId, attemptNumber])
+  @@index([studentId])
+}
+
+model AssignmentSubmission {
+  id          String           @id @default(uuid()) @db.Uuid
+  lessonId    String           @db.Uuid
+  enrolmentId String           @db.Uuid
+  studentId   String           @db.Uuid
+  text        String?
+  filePath    String?
+  fileName    String?
+  mimeType    String?
+  status      SubmissionStatus @default(SUBMITTED)
+  marks       Int?
+  feedback    String?
+  gradedById  String?          @db.Uuid
+  gradedAt    DateTime?
+  submittedAt DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  lesson    CourseLesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrolment CourseEnrolment @relation(fields: [enrolmentId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, enrolmentId])
+  @@index([studentId])
+}
+
+/// A student's question about a course or one lesson, answered by staff.
+model CourseQuestion {
+  id           String    @id @default(uuid()) @db.Uuid
+  courseId     String    @db.Uuid
+  lessonId     String?   @db.Uuid
+  enrolmentId  String    @db.Uuid
+  studentId    String    @db.Uuid
+  collegeId    String    @db.Uuid
+  question     String
+  answer       String?
+  answeredById String?   @db.Uuid
+  answeredAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  lesson    CourseLesson?   @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  enrolment CourseEnrolment @relation(fields: [enrolmentId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, answeredAt])
+  @@index([studentId])
+}
+
+model CourseCertificate {
+  id          String   @id @default(uuid()) @db.Uuid
+  courseId    String   @db.Uuid
+  enrolmentId String   @unique @db.Uuid
+  studentId   String   @db.Uuid
+  collegeId   String   @db.Uuid
+  serial      String   @unique
+  issuedAt    DateTime @default(now())
+
+  course    Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrolment CourseEnrolment @relation(fields: [enrolmentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
 }
