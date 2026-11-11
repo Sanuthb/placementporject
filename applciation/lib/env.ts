@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { loadMasterKeys } from "@/lib/ai/crypto";
 
 const blank = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 const opt = <T extends z.ZodType>(s: T) => z.preprocess(blank, s.optional());
@@ -20,6 +21,7 @@ const schema = z.object({
   GROQ_API_KEY: opt(z.string()),
   GROQ_MODEL: opt(z.string()),
   DB_POOL_MAX: opt(z.string().regex(/^\d+$/)),
+  REQUIRE_LOCAL_DB: opt(z.enum(["true", "false"])),
 });
 
 /** Checks configuration once at startup. Returns hard errors (the server should not start) and warnings (it can, but something is probably wrong). */
@@ -27,6 +29,8 @@ export function checkEnv(env: NodeJS.ProcessEnv = process.env) {
   const parsed = schema.safeParse(env);
   const errors = parsed.success ? [] : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
   const warnings: string[] = [];
+  // AI master keys (Phase 4.4.2): a malformed or inconsistent AI_MASTER_KEY_* is a hard error; the message names the variable, never its value.
+  try { loadMasterKeys(env); } catch (e) { errors.push((e as Error).message); }
   const prod = env.NODE_ENV === "production";
   if (env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_SERVICE_ROLE_KEY === env.SUPABASE_ANON_KEY) errors.push("SUPABASE_SERVICE_ROLE_KEY is the same as SUPABASE_ANON_KEY; use the service role key");
   if (prod) {

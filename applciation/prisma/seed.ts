@@ -1,6 +1,10 @@
 // Creates the first college, enables all modules, and creates a TPO admin who can sign in.
 // Usage: SEED_COLLEGE_NAME="..." SEED_ADMIN_EMAIL="..." SEED_ADMIN_NAME="..." SEED_ADMIN_PASSWORD="..." npm run db:seed
-import "dotenv/config";
+import { loadEnvFiles } from "../scripts/lib/envFiles";
+import { assertLocalTargets } from "../lib/localOnly";
+
+loadEnvFiles();
+assertLocalTargets(process.env, { what: "run this script" });
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createClient } from "@supabase/supabase-js";
 import { ModuleKey, PrismaClient } from "../generated/prisma/client";

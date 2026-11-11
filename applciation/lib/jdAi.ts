@@ -1,4 +1,4 @@
-import { groqJsonMessages, groqModel } from "@/lib/intelligence/groq";
+import { groqJsonMessages } from "@/lib/intelligence/groq";
 import { ApiError } from "@/lib/api/errors";
 import { JD_MAX_CHARS, normalizeExtraction } from "@/lib/jd";
 
@@ -25,7 +25,7 @@ const SYSTEM =
 /** Reads a job description's text into structured data with the AI provider, then checks every requirement against the text. */
 export async function extractJd(text: string) {
   const body = text.slice(0, JD_MAX_CHARS);
-  const raw = await groqJsonMessages(groqModel(), [{ role: "system", content: SYSTEM }, { role: "user", content: `Job description:\n"""\n${body}\n"""` }], { temperature: 0, maxTokens: 3500, timeoutMs: 60_000 });
+  const raw = await groqJsonMessages("TEXT", [{ role: "system", content: SYSTEM }, { role: "user", content: `Job description:\n"""\n${body}\n"""` }], { temperature: 0, maxTokens: 3500, timeoutMs: 60_000, feature: "jd_parse" });
   if (!raw || typeof raw !== "object") throw new ApiError(502, "AI_FAILED", "The AI returned an unreadable answer. Try again");
   return normalizeExtraction(raw, body);
 }

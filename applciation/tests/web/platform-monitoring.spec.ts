@@ -33,7 +33,7 @@ const C = (key: string, label: string, status: string, summary: string, evidence
 test.describe.configure({ mode: "serial" })
 test.beforeAll(async () => {
   if (!/localhost|127\.0\.0\.1/.test(process.env.SUPABASE_URL ?? "") || !/localhost|127\.0\.0\.1/.test(process.env.DIRECT_URL ?? "")) throw new Error("Refusing: not the local stack")
-  const r = spawnSync("npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: ADMIN.email, PLATFORM_ADMIN_NAME: "UI Monitor Admin", PLATFORM_ADMIN_PASSWORD: ADMIN.password } })
+  const r = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: ADMIN.email, PLATFORM_ADMIN_NAME: "UI Monitor Admin", PLATFORM_ADMIN_PASSWORD: ADMIN.password } })
   if (r.status !== 0) throw new Error(r.stderr)
   const anon = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, { auth: { persistSession: false } })
   const s = (await anon.auth.signInWithPassword({ email: ADMIN.email, password: ADMIN.password })).data.session!
@@ -91,11 +91,11 @@ test("platform administrator: second step, real health, refresh and throttling",
   await page.getByRole("button", { name: "Refresh" }).click()
   await expect(page.getByRole("status").filter({ hasText: "Refreshed too recently" })).toBeVisible()
   // the page itself never wrote anything: one more look at the error section shows its honest scope
-  await expect(page.getByText(/Not durable and not shared between servers/)).toBeVisible()
+  await expect(page.getByText(/Stored in the database and shared by all servers/)).toBeVisible()
 
   // ---- same session: every status, errors table, filters, paging, empty/loading/error states (API responses intercepted)
   const health = (overallStatus: string, comps: unknown[]) => ({ checkedAt: iso(), cached: false, throttled: false, ageMs: 0, overall: { status: overallStatus, counts: { healthy: 1, degraded: 1, unavailable: 1, unknown: 1, not_configured: 1 }, notes: ["1 component(s) cannot be confirmed", "1 component(s) not configured"] }, components: comps })
-  const jobs = [{ path: "/api/notifications/reminders/run", schedule: "30 * * * *", description: "Reminds students (hourly)", nextDueAt: iso(900000), lastRunAt: null, lastSuccessAt: null, lastFailure: null, durationMs: null }]
+  const jobs = [{ path: "/api/notifications/reminders/run", schedule: "30 * * * *", description: "Reminds students (hourly)", nextDueAt: iso(900000), state: "no_run_recorded", history: "recorded", lastRunAt: null, lastSuccessAt: null, lastFailure: null, lastFailureAt: null, durationMs: null, attempts: null, failedAttempts: null }]
   const comps = [
     C("application", "Application", "healthy", "The application process is running with valid configuration", ["Mode production, up 100 s"]),
     C("database", "Database", "degraded", "The database answers, but slowly", ["A trivial query took 900 ms (slow above 500 ms)"], 900),
@@ -151,12 +151,50 @@ test("platform administrator: second step, real health, refresh and throttling",
   await page.unroute("**/api/platform/monitoring/errors*")
   await page.route("**/api/platform/monitoring/errors*", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: errorsFor([], 0) }) }))
   await region.getByLabel("Search errors").fill("")
-  await expect(region.getByText("No server errors have been recorded by this server since it started.")).toBeVisible()
-  // health: loading skeleton, then the failure state with no stale figures
+  await expect(region.getByText("No server errors have been recorded in the retention period.")).toBeVisible()
+  // ---- database outage on the dashboard: last-known state marked stale, or a clear connection failure; never an invented "healthy"
+  await page.unroute("**/api/platform/monitoring?*"); await page.unroute("**/api/platform/monitoring")
+  let mode: "ok" | "down" = "ok"
+  const down = { status: 503, headers: { "retry-after": "5" }, contentType: "application/json", body: JSON.stringify({ error: { code: "DATABASE_UNAVAILABLE", message: "The database is not reachable right now. Try again in a few seconds", requestId: "req-down-1" } }) }
+  await page.route(/\/api\/platform\/monitoring(\?.*)?$/, (r) => (mode === "ok" ? r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: health("healthy", comps) }) }) : r.fulfill(down)))
+  await page.reload({ waitUntil: "networkidle" })
+  await expect(page.getByTestId("stale-warning")).toHaveCount(0)
+  await expect(page.getByTestId("connection-failure")).toHaveCount(0)
+  await expect(comp(page, "database")).toBeVisible()
+  const checkedOk = await page.getByTestId("checked-at").innerText()
+  expect(checkedOk).not.toContain("Stale")
+  mode = "down"
+  await page.getByRole("button", { name: "Refresh" }).click()
+  const stale = page.getByTestId("stale-warning")
+  await expect(stale).toBeVisible()
+  await expect(stale).toContainText("Showing the last known state (stale)")
+  await expect(stale).toContainText("database is unavailable")
+  await expect(stale).toContainText("may no longer be true")
+  await expect(stale).toContainText("req-down-1")
+  await expect(page.getByTestId("checked-at")).toContainText("Stale: last checked")          // the time of the last good check is shown
+  await expect(comp(page, "database")).toBeVisible()                                        // last-known figures stay on screen...
+  await expect(page.locator("[data-stale=true]")).toBeVisible()                             // ...visibly dimmed and marked stale
+  await expect(page.getByTestId("connection-failure")).toHaveCount(0)
+  mode = "ok"
+  await page.getByRole("button", { name: "Refresh" }).click()                               // recovery: warning and stale marking clear by themselves
+  await expect(stale).toHaveCount(0)
+  await expect(page.getByTestId("checked-at")).not.toContainText("Stale")
+  mode = "down"; await page.reload()                                                        // no earlier data in this page load: a clear connection failure, no figures
+  const fail = page.getByTestId("connection-failure")
+  await expect(fail).toBeVisible()
+  await expect(fail).toContainText("Cannot reach the monitoring service")
+  await expect(fail).toContainText("database is unavailable")
+  await expect(fail).toContainText("Nothing is bypassed")
+  await expect(fail).toContainText("/api/health/ready")
+  await expect(page.getByText("Overall platform health")).toHaveCount(0)
+  await expect(page.locator("[data-testid^=component-]")).toHaveCount(0)
+  await expect(page.getByTestId("stale-warning")).toHaveCount(0)
+  await page.unroute(/\/api\/platform\/monitoring(\?.*)?$/)
+  // health: loading skeleton, then a generic failure with nothing to show
   await page.unroute("**/api/platform/monitoring?*"); await page.unroute("**/api/platform/monitoring")
   await page.route("**/api/platform/monitoring", async (r) => { await new Promise((x) => setTimeout(x, 1500)); await r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { code: "INTERNAL", message: "Something went wrong" } }) }) })
   await page.reload()
   await expect(page.locator("[data-slot=skeleton]").first()).toBeVisible()
-  await expect(page.getByText("Could not load health")).toBeVisible()
+  await expect(page.getByText("Cannot reach the monitoring service")).toBeVisible()
   await expect(page.getByText("Overall platform health")).toHaveCount(0)
 })

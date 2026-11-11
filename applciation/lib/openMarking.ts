@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import { groqConfigured, groqJsonMessages, groqModel } from "@/lib/intelligence/groq";
+import { groqAvailable, groqJsonMessages } from "@/lib/intelligence/groq";
 import { paperQuestions } from "@/lib/assessments";
 import { OPEN_TYPES, isOpen, scoreAttempt, typeOf, type Answer, type Marks, type PaperQuestion } from "@/lib/mockTest";
 
@@ -12,10 +12,10 @@ const SYSTEM =
 
 /** One open answer marked by the AI. Returns null when it cannot be marked (the answer then waits for staff). */
 export async function markOne(q: PaperQuestion, answer: string): Promise<{ awarded: number; comment: string } | null> {
-  if (!groqConfigured()) return null;
+  if (!(await groqAvailable("TEXT"))) return null; // not configured, or switched off by an administrator
   try {
     const user = `Question type: ${typeOf(q)}${q.language ? ` (${q.language})` : ""}\nMaximum marks: ${q.marks}\n${q.context ? `Context:\n${q.context.slice(0, 2000)}\n` : ""}Question:\n${q.text}\n\nModel answer:\n${(q.modelAnswer ?? "(none given)").slice(0, 3000)}\n\nPoints to look for:\n${(q.rubric ?? "(none given)").slice(0, 1500)}\n\nStudent's answer:\n"""\n${answer.slice(0, 5000)}\n"""`;
-    const raw = (await groqJsonMessages(groqModel(), [{ role: "system", content: SYSTEM }, { role: "user", content: user }], { temperature: 0, maxTokens: 300, timeoutMs: 25_000 })) as { awarded?: unknown; comment?: unknown } | null;
+    const raw = (await groqJsonMessages("TEXT", [{ role: "system", content: SYSTEM }, { role: "user", content: user }], { temperature: 0, maxTokens: 300, timeoutMs: 25_000, feature: "open_marking" })) as { awarded?: unknown; comment?: unknown } | null;
     const n = typeof raw?.awarded === "number" ? raw.awarded : Number(raw?.awarded);
     if (!Number.isFinite(n)) return null;
     return { awarded: Math.min(q.marks, Math.max(0, Math.round(n * 2) / 2)), comment: typeof raw?.comment === "string" ? raw.comment.trim().slice(0, 300) : "" };

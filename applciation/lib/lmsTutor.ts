@@ -1,4 +1,4 @@
-import { groqJsonMessages, groqModel } from "@/lib/intelligence/groq";
+import { groqJsonMessages } from "@/lib/intelligence/groq";
 import { ApiError } from "@/lib/api/errors";
 
 export type Turn = { q: string; a: string };
@@ -17,7 +17,7 @@ export async function tutorAnswer(o: { course: { title: string; description: str
     'Answer with JSON only: {"answer": string}.';
   const ctx = `Course: ${o.course.title}\n${(o.course.description ?? "").slice(0, 1500)}` + (o.lesson ? `\n\nCurrent lesson (${o.lesson.type.toLowerCase()}): ${o.lesson.title}\n${o.lesson.type === "QUIZ" ? "" : (o.lesson.body ?? "").slice(0, 3000)}` : "");
   const talk = o.history.slice(-4).map((t) => `Student: ${t.q.slice(0, 500)}\nTutor: ${t.a.slice(0, 800)}`).join("\n\n");
-  const raw = await groqJsonMessages(groqModel(), [{ role: "system", content: system }, { role: "user", content: `${ctx}\n\n${talk ? `Earlier in this chat:\n${talk}\n\n` : ""}Student's new question:\n"""\n${o.question.slice(0, 1000)}\n"""` }], { temperature: 0.3, maxTokens: 700 });
+  const raw = await groqJsonMessages("TEXT", [{ role: "system", content: system }, { role: "user", content: `${ctx}\n\n${talk ? `Earlier in this chat:\n${talk}\n\n` : ""}Student's new question:\n"""\n${o.question.slice(0, 1000)}\n"""` }], { temperature: 0.3, maxTokens: 700, feature: "lms_tutor" });
   const a = (raw as { answer?: unknown } | null)?.answer;
   if (typeof a !== "string" || !a.trim()) throw new ApiError(502, "AI_FAILED", "The tutor could not answer. Try rephrasing your question");
   return a.trim().slice(0, 3000);

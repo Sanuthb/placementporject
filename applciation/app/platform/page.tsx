@@ -192,7 +192,7 @@ export default function PlatformPage() {
   return (
     <>
       <InstitutionsView />
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-4 pb-8 md:px-8"><Button variant="outline" size="sm" render={<Link href="/platform/analytics" />}>Analytics</Button><Button variant="outline" size="sm" render={<Link href="/platform/monitoring" />}>System health</Button><Button variant="outline" size="sm" render={<Link href="/platform/audit" />}>Audit log</Button><RemoveMfa onDone={reload} /></div>
+      <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-4 pb-8 md:px-8"><Button variant="outline" size="sm" render={<Link href="/platform/analytics" />}>Analytics</Button><Button variant="outline" size="sm" render={<Link href="/platform/ai" />}>AI</Button><Button variant="outline" size="sm" render={<Link href="/platform/monitoring" />}>System health</Button><Button variant="outline" size="sm" render={<Link href="/platform/audit" />}>Audit log</Button><RemoveMfa onDone={reload} /></div>
     </>
   )
 }

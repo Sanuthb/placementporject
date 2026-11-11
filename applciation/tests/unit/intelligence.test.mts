@@ -1,4 +1,5 @@
 // The AI reading: what is sent to the model, and how its answer is checked before staff see it. fetch is replaced, so no key or network is used.
+import { createAiResolver, setAiResolverForTests } from "../../lib/ai/config";
 import assert from "node:assert/strict";
 import type { Evidence } from "../../lib/intelligence/evidence";
 import { writeNarrative } from "../../lib/intelligence/narrative";
@@ -22,6 +23,8 @@ let answer: unknown = {};
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (_u: unknown, init?: RequestInit) => { sent = { body: String(init?.body) }; return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(answer) } }] }), { status: 200 }); }) as typeof fetch;
 process.env.GROQ_API_KEY = "test-key";
+// The narrative writer asks the central AI resolver for its provider and key. A unit test must not read a database, so it uses an isolated resolver that finds nothing configured and falls back to the environment (GROQ_API_KEY above), as before.
+setAiResolverForTests(createAiResolver({ load: async () => null, env: () => process.env }));
 
 await t("no name, email or contact details are sent to the model", async () => {
   answer = { summary: "A careful summary of the evidence." };

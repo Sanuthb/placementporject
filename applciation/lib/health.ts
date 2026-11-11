@@ -5,6 +5,9 @@ import { checkEnv } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { aiStats, errorCounts, scrub, startedAt } from "@/lib/monitorStore";
 import { scheduledJobs } from "@/lib/cronMeta";
+import { judgeJob, loadJobHistory, noHistory, type JobHistory, type JobState } from "@/lib/jobHistory";
+import { durableErrorCounts } from "@/lib/monitorEvents";
+import { loadAiHealth, type AiHealthCfg } from "@/lib/aiHealth";
 
 /**
  * Platform health. One honest status per dependency, each with the evidence behind it.
@@ -49,7 +52,29 @@ export function classifyStorage(i: { configured: boolean; probe?: Probe; buckets
   return { ...b, status: "healthy", latencyMs: p.ms, summary: "Storage answers and the required bucket exists", evidence: [`Listing buckets succeeded in ${p.ms} ms`, `Required buckets present: ${i.expected.join(", ")}`, "Only a bucket listing is checked: no file is read, written or linked"] };
 }
 export type AiStats = ReturnType<typeof aiStats>;
-export function classifyAi(i: { configured: boolean; httpStatus?: number | null; probe?: Probe; stats: AiStats }, now = new Date()): Component {
+/** Extra facts about the AI configuration and usage, appended to what the provider check found. A problem here lowers a healthy provider to "degraded" at most. */
+function aiExtras(cfg: AiHealthCfg | null | undefined): { evidence: string[]; warn: string | null; details: Record<string, unknown> } {
+  if (!cfg) return { evidence: [], warn: null, details: {} };
+  const ev: string[] = []; let warn: string | null = null;
+  const bad = cfg.purposes.filter((p) => p.error);
+  if (bad.length) { warn = "An AI key or its configuration could not be read"; ev.push(...bad.map((p) => `${p.purpose}: ${p.error === "AI_KEY_UNREADABLE" ? "the stored key cannot be decrypted (check the master key)" : "the configuration could not be read"}`)); }
+  if (cfg.purposes.some((p) => p.stale)) { warn ??= "The AI configuration could not be read from the database; the last known one is in use"; ev.push("AI configuration: database unreadable, using the last known configuration"); }
+  const off = cfg.purposes.filter((p) => !p.enabled && !p.error);
+  if (off.length) ev.push(`Switched off: ${off.map((p) => `${p.purpose}${p.disabledBy === "global" ? " (global switch)" : ""}`).join(", ")}`);
+  for (const pr of Object.values(cfg.probes)) if (pr && !pr.ok) { warn ??= `The ${pr.provider} provider check failed (${pr.reason})`; ev.push(`${pr.provider} model-list check: ${pr.reason}`); }
+  if (cfg.usage.available) { ev.push(`Today: ${cfg.usage.callsToday} AI call(s), ${cfg.usage.failuresToday} failed, ${cfg.usage.blockedToday} refused by a daily limit`); for (const n of cfg.usage.nearLimit) ev.push(`Limit nearly reached: ${n.scope} at ${n.used} of ${n.limit}`); }
+  else ev.push("Today's AI usage could not be read");
+  return { evidence: ev, warn, details: { ai: cfg } };
+}
+export function classifyAi(i: { configured: boolean; httpStatus?: number | null; probe?: Probe; stats: AiStats; cfg?: AiHealthCfg | null }, now = new Date()): Component {
+  const c = classifyAiBase(i, now), x = aiExtras(i.cfg);
+  const globalOff = !!i.cfg && i.cfg.purposes.length > 0 && i.cfg.purposes.every((p) => !p.enabled && p.disabledBy === "global");
+  if (globalOff) return { ...c, status: "not_configured", latencyMs: null, summary: "AI is switched off by a platform administrator", evidence: ["The global AI switch is off: no AI feature is running", ...x.evidence], details: { ...(c.details ?? {}), ...x.details } };
+  let status = c.status, summary = c.summary;
+  if (x.warn && status === "healthy") { status = "degraded"; summary = x.warn; }
+  return { ...c, status, summary, evidence: [...c.evidence, ...x.evidence], details: { ...(c.details ?? {}), ...x.details } };
+}
+function classifyAiBase(i: { configured: boolean; httpStatus?: number | null; probe?: Probe; stats: AiStats }, now = new Date()): Component {
   const b = base("ai", "AI provider", now); const s = i.stats;
   const recent = `This instance, last ${s.windowMinutes} min: ${s.calls} call(s), ${s.failures} failed, ${s.timeouts} timed out${s.avgLatencyMs !== null ? `, average ${s.avgLatencyMs} ms` : ""}`;
   if (!i.configured) return { ...b, status: "not_configured", latencyMs: null, summary: "No AI provider key is configured", evidence: ["GROQ_API_KEY is not set", "AI features return 'not switched on'"], details: { stats: s } };
@@ -78,12 +103,31 @@ export function classifyEmail(i: { configured: boolean; dryRun: boolean; probe?:
   return { ...b, status: "healthy", latencyMs: p.ms, summary: "The mail server accepts a connection and login", evidence: [`Connection and login check succeeded in ${p.ms} ms (no message is sent)`, ...hist], details: { history: h } };
 }
 export type JobRow = { path: string; schedule: string; description: string; nextDueAt: string | null };
-export function classifyScheduledJobs(i: { cronSecret: boolean; jobs: JobRow[] }, now = new Date()): Component {
+const STATE_TEXT: Record<JobState, string> = { succeeded: "last run succeeded", failed: "last run failed", running: "running now", interrupted: "last run started but never finished", overdue: "the expected run did not happen", no_run_recorded: "no run recorded yet" };
+export function classifyScheduledJobs(i: { cronSecret: boolean; jobs: JobRow[]; history?: JobHistory | null }, now = new Date()): Component {
   const b = base("scheduledJobs", "Scheduled jobs", now);
-  const jobs = i.jobs.map((j) => ({ ...j, lastRunAt: null, lastSuccessAt: null, lastFailure: null, durationMs: null, history: "not recorded" as const }));
+  const h = i.history ?? null;
+  const rows = i.jobs.map((j) => {
+    const latest = h?.available ? h.latest[j.path] : undefined, ok = h?.available ? h.lastSuccess[j.path] : undefined, bad = h?.available ? h.lastFailure[j.path] : undefined;
+    const state: JobState | null = h?.available ? judgeJob({ schedule: j.schedule, latest, since: h.since, now }) : null;
+    return {
+      ...j, state, history: (h?.available ? "recorded" : h ? "unavailable" : "not recorded") as "recorded" | "unavailable" | "not recorded",
+      lastRunAt: latest?.lastStartedAt ?? null, lastSuccessAt: ok?.finishedAt ?? null, lastFailure: bad?.error ?? null, lastFailureAt: bad?.finishedAt ?? null,
+      durationMs: latest?.durationMs ?? null, lastRunOk: latest?.ok ?? null, attempts: latest?.attempts ?? null, failedAttempts: latest?.failedAttempts ?? null, summary: latest?.summary ?? null,
+    };
+  });
+  const jobs = rows;
   if (!jobs.length) return { ...b, status: "not_configured", latencyMs: null, summary: "No scheduled jobs are registered", evidence: ["vercel.json lists no cron entries"], details: { jobs } };
   if (!i.cronSecret) return { ...b, status: "not_configured", latencyMs: null, summary: "Jobs are registered, but CRON_SECRET is not set, so a scheduler cannot trigger them", evidence: [`${jobs.length} job(s) in vercel.json`, "CRON_SECRET is not set"], details: { jobs } };
-  return { ...b, status: "unknown", latencyMs: null, summary: "Jobs are registered, but the application records no execution history, so a run cannot be confirmed", evidence: [`${jobs.length} job(s) registered in vercel.json`, "No last-run, success, failure or duration is stored (see docs/MONITORING.md for the proposal)"], details: { jobs } };
+  if (!h?.available) return { ...b, status: "unknown", latencyMs: null, summary: h ? "Jobs are registered, but their run history could not be read, so a run cannot be confirmed" : "Jobs are registered, but the application records no execution history, so a run cannot be confirmed", evidence: [`${jobs.length} job(s) registered in vercel.json`, h ? "The run history could not be read (database unavailable or the table is missing)" : "No run history was provided"], details: { jobs } };
+  const count = (st: JobState) => rows.filter((r) => r.state === st).length;
+  const failed = count("failed"), overdue = count("overdue"), interrupted = count("interrupted"), none = count("no_run_recorded"), unhealthy = failed + overdue + interrupted;
+  const lines = rows.filter((r) => r.state !== "succeeded").map((r) => `${r.description}: ${STATE_TEXT[r.state!]}${r.state === "failed" && r.lastFailure ? ` (${r.lastFailure})` : ""}`);
+  const ev = [`${jobs.length} job(s) registered; history kept for 90 days${h.since ? `, recorded since ${h.since}` : ""}`, ...lines.slice(0, 8)];
+  if (unhealthy === jobs.length) return { ...b, status: "unavailable", latencyMs: null, summary: "Every scheduled job has failed, was interrupted or missed its run", evidence: ev, details: { jobs } };
+  if (unhealthy > 0) return { ...b, status: "degraded", latencyMs: null, summary: `${unhealthy} of ${jobs.length} scheduled job(s) need attention (${[failed && `${failed} failed`, overdue && `${overdue} overdue`, interrupted && `${interrupted} interrupted`].filter(Boolean).join(", ")})`, evidence: ev, details: { jobs } };
+  if (none > 0) return { ...b, status: "unknown", latencyMs: null, summary: `${none} of ${jobs.length} job(s) have no recorded run yet, so they cannot be confirmed`, evidence: ev, details: { jobs } };
+  return { ...b, status: "healthy", latencyMs: null, summary: `All ${jobs.length} scheduled jobs ran and their latest run succeeded`, evidence: ev, details: { jobs } };
 }
 export type ImportCounts = { available: boolean; preview: number; processing: number; completed7d: number; stuck: number };
 export function classifyBackground(i: ImportCounts, now = new Date()): Component {
@@ -93,9 +137,9 @@ export function classifyBackground(i: ImportCounts, now = new Date()): Component
   if (i.stuck > 0) return { ...b, status: "degraded", latencyMs: null, summary: `${i.stuck} bulk import(s) have been processing for over 15 minutes`, evidence: [`Pending preview: ${i.preview}, processing: ${i.processing}, completed in 7 days: ${i.completed7d}`, note], details: { imports: i } };
   return { ...b, status: "healthy", latencyMs: null, summary: "No bulk import is stuck", evidence: [`Pending preview: ${i.preview}, processing: ${i.processing}, completed in 7 days: ${i.completed7d}`, note], details: { imports: i } };
 }
-export function classifyErrors(c: ReturnType<typeof errorCounts>, started: Date, now = new Date()): Component {
+export function classifyErrors(c: ReturnType<typeof errorCounts>, started: Date, now = new Date(), durable = false): Component {
   const b = base("errors", "Server errors", now);
-  const since = `Counted since this server instance started (${started.toISOString()}); not durable and not shared between instances`;
+  const since = durable ? "Counted from the durable error record: all server instances, kept for 14 days" : `Counted since this server instance started (${started.toISOString()}); not durable and not shared between instances (the durable record could not be read)`;
   const bd = [...(c.byStatusLastHour?.length ? [`By status (last hour): ${c.byStatusLastHour.map((x) => `${x.key} ×${x.count}`).join(", ")}`] : []), ...(c.byRouteLastHour?.length ? [`By endpoint (last hour): ${c.byRouteLastHour.map((x) => `${x.key} ×${x.count}`).join(", ")}`] : [])];
   if (c.last15Minutes >= 20) return { ...b, status: "unavailable", latencyMs: null, summary: `${c.last15Minutes} server errors in the last 15 minutes`, evidence: [since, ...bd], details: { counts: c } };
   if (c.last15Minutes >= 1) return { ...b, status: "degraded", latencyMs: null, summary: `${c.last15Minutes} server error(s) in the last 15 minutes`, evidence: [since, ...bd], details: { counts: c } };
@@ -131,6 +175,10 @@ export type Deps = {
   env: NodeJS.ProcessEnv; now: () => Date;
   dbPing: () => Promise<void>; listBuckets: () => Promise<string[]>; aiProbe: (key: string, baseUrl: string) => Promise<number>; smtpVerify: (cfg: SmtpCfg) => Promise<void>;
   emailHistory: () => Promise<EmailHistory>; importCounts: () => Promise<ImportCounts>;
+  /** Optional so older mocks keep working: absent means "no history / no durable record available". */
+  jobHistory?: () => Promise<JobHistory>; durableErrors?: () => Promise<ReturnType<typeof errorCounts>>;
+  /** Optional: the effective AI configuration (database first). Absent means the environment key alone is used, as before. */
+  aiConfig?: () => Promise<AiHealthCfg>;
 };
 export type SmtpCfg = { host: string; port: number; user: string; pass: string };
 export const EXPECTED_BUCKETS = ["student-documents"];
@@ -152,6 +200,7 @@ export const realDeps: Deps = {
              (array_agg(error order by at desc) filter (where status = 'FAILED'))[1] as last_fail from ev`;
     return { available: true, sent24h: Number(r.sent), failed24h: Number(r.failed), lastSentAt: r.last_sent?.toISOString() ?? null, lastFailureAt: r.last_fail_at?.toISOString() ?? null, lastFailure: r.last_fail ? scrub(r.last_fail) : null };
   },
+  jobHistory: () => loadJobHistory(), durableErrors: () => durableErrorCounts(), aiConfig: () => loadAiHealth(),
   importCounts: async () => {
     const [r] = await db.$queryRaw<{ preview: number; processing: number; completed: number; stuck: number }[]>`
       select (count(*) filter (where status = 'PREVIEW'))::int as preview, (count(*) filter (where status = 'PROCESSING'))::int as processing,
@@ -173,31 +222,43 @@ export function appInfo(): AppInfo {
   return { buildId, commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? null, node: process.version, mode: process.env.NODE_ENV ?? "unknown", uptimeSeconds: Math.round(process.uptime()), startedAt: startedAt().toISOString() };
 }
 
+/** The Groq model-list check made while loading the AI configuration, expressed as the probe and HTTP status the classifier already understands (its duration is the real one). */
+function fromAiProbe(pr: NonNullable<AiHealthCfg["probes"]["GROQ"]>, holder: { aiStatus: number | null }): Probe {
+  holder.aiStatus = pr.reason === "ok" ? 200 : pr.reason === "unauthorized" ? 401 : pr.reason === "rate_limited" ? 429 : pr.reason === "error" ? 400 : null;
+  return pr.reason === "timeout" ? { ok: false, ms: pr.ms, timedOut: true } : pr.reason === "unavailable" ? { ok: false, ms: pr.ms, error: "provider unavailable" } : { ok: true, ms: pr.ms };
+}
+
 /** Runs every check once, in parallel, each with its own limit. Never throws: a failing check becomes that component's status. */
 export async function runChecks(d: Deps = realDeps): Promise<{ checkedAt: string; overall: ReturnType<typeof overall>; components: Component[] }> {
   const now = d.now(); const env = d.env;
   const storageCfg = !!(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
-  const aiKey = env.GROQ_API_KEY?.trim(); const dry = env.SMTP_DRY_RUN === "true";
+  const dry = env.SMTP_DRY_RUN === "true";
+  const aiCfg = d.aiConfig ? await withTimeout(d.aiConfig(), LIMITS.aiMs + 2000).catch(() => null) : null;
+  // With a resolved configuration the TEXT purpose decides whether a Groq key is in use; without one the environment key alone is used, as before.
+  const textP = aiCfg?.purposes.find((p) => p.purpose === "TEXT");
+  const aiKey = aiCfg ? (textP && textP.enabled && !textP.error && textP.configured ? "resolved" : undefined) : env.GROQ_API_KEY?.trim();
   const smtpCfg = !!(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
   const holder: { aiStatus: number | null } = { aiStatus: null };
-  const [db_, st, ai, sm, em, im] = await Promise.all([
+  const [db_, st, ai, sm, em, im, jh, de] = await Promise.all([
     timed(d.dbPing, LIMITS.dbMs),
     storageCfg ? (async () => { let buckets: string[] = []; const p = await timed(async () => { buckets = await d.listBuckets(); }, LIMITS.storageMs); return { p, buckets }; })() : Promise.resolve(null),
-    aiKey ? timed(async () => { holder.aiStatus = await d.aiProbe(aiKey, aiBase(env)); }, LIMITS.aiMs) : Promise.resolve(null),
+    aiCfg ? Promise.resolve(aiCfg.probes.GROQ ? fromAiProbe(aiCfg.probes.GROQ, holder) : null) : aiKey ? timed(async () => { holder.aiStatus = await d.aiProbe(aiKey, aiBase(env)); }, LIMITS.aiMs) : Promise.resolve(null),
     !dry && smtpCfg ? timed(() => d.smtpVerify({ host: env.SMTP_HOST!, port: Number(env.SMTP_PORT ?? 465), user: env.SMTP_USER!, pass: env.SMTP_PASS!.replace(/\s+/g, "") }), LIMITS.smtpMs) : Promise.resolve(null),
     withTimeout(d.emailHistory(), LIMITS.queryMs).catch((): EmailHistory => ({ available: false, sent24h: 0, failed24h: 0, lastSentAt: null, lastFailureAt: null, lastFailure: null })),
     withTimeout(d.importCounts(), LIMITS.queryMs).catch((): ImportCounts => ({ available: false, preview: 0, processing: 0, completed7d: 0, stuck: 0 })),
+    d.jobHistory ? withTimeout(d.jobHistory(), LIMITS.queryMs).catch((): JobHistory => noHistory()) : Promise.resolve<JobHistory | null>(null),
+    d.durableErrors ? withTimeout(d.durableErrors(), LIMITS.queryMs).catch(() => null) : Promise.resolve(null),
   ]);
   const env2 = checkEnv(env);
   const components: Component[] = [
     classifyApp({ envErrors: env2.errors, envWarnings: env2.warnings, info: appInfo() }, now),
     classifyDatabase(db_, now),
     classifyStorage({ configured: storageCfg, probe: st?.p, buckets: st?.buckets, expected: EXPECTED_BUCKETS }, now),
-    classifyAi({ configured: !!aiKey, probe: ai ?? undefined, httpStatus: holder.aiStatus, stats: aiStats() }, now),
+    classifyAi({ configured: !!aiKey, probe: ai ?? undefined, httpStatus: holder.aiStatus, stats: aiStats(), cfg: aiCfg }, now),
     classifyEmail({ configured: smtpCfg, dryRun: dry, probe: sm ?? undefined, history: em }, now),
-    classifyScheduledJobs({ cronSecret: !!env.CRON_SECRET, jobs: scheduledJobs(now) }, now),
+    classifyScheduledJobs({ cronSecret: !!env.CRON_SECRET, jobs: scheduledJobs(now), history: jh }, now),
     classifyBackground(im, now),
-    classifyErrors(errorCounts(now.getTime()), startedAt(), now),
+    de ? classifyErrors(de, startedAt(), now, true) : classifyErrors(errorCounts(now.getTime()), startedAt(), now),
   ];
   return { checkedAt: now.toISOString(), overall: overall(components), components };
 }

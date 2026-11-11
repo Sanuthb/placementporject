@@ -2,7 +2,11 @@
 // no API can do this. It removes every authenticator, so the administrator is refused platform access until they enrol a new one.
 // Usage: PLATFORM_ADMIN_EMAIL="..." PLATFORM_RECOVERY_CONFIRM="<same email>" npm run db:platform-mfa-recovery
 // Do this with the administrator present (confirm their identity out of band): the next person to sign in with their password can enrol.
-import "dotenv/config";
+import { loadEnvFiles } from "./lib/envFiles";
+import { assertLocalTargets } from "../lib/localOnly";
+
+loadEnvFiles();
+assertLocalTargets(process.env, { what: "run this script" });
 import os from "node:os";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createClient } from "@supabase/supabase-js";

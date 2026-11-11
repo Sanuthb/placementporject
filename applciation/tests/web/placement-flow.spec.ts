@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs"
-import { parse } from "dotenv"
 import { expect, test, type Page } from "@playwright/test"
+import { blockNonLocal, requireLocalBrowserEnv } from "./lib/local-only"
 
 /**
  * One end-to-end browser test of the main staff flow.
@@ -8,9 +7,10 @@ import { expect, test, type Page } from "@playwright/test"
  *   signed out -> sign in -> create a department, batch and student -> add a company -> visit every main
  *   screen and check none shows an error -> sign out.
  *
- * It signs in with the demo admin from `.env.seed` and CREATES records (prefixed "PW "), so point `.env`
- * at a throwaway Supabase project. Set PW_ALLOW=1 to run it. Set PW_SMOKE_ONLY=1 to run just the
- * signed-out part, which needs no credentials and writes nothing.
+ * It signs in with the local demo admin (SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD from the environment or `.env.local`, created by tests/e2e/stack/up.sh) and CREATES records (prefixed "PW ").
+ * LOCAL ONLY, fail-closed: it refuses to run unless every database and Auth target resolves to localhost and the app under test (PW_BASE_URL, default the config's own server on :3115)
+ * is on this machine; `.env.seed` and a bare `.env` are never read; and the browser is not allowed to reach any non-local host during the test (see tests/web/lib/local-only.ts).
+ * Set PW_ALLOW=1 to run it. Set PW_SMOKE_ONLY=1 to run just the signed-out part, which writes nothing.
  */
 const stamp = Date.now().toString(36).toUpperCase()
 const dept = { name: `PW Department ${stamp}`, code: `PW${stamp}`.slice(0, 12) }
@@ -36,9 +36,8 @@ const screens: [string, RegExp][] = [
 ]
 
 function seedLogin() {
-  const env = parse(readFileSync(".env.seed"))
-  const email = env.SEED_ADMIN_EMAIL, password = env.SEED_ADMIN_PASSWORD
-  if (!email || !password) throw new Error(".env.seed needs SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD")
+  const email = process.env.SEED_ADMIN_EMAIL, password = process.env.SEED_ADMIN_PASSWORD
+  if (!email || !password) throw new Error("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are needed (they come from .env.local, written for the local stack)")
   return { email, password }
 }
 
@@ -47,7 +46,9 @@ async function choose(page: Page, scope: ReturnType<Page["getByRole"]>, placehol
   await page.getByRole("option", { name: option, exact: true }).click()
 }
 
-test("placement officer: sign in, set up, add a student and company, visit the main screens, sign out", async ({ page }) => {
+test("placement officer: sign in, set up, add a student and company, visit the main screens, sign out", async ({ page, baseURL }) => {
+  requireLocalBrowserEnv(baseURL)                       // fail closed before anything else happens
+  const blocked = await blockNonLocal(page)             // and the browser may not leave this machine
   const problems: string[] = []
   page.on("pageerror", (e) => problems.push(`script error: ${e.message}`))
 
@@ -61,7 +62,7 @@ test("placement officer: sign in, set up, add a student and company, visit the m
     await expect(page.getByRole("heading", { name: "Design reference" })).toBeVisible()
   })
   if (process.env.PW_SMOKE_ONLY) return
-  test.skip(!process.env.PW_ALLOW, "This test creates data. Set PW_ALLOW=1 and point .env at a throwaway project.")
+  test.skip(!process.env.PW_ALLOW, "This test creates data in the LOCAL stack. Set PW_ALLOW=1 (the local Docker stack must be up).")
 
   await test.step("sign in as the admin", async () => {
     const { email, password } = seedLogin()
@@ -134,4 +135,5 @@ test("placement officer: sign in, set up, add a student and company, visit the m
   })
 
   expect(problems, "no script errors in the browser").toEqual([])
+  expect(blocked(), "the browser never tried to reach a non-local host").toEqual([])
 })

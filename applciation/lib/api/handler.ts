@@ -1,10 +1,12 @@
+import { runWithAiContext } from "@/lib/ai/context";
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError } from "zod";
 import { ApiError, forbidden } from "@/lib/api/errors";
 import { getSession, isFacultyOnly, isPrincipalOnly, requireModule, requireRole, type Session } from "@/lib/auth/session";
 import type { ModuleKey, Role } from "@/generated/prisma/client";
 import { rateLimit, type LimitOpt } from "@/lib/rateLimit";
-import { recordError } from "@/lib/monitorStore";
+import { recordError, safeFailure } from "@/lib/monitorStore";
+import { isDatabaseUnavailable } from "@/lib/dbErrors";
 
 type Opts = { roles?: Role[]; /** Let a faculty-only session through without listing FACULTY in `roles` (read-only routes any staff member may use). */ facultyOk?: boolean; /** Lets a principal-only session through. Only for routes that are safe for a read-only viewer. */ principalOk?: boolean; module?: ModuleKey; limit?: LimitOpt; /** For the few routes a person must reach before finishing two-step sign-in. */ skipMfa?: boolean };
 type Ctx<P> = { params: Promise<P> };
@@ -24,7 +26,8 @@ export function route<P = Record<string, string>>(
       if (opts.roles) requireRole(session, ...opts.roles);
       if (opts.module) await requireModule(session, opts.module);
       if (opts.limit) await rateLimit(opts.limit, session.userId);
-      const result = await fn(req, session, await ctx.params);
+      const params = await ctx.params;
+      const result = await runWithAiContext(session.collegeId, () => fn(req, session, params)); // AI calls made inside count for this institution
       return result instanceof Response ? result : NextResponse.json({ data: result });
     } catch (e) {
       return toErrorResponse(e, req);
@@ -40,8 +43,13 @@ export function toErrorResponse(e: unknown, req?: Request) {
     const retry = (e.details as { retryAfter?: number } | undefined)?.retryAfter;
     return NextResponse.json({ error: { code: e.code, message: e.message, details: e.details, requestId } }, { status: e.status, headers: retry ? { "retry-after": String(retry) } : undefined });
   }
+  // The database cannot be reached: say so plainly (503, retry soon). Nothing about the failure is returned, and nothing is bypassed: the request was refused.
+  if (isDatabaseUnavailable(e)) {
+    recordError({ status: 503, code: "DATABASE_UNAVAILABLE", message: "database unreachable", service: "database", method: req?.method ?? null, path: req ? new URL(req.url).pathname : null, requestId: requestId ?? null });
+    return NextResponse.json({ error: { code: "DATABASE_UNAVAILABLE", message: "The database is not reachable right now. Try again in a few seconds", requestId } }, { status: 503, headers: { "retry-after": "5" } });
+  }
   if (e instanceof ZodError) return NextResponse.json({ error: { code: "VALIDATION", message: validationMessage(e), details: e.issues, requestId } }, { status: 400 });
-  recordError({ status: 500, code: "INTERNAL", message: (e as Error)?.message, method: req?.method ?? null, path: req ? new URL(req.url).pathname : null, requestId: requestId ?? null });
+  recordError({ status: 500, code: "INTERNAL", message: safeFailure(e), method: req?.method ?? null, path: req ? new URL(req.url).pathname : null, requestId: requestId ?? null });
   console.error(JSON.stringify({ level: "error", requestId, path: req ? new URL(req.url).pathname : undefined, method: req?.method, message: (e as Error)?.message, stack: (e as Error)?.stack }));
   return NextResponse.json({ error: { code: "INTERNAL", message: "Something went wrong", requestId } }, { status: 500 });
 }

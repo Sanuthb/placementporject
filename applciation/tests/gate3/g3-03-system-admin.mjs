@@ -24,9 +24,9 @@ const created = { colleges: [], auth: [] };
 const MISSING = "Feature not built (Gate 1 audit: Missing)";
 try {
   // SA-TC-018: creation is script-only. Use the real script, and prove the API offers no way to do it.
-  const sc = spawnSync("npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: email, PLATFORM_ADMIN_NAME: "G3 Platform", PLATFORM_ADMIN_PASSWORD: pw } });
+  const sc = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: email, PLATFORM_ADMIN_NAME: "G3 Platform", PLATFORM_ADMIN_PASSWORD: pw } });
   R.t(["SA-TC-018"], "create-platform-admin script creates an administrator", sc.status === 0 && /created/.test(sc.stdout), sc.stderr + sc.stdout);
-  const short = spawnSync("npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: `g3short${tag}@example.com`, PLATFORM_ADMIN_NAME: "x", PLATFORM_ADMIN_PASSWORD: "short" } });
+  const short = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: `g3short${tag}@example.com`, PLATFORM_ADMIN_NAME: "x", PLATFORM_ADMIN_PASSWORD: "short" } });
   R.t(["SA-TC-018"], "script refuses a password under 12 characters", short.status !== 0);
   const noApi = [await fetch(B + "/api/platform/admins", { method: "POST" }), await fetch(B + "/api/platform/admin", { method: "POST" })];
   R.t(["SA-TC-018"], "no API route can create a platform administrator", noApi.every((r) => r.status === 404 || r.status === 401 || r.status === 403 || r.status === 405), noApi.map((r) => r.status).join(","));
@@ -132,9 +132,9 @@ try {
   R.t(["SA-TC-017"], "MFA removal with a wrong code refused", (await P("DELETE", "/api/platform/mfa", { code: "000000" })).code === "INVALID_CODE");
   R.t(["SA-TC-017"], "MFA removal from a password-only session refused", (await aal1("DELETE", "/api/platform/mfa", { code: totp(enr.d.secret, 1) })).s === 403);
   // SA-TC-019 recovery script
-  const rec = spawnSync("npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: email, PLATFORM_RECOVERY_CONFIRM: email } });
+  const rec = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: email, PLATFORM_RECOVERY_CONFIRM: email } });
   R.t(["SA-TC-019"], "recovery script removes the authenticator with matching confirmation", rec.status === 0 && (await sb.auth.admin.mfa.listFactors({ userId: uid })).data.factors.length === 0, rec.stderr);
-  const rec2 = spawnSync("npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: email, PLATFORM_RECOVERY_CONFIRM: "other@x.com" } });
+  const rec2 = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: email, PLATFORM_RECOVERY_CONFIRM: "other@x.com" } });
   R.t(["SA-TC-019"], "recovery script refused without the matching confirmation", rec2.status !== 0);
   R.t(["SA-TC-031"], "MFA enrolment/removal/recovery are in the platform audit trail", (await pgc.query(`select count(*)::int n from "PlatformAuditLog" where "adminId"=$1`, [uid])).rows[0].n >= 3);
 

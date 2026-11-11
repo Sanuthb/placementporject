@@ -3,38 +3,44 @@
  "timings": [
   {
    "name": "GET /api/health/live",
-   "medianMs": 6,
-   "maxMs": 9,
+   "medianMs": 15,
+   "maxMs": 18,
    "runs": 20
   },
   {
    "name": "GET /api/health/ready (cached 5 s)",
-   "medianMs": 6,
-   "maxMs": 7,
+   "medianMs": 15,
+   "maxMs": 18,
    "runs": 20
   },
   {
    "name": "GET /api/platform/monitoring (shared result)",
-   "medianMs": 16,
-   "maxMs": 22,
+   "medianMs": 46,
+   "maxMs": 48,
    "runs": 20
   },
   {
    "name": "GET /api/platform/monitoring?refresh=1 (all dependencies checked, mocks local)",
-   "medianMs": 57,
-   "maxMs": 64,
+   "medianMs": 34,
+   "maxMs": 65,
    "runs": 5
   },
   {
    "name": "GET /api/platform/monitoring/errors (page of 25)",
-   "medianMs": 17,
-   "maxMs": 23,
+   "medianMs": 46,
+   "maxMs": 48,
    "runs": 20
   },
   {
-   "name": "GET /api/platform/monitoring?refresh=1 with 120537 delivery-log rows",
-   "medianMs": 191,
-   "maxMs": 191,
+   "name": "GET /api/platform/monitoring/jobs (page of 25)",
+   "medianMs": 46,
+   "maxMs": 49,
+   "runs": 20
+  },
+  {
+   "name": "GET /api/platform/monitoring?refresh=1 with 120000 delivery-log rows",
+   "medianMs": 65,
+   "maxMs": 65,
    "runs": 1
   }
  ]

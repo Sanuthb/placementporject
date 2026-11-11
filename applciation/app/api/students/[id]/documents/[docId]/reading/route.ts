@@ -9,7 +9,7 @@ type P = { id: string; docId: string };
 export const GET = route<P>({ module: "ONBOARDING" }, async (_req, s, { id, docId }) => {
   await scopedStudent(s, id);
   const set = await db.collegeSettings.findUnique({ where: { collegeId: s.collegeId }, select: { aiDocumentReading: true } });
-  return { enabled: !!set?.aiDocumentReading && aiReadingConfigured(), reading: await latestExtraction(s.collegeId, id, docId) };
+  return { enabled: !!set?.aiDocumentReading && (await aiReadingConfigured()), reading: await latestExtraction(s.collegeId, id, docId) };
 });
 
 export const POST = route<P>({ roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"], module: "ONBOARDING", limit: { name: "doc-ai-read-staff", max: 200, windowSec: 3600 } }, async (_req, s, { id, docId }) => {

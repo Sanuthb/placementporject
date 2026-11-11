@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api/errors";
 import type { Evidence } from "@/lib/intelligence/evidence";
 import { groqJson } from "@/lib/intelligence/groq";
+import type { Resolved } from "@/lib/ai/config";
 
 const basis = z.enum(["measured", "inferred"]).catch("inferred");
 const point = z.object({ text: z.string().min(3).max(400), basis, evidence: z.array(z.string().max(120)).max(6).catch([]) });
@@ -43,7 +44,7 @@ Give at most 5 items in each list. "fit" describes how well the evidence support
 const VERDICT = /\b(not eligible|ineligible|is eligible|should (not )?be (hired|shortlisted|rejected)|unfit|unsuitable for hiring|reject (him|her|them|the student))\b/i;
 
 /** The AI-written reading. Scores and facts come from `evidence`; the AI only interprets them. */
-export async function writeNarrative(e: Evidence): Promise<Narrative> {
+export async function writeNarrative(e: Evidence, resolved?: Resolved): Promise<Narrative> {
   const payload = {
     note: "No name, email or contact details are included on purpose.",
     context: e.context,
@@ -52,12 +53,12 @@ export async function writeNarrative(e: Evidence): Promise<Narrative> {
   };
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const raw = await groqJson(SYSTEM, JSON.stringify(payload));
+    const raw = await groqJson(SYSTEM, JSON.stringify(payload), { resolved, feature: "intelligence_narrative" });
     const parsed = narrativeSchema.safeParse(raw);
     if (parsed.success) return sanitize(parsed.data, e);
     lastError = parsed.error;
   }
-  console.error(JSON.stringify({ level: "error", msg: "intelligence narrative did not match schema", error: String(lastError).slice(0, 300) }));
+  console.error(JSON.stringify({ level: "error", msg: "intelligence narrative did not match schema", issues: ((lastError as { issues?: { code?: string; path?: unknown[] }[] })?.issues ?? []).slice(0, 10).map((i) => `${i.code}@${(i.path ?? []).join(".")}`) })); // field paths and codes only, never the AI answer
   throw new ApiError(502, "AI_FAILED", "The AI answer was incomplete. Try again");
 }
 

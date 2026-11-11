@@ -3,6 +3,7 @@ import { route } from "@/lib/api/handler";
 import { isCronRequest } from "@/lib/cron";
 import { db } from "@/lib/db";
 import { sendReminders } from "@/lib/reminderService";
+import { withJobRun } from "@/lib/jobRun";
 
 const adminRun = route({ roles: ["TPO_ADMIN"] }, (_req, s) => sendReminders(s.collegeId));
 
@@ -12,10 +13,13 @@ const adminRun = route({ roles: ["TPO_ADMIN"] }, (_req, s) => sendReminders(s.co
  */
 export async function POST(req: NextRequest, ctx: { params: Promise<Record<string, string>> }) {
   if (!isCronRequest(req)) return adminRun(req, ctx);
-  const colleges = await db.college.findMany({ where: { isActive: true }, select: { id: true } });
-  let reminded = 0, delivered = 0;
-  for (const c of colleges) { const r = await sendReminders(c.id); reminded += r.reminded; delivered += r.delivered; }
-  return NextResponse.json({ data: { colleges: colleges.length, reminded, delivered } });
+  const out = await withJobRun("/api/notifications/reminders/run", async () => {
+    const colleges = await db.college.findMany({ where: { isActive: true }, select: { id: true } });
+    let reminded = 0, delivered = 0;
+    for (const c of colleges) { const r = await sendReminders(c.id); reminded += r.reminded; delivered += r.delivered; }
+    return { colleges: colleges.length, reminded, delivered };
+  });
+  return NextResponse.json({ data: out });
 }
 
 /** For schedulers that can only send GET. Accepts the cron secret only. */

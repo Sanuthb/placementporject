@@ -1,7 +1,11 @@
 // Adds a platform administrator: the only way to grant the right to create institutions. Nothing in the API does this.
 // Usage: PLATFORM_ADMIN_EMAIL="..." PLATFORM_ADMIN_NAME="..." PLATFORM_ADMIN_PASSWORD="..." npm run db:platform-admin
 // The login is a Supabase auth user with no college; it can sign in to /platform and nowhere else.
-import "dotenv/config";
+import { loadEnvFiles } from "./lib/envFiles";
+import { assertLocalTargets } from "../lib/localOnly";
+
+loadEnvFiles();
+assertLocalTargets(process.env, { what: "run this script" });
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createClient } from "@supabase/supabase-js";
 import { PrismaClient } from "../generated/prisma/client";

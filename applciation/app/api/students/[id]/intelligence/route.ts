@@ -2,7 +2,7 @@ import { route } from "@/lib/api/handler";
 import { db } from "@/lib/db";
 import { scopedStudent } from "@/lib/verification";
 import { evidenceHash, gatherEvidence } from "@/lib/intelligence/evidence";
-import { groqConfigured } from "@/lib/intelligence/groq";
+import { groqAvailable } from "@/lib/intelligence/groq";
 
 /**
  * The student's 360° intelligence matrix. Scores and gaps are computed fresh on every call, so they are always current.
@@ -21,7 +21,7 @@ export const GET = route<{ id: string }>({ module: "ONBOARDING" }, async (_req, 
     await db.psychAccessLog.create({ data: { collegeId: s.collegeId, actorId: s.userId, studentId: id, reason: "Student 360° intelligence view" } });
   }
   return {
-    aiConfigured: groqConfigured(),
+    aiConfigured: await groqAvailable("TEXT"),
     evidence,
     report: latest ? { id: latest.id, narrative: latest.narrative, model: latest.model, createdAt: latest.createdAt, stale: latest.inputHash !== hash } : null,
     // Earlier readings: the dimension scores they were based on, so progress can be compared over time.

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { blockNonLocal, requireLocalBrowserEnv } from "./lib/local-only"
 
 /**
  * Browser test of the student side.
@@ -7,6 +8,8 @@ import { expect, test } from "@playwright/test"
  * The signed-in part needs a real student account that is already onboarded, given at run time:
  *
  *   PW_STUDENT_EMAIL=... PW_STUDENT_PASSWORD=... PW_ALLOW=1 npx playwright test student-flow
+ *
+ * LOCAL ONLY, fail-closed (see tests/web/lib/local-only.ts): it refuses to run unless the database and Auth targets and PW_BASE_URL are on this machine, and the browser may not reach any non-local host.
  *
  * It changes little: it opens every student screen, saves and un-saves one drive if there is one, and flips an email
  * preference and back. Credentials are read from the environment only and are never stored.
@@ -17,7 +20,9 @@ const screens = [
   "/student/showcase", "/student/notifications", "/student/help", "/student/support", "/student/status", "/student/privacy", "/student/resume",
 ]
 
-test("student: signed-out checks, then every student screen", async ({ page }) => {
+test("student: signed-out checks, then every student screen", async ({ page, baseURL }) => {
+  requireLocalBrowserEnv(baseURL)
+  const blocked = await blockNonLocal(page)
   const problems: string[] = []
   page.on("pageerror", (e) => problems.push(`script error: ${e.message}`))
 
@@ -80,4 +85,5 @@ test("student: signed-out checks, then every student screen", async ({ page }) =
   })
 
   expect(problems, "no script errors in the browser").toEqual([])
+  expect(blocked(), "the browser never tried to reach a non-local host").toEqual([])
 })

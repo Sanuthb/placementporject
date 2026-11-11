@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { ApiError, notFound } from "@/lib/api/errors";
-import { groqConfigured } from "@/lib/intelligence/groq";
+import { groqAvailable } from "@/lib/intelligence/groq";
 import { retakeDecision, type Decision } from "@/lib/reassessment";
 import { ruleOf } from "@/lib/reassessmentRules";
 import { INSTRUMENTS, instrumentByKey } from "@/lib/instruments/index";
@@ -18,7 +18,8 @@ export function instrumentOrThrow(key: string): Instrument {
   return i;
 }
 /** Writing tests need the AI; they are hidden from students (not just broken) when it is not configured. */
-export const available = (i: Instrument) => !i.items.some((x) => x.kind === "writing") || groqConfigured();
+const needsAi = (i: Instrument) => i.items.some((x) => x.kind === "writing");
+export const available = async (i: Instrument) => !needsAi(i) || (await groqAvailable("TEXT"));
 
 /** May this student start the test now, under their college's retake rule for the test's category? */
 export async function decisionFor(me: Me, inst: Instrument): Promise<{ decision: Decision; attempts: number }> {
@@ -38,7 +39,8 @@ export async function listForStudent(me: Me) {
     db.instrumentAttempt.findMany({ where: { studentId: me.studentId, isCurrent: true }, select: { instrumentKey: true, completedAt: true, attemptNumber: true } }),
   ]);
   const out = [];
-  for (const inst of INSTRUMENTS.filter(available)) {
+  const aiOn = await groqAvailable("TEXT");
+  for (const inst of INSTRUMENTS.filter((i) => !needsAi(i) || aiOn)) {
     const { decision, attempts } = await decisionFor(me, inst);
     const cur = current.find((c) => c.instrumentKey === inst.key);
     out.push({
@@ -56,7 +58,7 @@ export async function listForStudent(me: Me) {
  */
 export async function submitAttempt(me: Me, key: string, raw: unknown): Promise<Result> {
   const inst = instrumentOrThrow(key);
-  if (!available(inst)) throw new ApiError(503, "AI_NOT_CONFIGURED", "This test is not available yet");
+  if (!(await available(inst))) throw new ApiError(503, "AI_NOT_CONFIGURED", "This test is not available yet");
   const parsed = answersSchema(inst).safeParse(raw);
   if (!parsed.success) throw new ApiError(400, "BAD_REQUEST", parsed.error.issues[0]?.message ?? "Some answers are missing", parsed.error.issues.slice(0, 10));
   const answers = parsed.data;

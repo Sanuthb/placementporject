@@ -3,10 +3,14 @@
 // A case is Pass only if it has assertions and all passed; Fail if any failed; Blocked if none failed but one could not run.
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export function recorder(suite) {
-  if (!/localhost|127\.0\.0\.1/.test(process.env.SUPABASE_URL ?? "")) { console.error("Refusing: SUPABASE_URL is not local"); process.exit(2); }
-  const file = new URL(`./results/${suite}.jsonl`, import.meta.url).pathname;
+  for (const k of ["SUPABASE_URL", "DIRECT_URL"]) {
+  const h = /^[a-z]+:\/\/(?:[^/@]*@)?(\[[^\]]*\]|[^/:?#]*)/i.exec(process.env[k] ?? "")?.[1]?.replace(/^\[|\]$/g, "").toLowerCase();
+  if (!["localhost", "127.0.0.1", "::1"].includes(h ?? "")) { console.error(`Refusing: ${k} is not the isolated local stack`); process.exit(2); }
+}
+  const file = fileURLToPath(new URL(`./results/${suite}.jsonl`, import.meta.url));
   mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, "");
   const date = new Date().toISOString();
   const env = "local Docker stack (Postgres 54330, Auth 54321, mail sink 54325); Next dev on :3111; synthetic data";

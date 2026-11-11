@@ -18,15 +18,27 @@ const parseField = (f: string, min: number, max: number): Set<number> | null => 
   }
   return out;
 };
-/** Next UTC time after `from` matching a 5-field cron expression (minute hour day-of-month month day-of-week). null when the expression is not understood. */
-export function nextRun(expr: string, from = new Date()): Date | null {
+type Cron = { mi: Set<number>; ho: Set<number>; dom: Set<number>; mo: Set<number>; dow: Set<number>; either: boolean };
+const parseCron = (expr: string): Cron | null => {
   const p = expr.trim().split(/\s+/); if (p.length !== 5) return null;
   const [mi, ho, dom, mo, dow] = [parseField(p[0], 0, 59), parseField(p[1], 0, 23), parseField(p[2], 1, 31), parseField(p[3], 1, 12), parseField(p[4], 0, 6)];
   if (!mi || !ho || !dom || !mo || !dow) return null;
-  const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate(), from.getUTCHours(), from.getUTCMinutes() + 1));
-  for (let i = 0; i < 366 * 24 * 60; i++, d.setUTCMinutes(d.getUTCMinutes() + 1)) {
-    if (mi.has(d.getUTCMinutes()) && ho.has(d.getUTCHours()) && mo.has(d.getUTCMonth() + 1) && (p[2] === "*" || p[4] === "*" ? dom.has(d.getUTCDate()) && dow.has(d.getUTCDay()) : dom.has(d.getUTCDate()) || dow.has(d.getUTCDay()))) return new Date(d);
-  }
+  return { mi, ho, dom, mo, dow, either: !(p[2] === "*" || p[4] === "*") };
+};
+const matches = (c: Cron, d: Date) => c.mi.has(d.getUTCMinutes()) && c.ho.has(d.getUTCHours()) && c.mo.has(d.getUTCMonth() + 1) && (c.either ? c.dom.has(d.getUTCDate()) || c.dow.has(d.getUTCDay()) : c.dom.has(d.getUTCDate()) && c.dow.has(d.getUTCDay()));
+const minute = (d: Date, plus = 0) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes() + plus));
+/** Next UTC time after `from` matching a 5-field cron expression (minute hour day-of-month month day-of-week). null when the expression is not understood. */
+export function nextRun(expr: string, from = new Date()): Date | null {
+  const c = parseCron(expr); if (!c) return null;
+  const d = minute(from, 1);
+  for (let i = 0; i < 366 * 24 * 60; i++, d.setUTCMinutes(d.getUTCMinutes() + 1)) if (matches(c, d)) return new Date(d);
+  return null;
+}
+/** The latest UTC time at or before `from` matching the expression: the schedule slot a run at `from` belongs to. Looks back at most 35 days; null when the expression is not understood or never matched. */
+export function previousRun(expr: string, from = new Date()): Date | null {
+  const c = parseCron(expr); if (!c) return null;
+  const d = minute(from);
+  for (let i = 0; i < 35 * 24 * 60; i++, d.setUTCMinutes(d.getUTCMinutes() - 1)) if (matches(c, d)) return new Date(d);
   return null;
 }
 export function scheduledJobs(now = new Date()) {

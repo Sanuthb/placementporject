@@ -1,4 +1,5 @@
 import { z } from "zod";
+import vercel from "@/vercel.json";
 
 const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
 const day = (end: boolean) => (v: unknown) => (typeof v === "string" && dateOnly.test(v) ? new Date(v + (end ? "T23:59:59.999Z" : "T00:00:00.000Z")) : v);
@@ -14,3 +15,11 @@ export const errorsQuery = z.object({
 }).refine((v) => !v.from || !v.to || v.from <= v.to, { message: "The start date must not be after the end date", path: ["from"] });
 /** GET /api/platform/monitoring: only `refresh` is accepted. */
 export const summaryQuery = z.object({ refresh: z.enum(["0", "1", "true", "false"]).optional() }).strict();
+/** GET /api/platform/monitoring/jobs: a registered job (fixed allow-list), an outcome filter and bounded paging. */
+const JOB_PATHS = (vercel.crons ?? []).map((c) => c.path) as [string, ...string[]];
+export const jobsQuery = z.object({
+  job: z.enum(JOB_PATHS).optional(),
+  outcome: z.enum(["succeeded", "failed"]).optional(),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+}).strict();

@@ -1,3 +1,4 @@
+import { runWithAiContext } from "@/lib/ai/context";
 import { NextResponse, type NextRequest } from "next/server";
 import { toErrorResponse } from "@/lib/api/handler";
 import { requireModule } from "@/lib/auth/session";
@@ -15,7 +16,8 @@ export function studentRoute<P = Record<string, string>>(
       const me = await getStudentSession(req);
       if (opts.module) await requireModule(me, opts.module);
       if (opts.limit) await rateLimit(opts.limit, me.studentId);
-      const result = await fn(req, me, await ctx.params);
+      const params = await ctx.params;
+      const result = await runWithAiContext(me.collegeId, () => fn(req, me, params)); // AI calls made inside count for this institution
       return result instanceof Response ? result : NextResponse.json({ data: result });
     } catch (e) {
       return toErrorResponse(e, req);

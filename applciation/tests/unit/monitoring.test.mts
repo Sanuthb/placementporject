@@ -1,7 +1,8 @@
 // Unit tests: health classification, roll-up, scrubbing, bounded error memory, cron next-run, timeouts, throttling, and runChecks with mocked dependencies.
 // No network, no database, no real SMTP, no real AI provider.
 import { isTimeout, classifyDatabase, classifyStorage, classifyAi, classifyEmail, classifyScheduledJobs, classifyBackground, classifyErrors, classifyApp, overall, withTimeout, Timeout, runChecks, getHealth, resetHealthCache, readiness, resetReadiness, LIMITS, CACHE_MS, FORCE_GAP_MS, type Deps, type Component, type EmailHistory } from "../../lib/health";
-import { scrub, scrubPath, recordError, listErrors, errorCounts, recordAiCall, aiStats, resetMonitorStore } from "../../lib/monitorStore";
+import { scrub, scrubPath, recordError, listErrors, errorCounts, recordAiCall, aiStats, resetMonitorStore, setEventWriter } from "../../lib/monitorStore";
+setEventWriter(async () => undefined); // these tests never touch a database; durable writes are covered in jobhistory.test.mts
 import { nextRun, scheduledJobs } from "../../lib/cronMeta";
 import { errorsQuery as eq, summaryQuery as sq, SERVICES } from "../../lib/monitorQuery";
 let fails = 0;

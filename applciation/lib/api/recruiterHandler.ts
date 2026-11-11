@@ -1,3 +1,4 @@
+import { runWithAiContext } from "@/lib/ai/context";
 import { NextResponse, type NextRequest } from "next/server";
 import { toErrorResponse } from "@/lib/api/handler";
 import { requireModule } from "@/lib/auth/session";
@@ -11,7 +12,8 @@ export function recruiterRoute<P = Record<string, string>>(fn: (req: NextRequest
     try {
       const r = await getRecruiterSession(req);
       await requireModule(r, "RECRUITER_PORTAL");
-      const result = await fn(req, r, await ctx.params);
+      const params = await ctx.params;
+      const result = await runWithAiContext(r.collegeId, () => fn(req, r, params)); // AI calls made inside count for this institution
       return result instanceof Response ? result : NextResponse.json({ data: result });
     } catch (e) {
       return toErrorResponse(e, req);

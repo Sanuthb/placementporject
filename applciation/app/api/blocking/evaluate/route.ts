@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { evaluateBlocks } from "@/lib/blocking";
 import { route } from "@/lib/api/handler";
 import { isCronRequest } from "@/lib/cron";
+import { withJobRun } from "@/lib/jobRun";
 
 /**
  * Applies block policies. Two callers:
@@ -14,9 +15,12 @@ const adminRun = route({ roles: ["TPO_ADMIN"], module: "ATTENDANCE_BLOCKING" }, 
 export async function POST(req: NextRequest, ctx: { params: Promise<Record<string, string>> }) {
   const isCron = isCronRequest(req);
   if (isCron) {
-    const colleges = await db.collegeModule.findMany({ where: { module: "ATTENDANCE_BLOCKING", enabled: true, college: { isActive: true } }, select: { collegeId: true } });
-    const out = { colleges: colleges.length, created: 0, expired: 0 };
-    for (const c of colleges) { const r = await evaluateBlocks(c.collegeId); out.created += r.created; out.expired += r.expired; }
+    const out = await withJobRun("/api/blocking/evaluate", async () => {
+      const colleges = await db.collegeModule.findMany({ where: { module: "ATTENDANCE_BLOCKING", enabled: true, college: { isActive: true } }, select: { collegeId: true } });
+      const out = { colleges: colleges.length, created: 0, expired: 0 };
+      for (const c of colleges) { const r = await evaluateBlocks(c.collegeId); out.created += r.created; out.expired += r.expired; }
+      return out;
+    });
     return NextResponse.json({ data: out });
   }
   return adminRun(req, ctx);

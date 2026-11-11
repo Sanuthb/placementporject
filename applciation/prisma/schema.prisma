@@ -2258,6 +2258,161 @@ model RateLimitBucket {
   @@index([createdAt])
 }
 
+/// One row per scheduled job per schedule slot (Gate 4 Phase 4.3 monitoring). A scheduler retry or a concurrent duplicate of the same slot
+/// updates this row (attempts + 1) instead of adding another. Holds counts and a sanitized failure note only: never a credential, token or person.
+/// Deleted after 90 days (lib/monitorRetention.ts). No foreign keys, so it can be dropped without touching anything else.
+model JobRun {
+  id             String    @id @default(uuid()) @db.Uuid
+  job            String
+  trigger        String    @default("scheduler")
+  /// The schedule slot this run belongs to (the most recent time the job's cron expression matched), in UTC.
+  slotAt         DateTime
+  /// When the first attempt for the slot began.
+  startedAt      DateTime  @default(now())
+  /// When the most recent attempt began. Later than finishedAt means an attempt is still running (or was cut off).
+  lastStartedAt  DateTime  @default(now())
+  /// When the most recent attempt ended. Null until one has ended.
+  finishedAt     DateTime?
+  /// Outcome of the most recent finished attempt. Null until one has finished.
+  ok             Boolean?
+  durationMs     Int?
+  attempts       Int       @default(1)
+  failedAttempts Int       @default(0)
+  /// Numeric counts the job returned (for example { colleges: 3, reminded: 12 }). Nothing else is ever stored here.
+  summary        Json?
+  /// Sanitized failure note, at most 300 characters.
+  error          String?
+
+  @@unique([job, slotAt])
+  @@index([slotAt])
+}
+
+/// A durable record of a server-side failure (HTTP 5xx or a service-unavailable code), written by lib/monitorStore.ts after the message has been
+/// scrubbed. Replaces the per-instance in-memory list as the source for the System Administrator error view. Deleted after 14 days.
+model MonitorEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  at        DateTime @default(now())
+  service   String
+  status    Int?
+  code      String
+  method    String?
+  /// Identifiers and link tokens already replaced with :id / :token.
+  path      String?
+  requestId String?
+  /// Scrubbed of credentials, addresses and long opaque strings; first line only; at most 240 characters.
+  message   String
+
+  @@index([at])
+  @@index([service, at])
+}
+
+enum AiProvider {
+  GROQ
+  ANTHROPIC
+}
+
+/// What an AI call is for. Each purpose can be configured (provider, model, key, on/off) on its own: text work, reading images, and the interview engine.
+enum AiPurpose {
+  TEXT
+  VISION
+  INTERVIEW
+}
+
+/// Platform-wide AI configuration (Phase 4.4.2), at most one row per purpose. Precedence at run time: an active row here, else environment variables, else the built-in defaults
+/// (lib/ai/config.ts). `enabled = false` is the per-purpose kill switch (the purpose is OFF, it does not fall back). Deleting the row returns the purpose to the environment.
+/// The API key is stored only as AES-256-GCM ciphertext (`keyCiphertext`, versioned envelope, authenticated against this row's id and purpose); it is never stored, returned or logged in
+/// plaintext, and `keyLast4` is the only part shown. No foreign keys: the table can be dropped without touching anything else. Row-level security is on and nothing is granted to public roles.
+model AiProviderConfig {
+  id            String     @id @default(uuid()) @db.Uuid
+  purpose       AiPurpose  @unique
+  provider      AiProvider
+  model         String
+  enabled       Boolean    @default(true)
+  /// Versioned envelope "aigcm1.<masterKeyVersion>.<iv>.<tag>.<ciphertext>" (base64url). Null: no key stored for this purpose, the provider's environment key is used.
+  keyCiphertext String?
+  /// Master-key version that encrypted `keyCiphertext` (also inside the envelope); lets rotation progress be counted without decrypting anything.
+  keyVersion    Int?
+  /// The last four characters of the key, for display only (null when the key is too short to show any part safely).
+  keyLast4      String?
+  keyUpdatedAt  DateTime?
+  keyUpdatedBy  String?    @db.Uuid
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  updatedBy     String?    @db.Uuid
+
+  @@index([keyVersion])
+}
+
+/// The platform-wide AI kill switch (Phase 4.4.3): one row, id "global" (enforced by a CHECK constraint in the migration). `enabled = false` switches ALL AI features off at once, whatever any
+/// per-purpose configuration says; there is no fallback to the environment. No row means on. `reason` is free text for administrators and never holds a credential or personal data.
+model AiGlobalSetting {
+  id        String   @id @default("global")
+  enabled   Boolean  @default(true)
+  reason    String?
+  updatedAt DateTime @updatedAt
+  updatedBy String?  @db.Uuid
+}
+
+/// Daily AI usage, aggregated: counts and latency only. Never a prompt, an answer, a transcript or a person. One row per day, institution (or "platform" for calls outside any
+/// institution), purpose, provider, model and feature; written by a concurrency-safe upsert (Phase 4.4.5). `collegeKey` is a college id or "platform" and is not a foreign key,
+/// so usage history survives the removal of an institution.
+model AiUsageDaily {
+  id          String     @id @default(uuid()) @db.Uuid
+  day         DateTime   @db.Date
+  collegeKey  String
+  purpose     AiPurpose
+  provider    AiProvider
+  model       String
+  feature     String
+  calls       Int        @default(0)
+  failures    Int        @default(0)
+  timeouts    Int        @default(0)
+  rateLimited Int        @default(0)
+  /// Calls refused by a daily limit before they were sent (not part of `calls`).
+  blocked     Int        @default(0)
+  /// Sum of call durations, so an average can be shown without keeping individual calls.
+  totalMs     BigInt     @default(0)
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([day, collegeKey, purpose, provider, model, feature])
+  @@index([collegeKey, day])
+  @@index([day])
+}
+
+enum AiLimitKind {
+  COLLEGE_DEFAULT
+  COLLEGE
+  PROVIDER
+  PURPOSE
+}
+
+/// A configured daily AI call limit (Phase 4.4.5). No row means no limit: the platform ships with none and invents none. Kinds and their keys:
+/// COLLEGE_DEFAULT "*" (every institution without its own row), COLLEGE <college id>, PROVIDER GROQ|ANTHROPIC (platform-wide), PURPOSE TEXT|VISION|INTERVIEW (platform-wide).
+/// `dailyCalls = 0` blocks the scope entirely. No foreign keys.
+model AiLimit {
+  id         String      @id @default(uuid()) @db.Uuid
+  kind       AiLimitKind
+  key        String
+  dailyCalls Int
+  updatedAt  DateTime    @updatedAt
+  updatedBy  String?     @db.Uuid
+
+  @@unique([kind, key])
+}
+
+/// The per-day counter that makes limits safe under concurrency: a call reserves its place with one conditional upsert per scope ("college:<id>", "provider:GROQ", "purpose:TEXT")
+/// inside a transaction, so two simultaneous calls can never both take the last slot. Counts attempts; holds no content. Kept 3 days.
+model AiQuotaCounter {
+  id        String   @id @default(uuid()) @db.Uuid
+  day       DateTime @db.Date
+  scope     String
+  used      Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([day, scope])
+  @@index([day])
+}
+
 /// One row per previous or current qualification (SSLC, PUC, BCA, MCA ...).
 model StudentEducationRecord {
   id                String          @id @default(uuid()) @db.Uuid
