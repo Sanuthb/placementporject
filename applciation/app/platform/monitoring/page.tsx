@@ -1,12 +1,15 @@
 "use client"
 
 import * as React from "react"
+import { ClockIcon, ServerIcon, TriangleAlertIcon } from "lucide-react"
 import Link from "next/link"
 import { RefreshCwIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { PlatformTab, PlatformTabList } from "../_components/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -38,6 +41,7 @@ const STATUS: Record<Status, { label: string; className: string; variant: "defau
 }
 const Pill = ({ s, label }: { s: Status; label?: string }) => <Badge variant={STATUS[s].variant} className={STATUS[s].className}>{label ?? STATUS[s].label}</Badge>
 const clock = (d: string) => new Date(d).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })
+type MonTab = "services" | "jobs" | "errors"
 const SERVICES = ["application", "database", "storage", "ai", "email", "auth", "other"]
 
 /**
@@ -47,6 +51,7 @@ const SERVICES = ["application", "database", "storage", "ai", "email", "auth", "
  */
 export default function MonitoringPage() {
   const [forced, setForced] = React.useState(false)
+  const [tab, setTab] = React.useState<MonTab>("services")
   const { data, error, loading, reload } = useApi<Health>("/api/platform/monitoring", forced ? { refresh: "1" } : {})
   const [f, setF] = React.useState({ service: "", from: "", to: "" }); const [q, setQ] = React.useState(""); const [dq, setDq] = React.useState(""); const [page, setPage] = React.useState(1)
   React.useEffect(() => { const t = setTimeout(() => { setDq(q.trim()); setPage(1) }, 300); return () => clearTimeout(t) }, [q])
@@ -66,11 +71,10 @@ export default function MonitoringPage() {
   const requestId = error instanceof ApiClientError ? error.requestId : undefined
   const bg = data?.components.find((c) => c.key === "backgroundJobs")
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5 p-4 md:p-8">
+    <div className="flex w-full min-w-0 flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-xl font-semibold tracking-tight">System health</h1><p className="text-sm text-muted-foreground">Live checks of what the platform depends on. A status is only “Healthy” when a check just succeeded.</p></div>
-        <div className="flex gap-2"><Button variant="outline" size="sm" render={<Link href="/platform" />}>Institutions</Button><Button variant="outline" size="sm" render={<Link href="/platform/analytics" />}>Analytics</Button><Button variant="outline" size="sm" render={<Link href="/platform/ai" />}>AI</Button><Button variant="outline" size="sm" render={<Link href="/platform/audit" />}>Audit log</Button></div>
-      </header>
+        <div><h1 className="text-2xl font-semibold tracking-tight">System health</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Live checks of what the platform depends on. A status is only “Healthy” when a check just succeeded.</p></div>
+        </header>
 
       {!!error && !data && (
         <Alert variant="destructive" role="alert" data-testid="connection-failure"><AlertTitle>Cannot reach the monitoring service</AlertTitle>
@@ -80,11 +84,9 @@ export default function MonitoringPage() {
         <Alert role="alert" data-testid="stale-warning" className="border-amber-500 bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-100"><AlertTitle>Showing the last known state (stale)</AlertTitle>
           <AlertDescription>{dbDown ? "The database is unavailable, so a new check could not be made." : `The refresh failed: ${error instanceof Error ? error.message : "try again"}.`} The figures below were checked at {fmtDateTime(data.checkedAt)} and may no longer be true. Use Refresh to try again.{requestId ? ` Reference: ${requestId}` : ""}</AlertDescription></Alert>
       )}
-      {loading && !data && <div className="grid gap-3 md:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-36" />)}</div>}
 
       {data && (
-        <div className={`flex flex-col gap-5 ${stale ? "opacity-60" : ""}`} data-stale={stale}>
-          <Card><CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+        <Card><CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
             <div><CardDescription>Overall platform health</CardDescription><CardTitle className="flex items-center gap-3 text-2xl" aria-live="polite"><span>{STATUS[data.overall.status].label}</span><Pill s={data.overall.status} /></CardTitle>
               <p className="mt-1 text-xs text-muted-foreground">{data.overall.counts.healthy} healthy · {data.overall.counts.degraded} degraded · {data.overall.counts.unavailable} unavailable · {data.overall.counts.unknown} unknown · {data.overall.counts.not_configured} not configured</p>
               {data.overall.notes.length > 0 && <p className="text-xs text-muted-foreground">{data.overall.notes.join(" · ")}</p>}</div>
@@ -92,7 +94,19 @@ export default function MonitoringPage() {
               <span className="text-xs text-muted-foreground" data-testid="checked-at">{stale ? "Stale: last checked " : "Checked "}{clock(data.checkedAt)}{data.cached && !stale ? " (shared result)" : ""}</span>
               {data.throttled && <span role="status" className="text-xs text-amber-700 dark:text-amber-300">Refreshed too recently; showing the latest result.</span>}</div>
           </CardHeader></Card>
+      )}
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as MonTab)}>
+        <PlatformTabList aria-label="System health sections">
+          <PlatformTab value="services" icon={ServerIcon}>Services</PlatformTab>
+          <PlatformTab value="jobs" icon={ClockIcon}>Scheduled jobs</PlatformTab>
+          <PlatformTab value="errors" icon={TriangleAlertIcon}>Errors</PlatformTab>
+        </PlatformTabList>
+
+        <TabsContent value="services" className="mt-4">
+          {loading && !data && <div className="grid gap-3 md:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-36" />)}</div>}
+          {data && (
+            <div className={`flex flex-col gap-5 ${stale ? "opacity-60" : ""}`} data-stale={stale}>
           <section aria-label="Dependencies" className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {data.components.filter((c) => !["scheduledJobs", "backgroundJobs"].includes(c.key)).map((c) => (
               <Card key={c.key} data-testid={`component-${c.key}`}><CardHeader><div className="flex items-center justify-between gap-2"><CardTitle className="text-base">{c.label}</CardTitle><Pill s={c.status} /></div><CardDescription>{c.summary}</CardDescription></CardHeader>
@@ -102,7 +116,19 @@ export default function MonitoringPage() {
                 </CardContent></Card>
             ))}
           </section>
+          {bg && (
+            <Card data-testid="component-backgroundJobs"><CardHeader><div className="flex items-center justify-between gap-2"><CardTitle className="text-base">Background jobs</CardTitle><Pill s={bg.status} /></div><CardDescription>{bg.summary}</CardDescription></CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                {bg.details?.imports && <p className="mb-1">Bulk imports: {bg.details.imports.preview} awaiting confirmation · {bg.details.imports.processing} processing · {bg.details.imports.completed7d} completed in 7 days · {bg.details.imports.stuck} stuck</p>}
+                <ul className="list-disc pl-4">{bg.evidence.map((e, i) => <li key={i}>{e}</li>)}</ul></CardContent></Card>
+          )}
+            </div>
+          )}
+        </TabsContent>
 
+        <TabsContent value="jobs" className="mt-4">
+          {!data ? <p className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{loading ? "Loading" : "Job status is not available until a health check succeeds."}</p> : (
+            <div className={`flex flex-col gap-5 ${stale ? "opacity-60" : ""}`} data-stale={stale}>
           <section aria-label="Scheduled jobs" className="flex flex-col gap-2">
             <div className="flex items-center gap-2"><h2 className="text-sm font-medium">Scheduled jobs</h2>{(() => { const c = data.components.find((x) => x.key === "scheduledJobs"); return c ? <Pill s={c.status} /> : null })()}</div>
             <p className="text-xs text-muted-foreground">{data.components.find((x) => x.key === "scheduledJobs")?.summary}</p>
@@ -118,16 +144,11 @@ export default function MonitoringPage() {
                     <TableCell className="text-xs text-muted-foreground">{j.attempts === null ? "—" : j.failedAttempts ? `${j.attempts} (${j.failedAttempts} failed)` : j.attempts}</TableCell></TableRow>))}</TableBody>
               </Table></div>)}
           </section>
-
-          {bg && (
-            <Card data-testid="component-backgroundJobs"><CardHeader><div className="flex items-center justify-between gap-2"><CardTitle className="text-base">Background jobs</CardTitle><Pill s={bg.status} /></div><CardDescription>{bg.summary}</CardDescription></CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                {bg.details?.imports && <p className="mb-1">Bulk imports: {bg.details.imports.preview} awaiting confirmation · {bg.details.imports.processing} processing · {bg.details.imports.completed7d} completed in 7 days · {bg.details.imports.stuck} stuck</p>}
-                <ul className="list-disc pl-4">{bg.evidence.map((e, i) => <li key={i}>{e}</li>)}</ul></CardContent></Card>
+            </div>
           )}
-        </div>
-      )}
+        </TabsContent>
 
+        <TabsContent value="errors" className="mt-4">
       <section aria-label="Recent errors" className="flex flex-col gap-2">
         <h2 className="text-sm font-medium">Recent server errors</h2>
         <p className="text-xs text-muted-foreground">{errs ? (errs.durable === false ? `Partial view: the durable error record could not be read, so this shows only the memory of the server that answered${errs.since ? `, since ${fmtDateTime(errs.since)}` : ""}. Not durable and not shared between servers.` : `Stored in the database and shared by all servers, kept ${errs.retentionDays ?? 14} days (${errs.retained} held${errs.since ? `, oldest ${fmtDateTime(errs.since)}` : ""}).`) : "Stored in the database for 14 days."}</p>
@@ -152,6 +173,8 @@ export default function MonitoringPage() {
           <div className="flex items-center justify-between text-sm text-muted-foreground"><span>{errs.total} error{errs.total === 1 ? "" : "s"} · page {errs.page} of {errs.totalPages}</span>
             <div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><Button size="sm" variant="outline" disabled={page >= errs.totalPages} onClick={() => setPage(page + 1)}>Next</Button></div></div>)}
       </section>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 // Also: a read-only principal must never get 2xx on a write; the platform administrator must not reach college routes.
 // Target: a production build (BASE_URL), so routes are not compiled lazily. Synthetic data, local stack only.
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url"; // a file URL's .pathname is "/D:/..." on Windows, which became "D:D:..."; fileURLToPath is correct on every platform
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
 import { B, client, login, makeStudents, tag } from "../e2e/lib.mjs";
@@ -91,7 +92,7 @@ const mods = new Map();
 for (const r of rows) { if (r.section !== "Public" && !/^(public|scheduler)/.test(r.who)) { const id = ua(r.path); mods.set(id, (mods.get(id) ?? 0) + 1); } }
 for (const [id, n] of mods) { const bad = [...sweep.anon, ...sweep.student, ...sweep.recruiter, ...sweep.staffAsStudent, ...sweep.role].filter((x) => x.ua === id); R.t([id], `module endpoints (${n}) refuse unauthorised callers: anonymous, wrong portal, wrong staff role`, bad.length === 0, summarise(bad)); }
 // full list kept for the evidence file
-import("node:fs").then((fs) => fs.writeFileSync(new URL("./results/g3-02-sweep-detail.json", import.meta.url).pathname, JSON.stringify(sweep, null, 1)));
+import("node:fs").then((fs) => fs.writeFileSync(fileURLToPath(new URL("./results/g3-02-sweep-detail.json", import.meta.url)), JSON.stringify(sweep, null, 1)));
 
 for (const k of made.rec) await pgc.query(`delete from "Recruiter" where id=$1`, [k]);
 for (const k of made.co) await pgc.query(`delete from "Company" where id=$1`, [k]);

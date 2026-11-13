@@ -33,8 +33,8 @@ async function main() {
 
   const slug = "demo-college";
   const college = await db.college.upsert({ where: { slug }, update: {}, create: { name: COLLEGE, slug } });
-  for (const module of Object.values(ModuleKey)) {
-    await db.collegeModule.upsert({ where: { collegeId_module: { collegeId: college.id, module } }, update: {}, create: { collegeId: college.id, module } });
+  for (const key of Object.values(ModuleKey)) { // not named "module": that shadows a Node/Next global (lint)
+    await db.collegeModule.upsert({ where: { collegeId_module: { collegeId: college.id, module: key } }, update: {}, create: { collegeId: college.id, module: key } });
   }
   for (const name of ["student-documents", "drive-documents", "offer-letters"]) {
     const b = await sb.storage.createBucket(name, { public: false });

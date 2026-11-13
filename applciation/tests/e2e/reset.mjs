@@ -7,6 +7,8 @@ const c = new pg.Client({ connectionString: process.env.DIRECT_URL }); await c.c
 // Tables whose contents change what the suites count (cohort sizes, block evaluations, audiences...).
 for (const t of ["Block", "BlockPolicy", "AttendanceRecord", "AttendanceSession", "PsychAttempt", "AssessmentAttempt", "CounsellingSlot", "RateLimitBucket"]) await c.query(`delete from "${t}"`);
 await c.query(`delete from "StudentSection" where section = 'SKILLS'`);
+// Drives left PUBLISHED and closing within three days by earlier suites would crowd the dashboard's "closing soon" list (the newest ten, soonest first) and hide the drive a suite just made.
+await c.query(`update "Drive" set status = 'CLOSED' where status = 'PUBLISHED' and "applicationDeadline" > now() and "applicationDeadline" <= now() + interval '3 days'`);
 await c.end();
 
 const staff = client(await login(process.env.SEED_ADMIN_EMAIL, process.env.SEED_ADMIN_PASSWORD));

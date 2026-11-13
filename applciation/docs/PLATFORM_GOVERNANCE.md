@@ -1,0 +1,85 @@
+# Platform governance (Gate 4, SA-TC-067; approved A-18 scope)
+
+Platform administrators only, behind the mandatory second step (`platformRoute`). Local test evidence: `tests/gate3/g4-09-platform-governance.mjs`, `tests/unit/permissions.test.mts`, `platformconfig.test.mts`, `platformpolicy.test.mts`, `channelhold.test.mts`, `tests/integration/channelhold.db.test.mts` (`npm run test:channels:db`), `tests/integration/retention.db.test.mts` (`npm run test:retention:db`), `tests/web/platform-governance.spec.ts`.
+
+## What it does
+
+| Area | Screen | API | Writes? |
+|---|---|---|---|
+| Role and permission matrix (route-level rules, see below) | `/platform/access` | `GET /api/platform/roles` | No. Generated from the route files (`npm run docs:permissions`); a unit test fails if it drifts. |
+| Staff roles of an institution | `/platform/institutions/:id/staff` | `GET /api/platform/institutions/:id/staff`, `PATCH .../staff/:userId` | Yes: assign the **existing** five roles and extra roles. No custom roles, no permission editing. |
+| Platform administrators | `/platform/access` | `GET /api/platform/admins`, `DELETE /api/platform/admins/:id` | Yes, but only **deactivation**. Accounts are created by script only (DEC-01, below); there is no API or screen that creates, invites or re-enables one. |
+| System configuration | `/platform/system` | `GET /api/platform/system` | No. Allow-listed, non-secret settings with their source. |
+| Integrations | `/platform/integrations` | `GET /api/platform/integrations` | No. Reuses the monitoring health checks. |
+| Security and retention policy | `/platform/policy` | `GET /api/platform/policy`, `PUT .../policy/mfa`, `PUT .../policy/retention`, `POST .../policy/retention/run` | Yes. |
+
+## What the role matrix does and does not show
+
+The matrix lists, for every endpoint, the **route-level rule**: which staff roles the route wrapper lets through at all. It is the outer boundary. **It is not the complete set of effective permissions, and it is not claimed to be.** After that gate, handlers and shared code narrow access further: a department coordinator sees only their own department, a student only their own records, some handlers re-check the role, and some actions need ownership of a record. Those rules are written as code inside handlers or shared library modules, not as a declarative rule, so they cannot be listed exhaustively.
+
+To make the gap visible each staff row carries a `narrowing` classification, produced by a source scan:
+
+| Value | Meaning |
+|---|---|
+| `handler` | The handler's own source contains a department-scope, ownership or second role check. |
+| `shared` | The handler uses a library module (other than the authentication and API machinery) that contains such checks; it **may** narrow access. |
+| `none-detected` | The scan found none. **This is a heuristic and not proof that nothing narrows access.** |
+
+At the time of writing, of 449 staff endpoints 32 are `handler`, 221 are `shared` and 196 are `none-detected`. Student, recruiter, platform, public and scheduler routes carry no classification: their scoping depends on the caller's identity rather than a staff role, and the matrix makes no claim about it. The screen shows the same statement above the table and a "Further narrowing" column. An existing end-to-end test (`tests/e2e/12-access-security.mjs`, "a pure coordinator IS limited") demonstrates one handler-level restriction in action; the matrix alone would not reveal it. The matrix has not been compared against runtime behaviour for every endpoint and role.
+
+## Guard rails
+
+* A platform administrator cannot change their own institution access, cannot deactivate themselves, and the platform keeps at least one active administrator (deactivations take a lock, so two administrators cannot deactivate each other at once).
+* **DEC-01 (decided 2026-11-12): platform administrator accounts are created by script only** (`npm run db:platform-admin`, `scripts/create-platform-admin.ts`). There is no public registration and no API or screen that creates, invites or re-enables an account; `POST`, `PUT` and `PATCH` on `/api/platform/admins` do not exist (tested live, and a unit test fails if one is added). An account created by the script is refused every platform route until two-step sign-in is set up (unchanged rule). Re-enabling a deactivated account is also a script/database operation.
+* An institution keeps at least one active Head TPO (role changes in one institution take a lock).
+* Every change is audited: staff role changes in the institution's audit log with the platform administrator as actor (before and after); administrator, policy and retention changes in the platform audit log in the same transaction as the change.
+* No secret is ever read into the system configuration or integration responses (allow-list; secrets appear only as configured yes/no).
+
+## Accuracy of the matrix (Gate 4 WP-02)
+
+The matrix is generated by reading the options each route passes to its wrapper. A live check (every route and method called with every identity, `tests/gate3/g4-12-access-control.mjs`) found that the first version of the generator did not follow option constants that a route **imports** from a service file (for example `CAMP_ADMIN`, `CAMP_TRAINER`, `MATCH_ADMIN`) and treated them as "no restriction". The matrix therefore said "any staff role" for those routes: it listed a department coordinator on 91 routes the code refuses to a coordinator, and left Faculty off 23 routes the code opens to Faculty. The generator now resolves imported constants and spreads, records `optionsResolved` for every route, and a unit test fails if any route's options cannot be resolved. After the correction the route-level roles are: Head TPO 447 routes, Placement Officer 384, Department Coordinator 118, Faculty 52, Principal 14, and the live check finds no difference between the matrix and the running application (one allowed identity is refused for a business reason, not authorisation: AI document reading switched off for the institution).
+
+## SMS and WhatsApp hold (enforced)
+
+Decision: SMS and WhatsApp stay on hold and no real message is sent. This is enforced in code, not by configuration:
+
+* `TEXT_CHANNELS_ON_HOLD` in `lib/channels.ts` is a constant. It is not read from the environment or the database, so provider keys, `CHANNEL_DRY_RUN`, an institution switching the channel on and a student opting in cannot lift it. Lifting it is a code change.
+* **Every send path was traced.** The provider endpoint appears in one file only (`lib/channels.ts`); its only caller is `sendText`, whose only caller is `deliverNotification` in `lib/dispatch.ts`, which is reached from the notification flow, the reminder service and the hourly catch-up job (`deliverPending`). There is no API route that sends a text message directly. A unit test re-checks this trace from the source.
+* In `deliverNotification` a text channel is logged as `SKIPPED` with the reason "On hold: SMS and WhatsApp are not being sent" and nothing is claimed as sent. `sendText` itself refuses first (before dry-run, credentials or any network call) with `409 CHANNEL_ON_HOLD`, so a future caller cannot bypass the dispatch check. `providerConfigured` reports false for both channels.
+* The platform dashboard and configuration screen keep showing both as disabled / on hold, and say the hold is enforced by the server. `GET /api/notifications/settings` and the student settings return `onHold` so callers are told clearly. Institutions can still store the on/off setting and students their opt-in; nothing happens until the hold is lifted.
+* Email, calendar, AI and other integrations are unchanged.
+
+Evidence: `tests/unit/channelhold.test.mts` (a counting `fetch` proves no request is made; environment variants cannot lift the hold; the source trace) and `tests/integration/channelhold.db.test.mts` (the real dispatch path with keys present, institution on, student opted in, daytime, dry-run on and off, and the background catch-up job). With the hold lifted on purpose, 9 unit and 5 database assertions fail, so the tests do detect a bypass.
+
+## Minimum two-step sign-in for institution administrators
+
+`PlatformPolicy.requireAdminMfa`. When on, an institution administrator without an authenticator is refused (`MFA_SETUP_REQUIRED`) until one is set up, whatever the institution chose. An institution may switch its own rule on, but cannot switch it off while the platform minimum is on (`409 PLATFORM_POLICY`). A "not enrolled" answer is cached for 3 seconds (it was 60), so a person who has just enrolled is not locked out for a minute. Platform administrators always need two-step sign-in; this setting cannot lower that.
+
+## Retention of operational records
+
+Only three tables are covered by the retention cleanup: `JobRun`, `MonitorEvent` and `AiUsageDaily`. **Student and institution data is not covered and is never deleted by these settings.**
+
+| Record | Table | Built-in period (before this change) | Proposed allowed range |
+|---|---|---|---|
+| Scheduled job history | `JobRun` | 90 days | 30 to 365 days |
+| Monitoring events (durable error records) | `MonitorEvent` | 14 days | 7 to 90 days |
+| AI usage statistics (daily counts) | `AiUsageDaily` | 90 days | 30 to 365 days |
+| AI request counters (not retention) | `AiQuotaCounter` | 3 days | not configurable, **not part of the retention cleanup**: a fixed housekeeping rule for the per-day limit counters that predates this work. It runs from the hourly job as its own step (`pruneAiQuotaCounters`) and is neither reported nor audited as retention. |
+
+The ranges are **proposed engineering limits** so that history stays useful for troubleshooting and the tables stay small. They are **not legal retention requirements**; no legal requirement has been assessed, and nothing here claims compliance with any data protection law. The database also enforces the ranges (check constraint `PlatformPolicy_bounds`, verified by writing out-of-range values directly in SQL), only one policy row can exist, and an absent value means the built-in default.
+
+How it behaves:
+
+* Saving a shorter period deletes nothing. The hourly job (or "Run cleanup now") removes the rows outside the period, in small batches (1,000 rows per statement, at most 5 statements per table per run, and a 3 s budget for the two monitoring tables), skipping rows another cleanup holds (`FOR UPDATE SKIP LOCKED` on all three tables, so overlapping runs never double-delete or block each other). A large backlog drains over several runs; the run reports `capped` while more remains.
+* Because deletion cannot be undone, a change that would remove rows is refused (`409 CONFIRMATION_REQUIRED`) with the exact count per record kind until the request is repeated with `confirm: true`.
+* Every cleanup run (by an administrator, or by the scheduled job when it removed anything) is written to the platform audit log with what was removed.
+* If the policy cannot be read, the last known values are used, else the built-in defaults. A database problem can never shorten retention.
+* The usage views in the platform AI screens still show at most 90 days; a longer AI usage retention keeps older rows for the per-institution usage report (up to 366 days).
+
+## Known limits
+
+* SMS and WhatsApp are on hold and shown as disabled, and the hold is **enforced by the server** (see below). The adapter and the institution and student settings are kept.
+* Calendar and GitHub have no health check and are shown only as configured or missing. GitHub is never contacted by the dashboard.
+* The role matrix shows the route-level rule only, and its "narrowing" column is a heuristic (see "What the role matrix does and does not show"). It is not the full set of effective permissions.
+* Deactivating a platform administrator switches the account off; it does not delete the sign-in or its history.
+* `npm run docs:permissions` must be run after changing any route's role list (a unit test fails otherwise).

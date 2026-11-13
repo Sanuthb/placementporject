@@ -235,9 +235,9 @@ try {
   const c2 = client(await login(pa.email, pw));
   const ok2 = await c2("POST", "/api/platform/mfa/verify", { factorId: enr2.d.factorId, code: totp(enr2.d.secret) });
   t("platform MFA: a new authenticator can be enrolled after removal", ok2.s === 200);
-  const rec = spawnSync("npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: pa.email, PLATFORM_RECOVERY_CONFIRM: pa.email } });
+  const rec = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: pa.email, PLATFORM_RECOVERY_CONFIRM: pa.email } });
   t("platform MFA recovery: the command removes the authenticator", rec.status === 0 && (await sb.auth.admin.mfa.listFactors({ userId: pa.id })).data.factors.length === 0, rec.stderr.slice(0, 200));
-  const bad = spawnSync("npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: pa.email, PLATFORM_RECOVERY_CONFIRM: "someone@else.com" } });
+  const bad = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/platform-mfa-recovery.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: pa.email, PLATFORM_RECOVERY_CONFIRM: "someone@else.com" } });
   t("platform MFA recovery: refused without the matching confirmation", bad.status !== 0);
   t("platform MFA: after recovery the old session is refused", (await client(ok2.d.access_token)("GET", "/api/platform/institutions")).code === "MFA_SETUP_REQUIRED");
   const pl = (await pgc.query(`select action from "PlatformAuditLog" where "adminId"=$1`, [pa.id])).rows.map((r) => r.action);

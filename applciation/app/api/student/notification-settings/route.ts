@@ -3,7 +3,7 @@ import { studentRoute } from "@/lib/api/studentHandler";
 import { parseBody } from "@/lib/api/parse";
 import { badRequest } from "@/lib/api/errors";
 import { db } from "@/lib/db";
-import { providerConfigured } from "@/lib/channels";
+import { providerConfigured, isOnHold } from "@/lib/channels";
 import { CATEGORIES, CHANNELS, channelsFor, isMandatory, normalisePhone, type Category, type Channel } from "@/lib/notifyRules";
 
 const body = z.object({ changes: z.array(z.object({ category: z.enum(CATEGORIES.map(([k]) => k) as [Category, ...Category[]]), channel: z.enum(CHANNELS.map(([k]) => k) as [Channel, ...Channel[]]), enabled: z.boolean() })).min(1).max(60) });
@@ -19,7 +19,7 @@ async function snapshot(collegeId: string, studentId: string) {
   return {
     categories: CATEGORIES.map(([key, label, mandatory]) => ({ key, label, mandatory, channels: channelsFor(key, prefs), consentGiven: Object.fromEntries(["SMS", "WHATSAPP"].map((ch) => [ch, prefs.find((p) => p.category === key && p.channel === ch && p.enabled)?.updatedAt ?? null])) })),
     phone: { onFile: !!st.phone, valid: !!phone, display: phone ? `${phone.slice(0, 3)}******${phone.slice(-3)}` : null },
-    channels: { SMS: { collegeEnabled: !!settings?.smsEnabled, available: !!settings?.smsEnabled && providerConfigured("SMS") }, WHATSAPP: { collegeEnabled: !!settings?.whatsappEnabled, available: !!settings?.whatsappEnabled && providerConfigured("WHATSAPP") } },
+    channels: { SMS: { collegeEnabled: !!settings?.smsEnabled, available: !!settings?.smsEnabled && providerConfigured("SMS"), onHold: isOnHold("SMS") }, WHATSAPP: { collegeEnabled: !!settings?.whatsappEnabled, available: !!settings?.whatsappEnabled && providerConfigured("WHATSAPP"), onHold: isOnHold("WHATSAPP") } },
     legacy,
   };
 }

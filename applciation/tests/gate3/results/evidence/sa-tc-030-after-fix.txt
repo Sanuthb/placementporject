@@ -1,0 +1,21 @@
+# SA-TC-030 AFTER the fix (2026-11-12): same suite, production build with the scheduled-reports job skipping suspended institutions.
+PASS SA-TC-034 the two production servers start 
+PASS SA-TC-025 a failure injected AFTER the institution, its settings, modules and administrator rows were written (a database trigger on the department insert) is reported as a failure (not 2xx) 
+PASS SA-TC-025 ROLLBACK: nothing remains in any table the transaction touched (institutions, settings, modules, users, academic years and the provisioning audit rows have the same counts as before) 
+PASS SA-TC-025 no institution with that address, no staff row and no sign-in for the administrator's e-mail address remain (the sign-in created first is removed again) 
+PASS SA-TC-025 the failure is not logged as a success (no 'institution.provision' audit row for the address) 
+PASS SA-TC-025 after the fault is removed the SAME address and e-mail register normally: the failed attempt left nothing that blocks a retry 
+PASS SA-TC-030 SELECTION: each of the four institution-wide jobs (blocking, CRM follow-ups, round reminders, reminders and message sweep) processes one institution fewer when it is suspended, and two fewer when both are (the job counts the institutions it works on) 
+PASS SA-TC-030 CONTROL: the active institution's due scheduled report is sent (an e-mail reaches the sink) and its schedule moves on 
+PASS SA-TC-030 SCHEDULED REPORTS: a SUSPENDED institution's due report is NOT sent: no e-mail reaches the sink, the schedule is not run or advanced, and nothing is recorded against it 
+PASS SA-TC-030 REACTIVATION: when the institution is switched back on its (unspent) due report is sent on the next run 
+PASS SA-TC-033 baseline: the verified platform session works 
+PASS SA-TC-033 EXPIRY AND TAMPERING: expired, wrongly signed, unsigned, signature-stripped and subject-swapped tokens are all refused with 401 on platform routes (15 probes) 
+PASS SA-TC-033 DEACTIVATION: a deactivated platform administrator's very next request is refused (403) although the token is still valid and cached 
+PASS SA-TC-033 REVOCATION: after signing out at the Auth server the token is refused by a server that has not seen it before (the Auth server treats the session as ended) 
+PASS SA-TC-033 REVOCATION WINDOW: a server that had already accepted the token (it was cached) stops accepting it within the documented 60-second cache (observed: refused after about 60 s) 
+PASS SA-TC-034 PRODUCTION: the first 30 writes in the window succeed and the 31st is refused with 429 RATE_LIMITED and a Retry-After header, even though RATE_LIMIT_DISABLED=true is set in the server's environment (production ignores that switch) 
+PASS SA-TC-034 the limit is per administrator: a second administrator is not blocked while the first is 
+PASS SA-TC-034 the refusals wrote nothing and changed nothing (the no-op writes left no policy audit rows) and the response carries no secret or internal detail 
+PASS SA-TC-034 FLOOD GUARD: anonymous requests to a platform endpoint beyond the per-minute flood limit (50 on this server) are refused with 429, and before that the answer is the normal 401 (the limit does not reveal anything) 
+19 assertions, 0 failed

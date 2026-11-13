@@ -39,7 +39,7 @@ const card = (page: Page, section: string, label: string) => page.getByRole("reg
 test.describe.configure({ mode: "serial" })
 test.beforeAll(async () => {
   if (!/localhost|127\.0\.0\.1/.test(process.env.SUPABASE_URL ?? "") || !/localhost|127\.0\.0\.1/.test(process.env.DIRECT_URL ?? "")) throw new Error("Refusing: not the local stack")
-  const r = spawnSync("npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", env: { ...process.env, PLATFORM_ADMIN_EMAIL: ADMIN.email, PLATFORM_ADMIN_NAME: "UI Analytics Admin", PLATFORM_ADMIN_PASSWORD: ADMIN.password } })
+  const r = spawnSync("npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: ADMIN.email, PLATFORM_ADMIN_NAME: "UI Analytics Admin", PLATFORM_ADMIN_PASSWORD: ADMIN.password } })
   if (r.status !== 0) throw new Error(r.stderr)
   const anon = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, { auth: { persistSession: false } })
   const s = (await anon.auth.signInWithPassword({ email: ADMIN.email, password: ADMIN.password })).data.session!

@@ -49,9 +49,9 @@ try {
   t("a fresh database: the complete migration chain applies, this one included, with exit code 0", fresh.code === 0 && new RegExp(MIG).test(fresh.out) && /successfully applied/i.test(fresh.out), fresh.out.slice(-300));
   t("migrate status says up to date, and the database equals schema.prisma exactly (no drift)", /up to date/i.test(status().out) && drift().code === 0);
   t("both tables and both enum types exist", (await left()).length >= 8);
-  // migration ordering: folders sort lexically in creation order, the three newest are in the expected sequence, and a fresh deploy applied them in exactly that order
+  // migration ordering: folders sort lexically in creation order, these four migrations keep their relative order (later migrations may follow them), and a fresh deploy applied them in exactly that order
   const dirs = readdirSync("prisma/migrations").filter((d) => /^\d{14}_/.test(d));
-  t("migration ordering: the folders sort in name order, and the four newest are 20261116090000_monitoring_history < 20261117090000_ai_configuration < 20261118090000_ai_global_switch < 20261119090000_ai_usage_limits", dirs.join() === [...dirs].sort().join() && dirs.slice(-4).join() === "20261116090000_monitoring_history,20261117090000_ai_configuration,20261118090000_ai_global_switch,20261119090000_ai_usage_limits", dirs.slice(-5).join());
+  t("migration ordering: the folders sort in name order, and these four keep this relative order (newer migrations may follow): 20261116090000_monitoring_history < 20261117090000_ai_configuration < 20261118090000_ai_global_switch < 20261119090000_ai_usage_limits", dirs.join() === [...dirs].sort().join() && ["20261116090000_monitoring_history", "20261117090000_ai_configuration", "20261118090000_ai_global_switch", "20261119090000_ai_usage_limits"].every((m, i, all) => dirs.includes(m) && (i === 0 || dirs.indexOf(all[i - 1]) < dirs.indexOf(m))), dirs.slice(-5).join());
   t("migration ordering: a fresh deploy recorded every migration in exactly name order (nothing applied out of sequence)", (await q(`select migration_name from _prisma_migrations order by started_at, migration_name`)).map((r) => r.migration_name).join() === [...dirs].sort().join());
 
   // upgrade over existing data: put the database back in its pre-migration state

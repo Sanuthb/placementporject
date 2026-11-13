@@ -17,12 +17,13 @@ export async function POST(req: NextRequest) {
     const info = await verifyTokenInfo(token);
     if (!info.sessionId) return NextResponse.json({ data: { recorded: false } });
 
-    const [staff, student, recruiter] = await Promise.all([
+    const [staff, student, recruiter, platformAdmin] = await Promise.all([
       db.user.findUnique({ where: { id: info.userId }, select: { collegeId: true, isActive: true } }),
       db.student.findUnique({ where: { userId: info.userId }, select: { collegeId: true, isActive: true } }),
       db.recruiter.findUnique({ where: { id: info.userId }, select: { collegeId: true, isActive: true } }),
+      db.platformAdmin.findUnique({ where: { id: info.userId }, select: { isActive: true } }),
     ]);
-    const who = staff ? { kind: "staff", ...staff } : student ? { kind: "student", ...student } : recruiter ? { kind: "recruiter", ...recruiter } : null;
+    const who = staff ? { kind: "staff", ...staff } : student ? { kind: "student", ...student } : recruiter ? { kind: "recruiter", ...recruiter } : platformAdmin ? { kind: "platform", collegeId: null as string | null, ...platformAdmin } : null;
     if (!who || !who.isActive) throw forbidden("This is not an active account");
 
     const mfa = info.methods.includes("totp");

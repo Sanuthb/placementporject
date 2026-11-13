@@ -64,7 +64,10 @@ export function nextRun(from: Date, f: ReportFrequency) {
 
 /** Sends every report that is due (optionally for one college). Each schedule is claimed first, so overlapping runs never double-send. */
 export async function runDueReports(collegeId?: string, now = new Date()) {
-  const due = await db.reportSchedule.findMany({ where: { isActive: true, nextRunAt: { lte: now }, ...(collegeId ? { collegeId } : {}) } });
+  const dueAll = await db.reportSchedule.findMany({ where: { isActive: true, nextRunAt: { lte: now }, ...(collegeId ? { collegeId } : {}) } });
+  // A suspended institution is not served: its schedules are left exactly as they are (not sent, not advanced, no failure recorded), so they run when it is reactivated. (SA-TC-030: this job used to ignore the institution's status.)
+  const live = new Set((await db.college.findMany({ where: { id: { in: [...new Set(dueAll.map((d) => d.collegeId))] }, isActive: true }, select: { id: true } })).map((c) => c.id));
+  const due = dueAll.filter((d) => live.has(d.collegeId));
   let sent = 0; const failures: { id: string; error: string }[] = [];
   for (const sch of due) {
     const claim = await db.reportSchedule.updateMany({ where: { id: sch.id, nextRunAt: sch.nextRunAt }, data: { nextRunAt: nextRun(now, sch.frequency) } });

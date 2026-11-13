@@ -35,6 +35,16 @@ export default function RecruiterDrivePage() {
   const slots = useApi<Slot[]>(`/api/recruiter/drives/${id}/schedule`)
   const fb = useApi<Fb>(`/api/recruiter/drives/${id}/feedback`)
   const [busy, setBusy] = React.useState(false)
+  async function decide(applicationId: string, status: "CLEARED" | "REJECTED", order: number) {
+    const rd = d.data?.rounds.find((x) => x.order === order)
+    if (!rd) return
+    setBusy(true)
+    try {
+      const r = await api<{ updated: number; failed: { reason: string }[] }>(`/api/recruiter/drives/${id}/rounds/${rd.id}/results`, { method: "POST", body: { results: [{ applicationId, status }] } })
+      if (r.failed.length) toast.error(r.failed[0].reason); else toast.success(status === "CLEARED" ? "Candidate moved on" : "Candidate rejected")
+      cands.reload(); d.reload()
+    } catch (err) { toastError(err) } finally { setBusy(false) }
+  }
   if (!d.data) return <Skeleton className="h-64" />
   async function saveFb(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -53,10 +63,10 @@ export default function RecruiterDrivePage() {
         <TabsContent value="candidates" className="flex flex-col gap-3">
           <OptionSelect className="w-56" value={round} onChange={setRound} options={[{ value: "", label: "All shortlisted" }, ...d.data.rounds.map((r) => ({ value: r.id, label: `Round ${r.order}: ${titleCase(r.type)}` }))]} placeholder="Round" />
           <Table>
-            <TableHeader><TableRow><TableHead>Candidate</TableHead><TableHead>Department</TableHead><TableHead>CGPA</TableHead><TableHead>Round</TableHead><TableHead className="text-right">Resume</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Candidate</TableHead><TableHead>Department</TableHead><TableHead>CGPA</TableHead><TableHead>Round</TableHead><TableHead className="text-right">Decision</TableHead><TableHead className="text-right">Resume</TableHead></TableRow></TableHeader>
             <TableBody>
-              {cands.data?.map((c) => <TableRow key={c.id}><TableCell>{c.student.name}<div className="text-xs text-muted-foreground">{c.student.email}</div></TableCell><TableCell>{c.student.department}</TableCell><TableCell>{c.student.cgpa ?? "—"}</TableCell><TableCell>{c.clearedAllRounds ? "Cleared all" : c.currentRound}</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => setWhy(c.student.id)}>Why they match</Button><Button size="sm" variant="outline" onClick={() => download(`/api/recruiter/drives/${id}/candidates/${c.student.id}/resume.pdf`).catch(toastError)}>Download</Button></div></TableCell></TableRow>)}
-              {cands.data?.length === 0 && <TableRow><TableCell colSpan={5} className="text-muted-foreground">No shortlisted candidates yet.</TableCell></TableRow>}
+              {cands.data?.map((c) => <TableRow key={c.id}><TableCell>{c.student.name}<div className="text-xs text-muted-foreground">{c.student.email}</div></TableCell><TableCell>{c.student.department}</TableCell><TableCell>{c.student.cgpa ?? "—"}</TableCell><TableCell>{c.clearedAllRounds ? "Cleared all" : c.currentRound}</TableCell><TableCell className="text-right">{!c.clearedAllRounds && d.data?.status === "PUBLISHED" ? <div className="flex justify-end gap-1"><Button size="sm" disabled={busy} aria-label={`Clear ${c.student.name} for the next step`} onClick={() => decide(c.id, "CLEARED", c.currentRound)}>Clear</Button><Button size="sm" variant="outline" disabled={busy} aria-label={`Reject ${c.student.name}`} onClick={() => decide(c.id, "REJECTED", c.currentRound)}>Reject</Button></div> : <span className="text-xs text-muted-foreground">—</span>}</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => setWhy(c.student.id)}>Why they match</Button><Button size="sm" variant="outline" onClick={() => download(`/api/recruiter/drives/${id}/candidates/${c.student.id}/resume.pdf`).catch(toastError)}>Download</Button></div></TableCell></TableRow>)}
+              {cands.data?.length === 0 && <TableRow><TableCell colSpan={6} className="text-muted-foreground">No shortlisted candidates yet.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </TabsContent>

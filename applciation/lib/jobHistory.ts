@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { nextRun, previousRun } from "@/lib/cronMeta";
 import { RUN_TIMEOUT_MS } from "@/lib/jobRun";
-import { RETENTION_DAYS } from "@/lib/monitorRetention";
+import { getPolicy } from "@/lib/platformPolicy";
 
 /** Reads of the JobRun table for the System Administrator: the latest run, last success and last failure of every job, and a paged list of runs. Bounded by the 90-day retention. */
 export type RunRow = { job: string; slotAt: string; startedAt: string; lastStartedAt: string; finishedAt: string | null; ok: boolean | null; durationMs: number | null; attempts: number; failedAttempts: number; summary: Record<string, number> | null; error: string | null };
@@ -15,7 +15,7 @@ export const toRun = (r: Raw): RunRow => ({ job: r.job, slotAt: iso(r.slotAt)!, 
 const byJob = (rows: Raw[]) => Object.fromEntries(rows.map((r) => [r.job, toRun(r)]));
 
 export async function loadJobHistory(now = new Date()): Promise<JobHistory> {
-  const floor = new Date(now.getTime() - RETENTION_DAYS.jobRun * 86_400_000);
+  const floor = new Date(now.getTime() - (await getPolicy()).days.jobRun * 86_400_000); // the retention period the platform administrator has set (default 90)
   const [latest, success, failure, [first]] = await Promise.all([
     db.$queryRaw<Raw[]>`SELECT DISTINCT ON (job) job, "slotAt", "startedAt", "lastStartedAt", "finishedAt", ok, "durationMs", attempts, "failedAttempts", summary, error FROM "JobRun" WHERE "slotAt" > ${floor} ORDER BY job, "slotAt" DESC`,
     db.$queryRaw<Raw[]>`SELECT DISTINCT ON (job) job, "slotAt", "startedAt", "lastStartedAt", "finishedAt", ok, "durationMs", attempts, "failedAttempts", summary, error FROM "JobRun" WHERE "slotAt" > ${floor} AND ok = true ORDER BY job, "slotAt" DESC`,
@@ -26,9 +26,10 @@ export async function loadJobHistory(now = new Date()): Promise<JobHistory> {
 }
 
 export async function listJobRuns(q: { job?: string; ok?: boolean; page: number; pageSize: number }) {
-  const where = { slotAt: { gt: new Date(Date.now() - RETENTION_DAYS.jobRun * 86_400_000) }, ...(q.job ? { job: q.job } : {}), ...(q.ok !== undefined ? { ok: q.ok } : {}) };
+  const keepDays = (await getPolicy()).days.jobRun;
+  const where = { slotAt: { gt: new Date(Date.now() - keepDays * 86_400_000) }, ...(q.job ? { job: q.job } : {}), ...(q.ok !== undefined ? { ok: q.ok } : {}) };
   const [total, rows] = await Promise.all([db.jobRun.count({ where }), db.jobRun.findMany({ where, orderBy: [{ slotAt: "desc" }, { job: "asc" }], skip: (q.page - 1) * q.pageSize, take: q.pageSize })]);
-  return { items: rows.map((r) => toRun({ ...r, summary: r.summary })), page: q.page, pageSize: q.pageSize, total, totalPages: Math.max(1, Math.ceil(total / q.pageSize)), retentionDays: RETENTION_DAYS.jobRun };
+  return { items: rows.map((r) => toRun({ ...r, summary: r.summary })), page: q.page, pageSize: q.pageSize, total, totalPages: Math.max(1, Math.ceil(total / q.pageSize)), retentionDays: keepDays };
 }
 
 // ---------- judging one job (pure: every rule is unit-tested) ----------

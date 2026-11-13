@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getPolicy } from "@/lib/platformPolicy";
 
 /**
  * Retention for the two monitoring tables: JobRun rows are kept 90 days, MonitorEvent rows 14 days.
@@ -9,7 +10,7 @@ import { db } from "@/lib/db";
 export const RETENTION_DAYS = { jobRun: 90, monitorEvent: 14 } as const;
 export const PRUNE_LIMITS = { batch: 1000, maxBatches: 5, budgetMs: 3000, pauseMs: 25 } as const;
 
-type Opts = { now?: Date; batch?: number; maxBatches?: number; budgetMs?: number; pauseMs?: number; exec?: (sql: "jobRun" | "monitorEvent", cutoff: Date, batch: number) => Promise<number> };
+type Opts = { /** Retention in days; when omitted the platform policy is read (built-in defaults if none or unreadable). */ days?: { jobRun: number; monitorEvent: number }; now?: Date; batch?: number; maxBatches?: number; budgetMs?: number; pauseMs?: number; exec?: (sql: "jobRun" | "monitorEvent", cutoff: Date, batch: number) => Promise<number> };
 export type PruneResult = { jobRuns: number; monitorEvents: number; capped: boolean; error: string | null };
 
 const realExec: NonNullable<Opts["exec"]> = (table, cutoff, batch) => table === "jobRun"
@@ -21,9 +22,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function pruneMonitoring(o: Opts = {}): Promise<PruneResult> {
   const now = o.now ?? new Date(), batch = o.batch ?? PRUNE_LIMITS.batch, maxBatches = o.maxBatches ?? PRUNE_LIMITS.maxBatches, budget = o.budgetMs ?? PRUNE_LIMITS.budgetMs, pause = o.pauseMs ?? PRUNE_LIMITS.pauseMs;
   const exec = o.exec ?? realExec, t0 = Date.now();
+  const keep = o.days ?? (o.exec ? RETENTION_DAYS : (await getPolicy()).days); // an injected executor (unit tests) never touches the database
   const out: PruneResult = { jobRuns: 0, monitorEvents: 0, capped: false, error: null };
   try {
-    for (const [table, days, key] of [["jobRun", RETENTION_DAYS.jobRun, "jobRuns"], ["monitorEvent", RETENTION_DAYS.monitorEvent, "monitorEvents"]] as const) {
+    for (const [table, days, key] of [["jobRun", keep.jobRun, "jobRuns"], ["monitorEvent", keep.monitorEvent, "monitorEvents"]] as const) {
       const cutoff = new Date(now.getTime() - days * 86_400_000);
       for (let i = 0; ; i++) {
         if (i >= maxBatches || Date.now() - t0 >= budget) { out.capped = true; break; }

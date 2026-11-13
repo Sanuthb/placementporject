@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { escapeHtml, fromAddress, mailer } from "@/lib/mailer";
-import { providerConfigured, sendText } from "@/lib/channels";
+import { HOLD_REASON, isOnHold, providerConfigured, sendText } from "@/lib/channels";
 import { EXTERNAL, categoryOf, checkChannel, normalisePhone, textMessage } from "@/lib/notifyRules";
 
 type N = { id: string; collegeId: string; studentId: string | null; type: string; title: string; body: string | null; link: string | null };
@@ -24,7 +24,7 @@ export async function deliverNotification(n: N, now = new Date()) {
   for (const channel of EXTERNAL) {
     if (!prefs.some((p) => p.category === category && p.channel === channel && p.enabled)) continue;
     const phone = normalisePhone(st.phone);
-    const check = checkChannel({ channel, category, prefs, collegeEnabled: channel === "SMS" ? !!settings?.smsEnabled : channel === "WHATSAPP" ? !!settings?.whatsappEnabled : true, providerConfigured: providerConfigured(channel), phone, email: st.email, now });
+    const check = isOnHold(channel) ? { channel, send: false as const, reason: HOLD_REASON } : checkChannel({ channel, category, prefs, collegeEnabled: channel === "SMS" ? !!settings?.smsEnabled : channel === "WHATSAPP" ? !!settings?.whatsappEnabled : true, providerConfigured: providerConfigured(channel), phone, email: st.email, now });
     const claim = await db.notificationDelivery.create({ data: { collegeId: n.collegeId, studentId: n.studentId, notificationId: n.id, channel, category, title: n.title.slice(0, 200), status: check.send ? "SENDING" : "SKIPPED", detail: check.send ? null : check.reason } }).catch(() => null);
     if (!claim || !check.send) continue;
     try {

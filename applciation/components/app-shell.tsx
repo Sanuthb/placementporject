@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Spinner } from "@/components/ui/spinner"
-import { homeFor, useAuth, type Kind } from "@/lib/web/auth"
+import { PlatformAnnouncements } from "@/components/platform-announcements"
+import { hasRole, homeFor, useAuth, type Kind } from "@/lib/web/auth"
 import { NAV } from "@/lib/web/nav"
 
 /** The one layout every dashboard uses: signs you in if needed, sends you to the right area, then shows sidebar + page. */
@@ -56,7 +57,7 @@ export function AppShell({ kind, children }: { kind: Kind; children: React.React
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-        <div className="mx-auto flex w-full min-w-0 max-w-[1680px] flex-1 flex-col gap-4 p-4 pt-0 sm:p-6 sm:pt-0">{children}</div>
+        <div className="mx-auto flex w-full min-w-0 max-w-[1680px] flex-1 flex-col gap-4 p-4 pt-0 sm:p-6 sm:pt-0">{kind === "staff" && <PlatformAnnouncements canAcknowledge={hasRole(state.profile, "TPO_ADMIN")} />}{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

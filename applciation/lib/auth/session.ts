@@ -1,9 +1,11 @@
 import type { NextRequest } from "next/server";
 import type { ModuleKey, Role } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { platformAvailability, unavailableMessage } from "@/lib/moduleRollout";
 import { forbidden, unauthorized } from "@/lib/api/errors";
 import { verifyTokenInfo } from "@/lib/auth/verifyToken";
 import { hasMfaFactor } from "@/lib/auth/mfa";
+import { platformRequiresAdminMfa } from "@/lib/platformPolicy";
 import { ApiError } from "@/lib/api/errors";
 
 export type Session = {
@@ -57,8 +59,9 @@ async function enforceMfa(session: Session, aal: string) {
   const enrolled = await hasMfaFactor(session.userId);
   if (enrolled && aal !== "aal2") throw new ApiError(403, "MFA_REQUIRED", "Confirm your sign-in with the code from your authenticator app");
   if (!enrolled) {
+    // The platform sets a minimum (platformRequiresAdminMfa); the college may tighten it but never weaken it, so either one is enough to require setup.
     const s = await db.collegeSettings.findUnique({ where: { collegeId: session.collegeId }, select: { requireMfaForAdmins: true } });
-    if (s?.requireMfaForAdmins) throw new ApiError(403, "MFA_SETUP_REQUIRED", "Your college requires administrators to set up two-step sign-in");
+    if (s?.requireMfaForAdmins || (await platformRequiresAdminMfa())) throw new ApiError(403, "MFA_SETUP_REQUIRED", "Administrators must set up two-step sign-in");
   }
 }
 
@@ -81,9 +84,13 @@ export function requireRole(session: Session, ...roles: Role[]) {
 
 /** Server-side module gating: a college only reaches modules it has bought (spec rule 12.1). */
 export async function requireModule(session: { collegeId: string }, module: ModuleKey) {
-  const row = await db.collegeModule.findUnique({
-    where: { collegeId_module: { collegeId: session.collegeId, module } },
-  });
+  const [row, platform] = await Promise.all([
+    db.collegeModule.findUnique({ where: { collegeId_module: { collegeId: session.collegeId, module } } }),
+    // The platform-wide emergency switch. It can only turn a module OFF for everyone; an absent row, or a table that is not there yet, means "on".
+    db.platformModuleSetting.findUnique({ where: { module }, select: { globallyEnabled: true, availableFrom: true, rolloutPercent: true } }).catch(() => null),
+  ]);
+  const gate = platformAvailability(platform, session.collegeId, module, new Date());
+  if (!gate.available) throw forbidden(unavailableMessage(module, gate.reason));
   if (!row?.enabled) throw forbidden(`The ${module} module is not enabled for this college`);
 }
 

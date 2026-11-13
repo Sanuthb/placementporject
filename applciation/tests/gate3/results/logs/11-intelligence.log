@@ -3,7 +3,7 @@ PASS intelligence: every dimension is separate and there is no overall score
 PASS intelligence: no data means no score, and the gap is said 
 PASS intelligence: no reading exists yet, and AI availability is reported 
 PASS intelligence: no name, email or phone in the evidence 
-FAIL intelligence: DISC and RIASEC are honestly marked as not available 
+PASS intelligence: the behavioural-style (DISC) and career-interest (RIASEC) tests are honestly marked as not taken yet (the M4 instruments replaced the old 'No DISC / No RIASEC' wording) 
 PASS academics: score is computed by code from the marks (blend minus backlog penalty) 
 PASS academics: unverified marks are flagged and capped at medium confidence 
 PASS technical: self-declared skills get no invented score 
@@ -16,4 +16,4 @@ PASS consent: viewing shared personality data is logged
 PASS generate: clear message when AI is off, otherwise a stored reading 
 PASS access: requires sign-in 
 PASS access: unknown student is a 404 
-1 FAILED
+ALL PASSED

@@ -2,197 +2,180 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ShieldCheckIcon } from "lucide-react"
-import { toast } from "sonner"
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { ArrowRightIcon, Building2Icon, BotIcon, GraduationCapIcon, HeartPulseIcon, LifeBuoyIcon, UsersIcon, BriefcaseBusinessIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Spinner } from "@/components/ui/spinner"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { api, ApiClientError, toastError } from "@/lib/web/api"
-import { supabase } from "@/lib/supabase/browser"
-import { fmtDate } from "@/lib/web/format"
+import { fmtDateTime, titleCase } from "@/lib/web/format"
 import { useApi } from "@/lib/web/use-api"
+import { PageHeader } from "./_components/page-header"
 
-type Institution = { id: string; name: string; slug: string; isActive: boolean; createdAt: string; _count: { users: number; students: number; departments: number } }
+type Summary = {
+  institutions: { total: number; active: number; suspended: number; registeredLast30Days: number }
+  users: { students: { total: number; active: number }; staff: { total: number; active: number }; recruiters: { total: number; active: number }; activeUsers: { distinctUsers: number; signIns: number } }
+  placement: { drives: { total: number; published: number }; applications: { total: number; shortlisted: number }; offers: { made: number; accepted: number }; placedStudents: number; registeredForPlacement: number; placementRate: number | null }
+  series: { unit: "day" | "month"; points: { period: string; institutionsRegistered: number; signIns: number; applications: number; offers: number }[] }
+  recent: { registrations: { id: string; name: string; isActive: boolean; createdAt: string }[]; adminActivity: { id: string; action: string; at: string; outcome: "success" | "failure"; actor: { email: string | null } | null; institution: { name: string | null } | null }[] }
+}
+type Status = "healthy" | "degraded" | "unavailable" | "unknown" | "not_configured"
+type Health = { checkedAt: string; overall: { status: Status; counts: Record<Status, number>; notes: string[] }; components: { key: string; label: string; status: Status; summary: string }[] }
+type AiUsage = { totals: { calls: number; failures: number; blocked: number; rateLimited: number }; trend?: { day: string; calls: number; failures: number; blocked: number }[] }
+type Adoption = { activeInstitutions: number; items: { module: string; enabled: number; total: number; share: number | null }[] }
+type SupportPage = { items: { id: string; subject: string; status: string; category: string; createdAt: string; college: { id: string; name: string } }[]; total: number }
 
-/**
- * Platform administration: creating institutions. Separate from the staff console on purpose; only identities listed as platform
- * administrators can use it, and the API refuses everyone else, including college administrators.
- */
-function InstitutionsView() {
-  const [q, setQ] = React.useState("")
-  const [dq, setDq] = React.useState("")
-  const [status, setStatus] = React.useState<"all" | "active" | "inactive">("all")
-  const [sort, setSort] = React.useState<"name" | "createdAt" | "staff" | "students">("createdAt")
-  const [order, setOrder] = React.useState<"asc" | "desc">("desc")
-  const [page, setPage] = React.useState(1)
-  React.useEffect(() => { const t = setTimeout(() => { setDq(q.trim()); setPage(1) }, 300); return () => clearTimeout(t) }, [q])
-  const { data: list, loading, reload } = useApi<{ items: Institution[]; page: number; total: number; totalPages: number }>("/api/platform/institutions", { q: dq || undefined, status, sort, order, page, pageSize: 20 })
-  const data = list?.items
-  const sortBy = (k: typeof sort) => { if (k === sort) setOrder(order === "asc" ? "desc" : "asc"); else { setSort(k); setOrder(k === "name" ? "asc" : "desc") } setPage(1) }
-  const arrow = (k: typeof sort) => (k === sort ? (order === "asc" ? " ▲" : " ▼") : "")
-  const [v, setV] = React.useState({ name: "", slug: "", adminName: "", adminEmail: "", departments: "" })
-  const [busy, setBusy] = React.useState(false)
+const STATUS: Record<Status, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  healthy: { label: "Healthy", variant: "default" }, degraded: { label: "Degraded", variant: "secondary" }, unavailable: { label: "Unavailable", variant: "destructive" },
+  unknown: { label: "Not checked", variant: "outline" }, not_configured: { label: "Not configured", variant: "outline" },
+}
+const trendCfg = { signIns: { label: "Sign-ins", color: "var(--chart-2)" }, applications: { label: "Applications", color: "var(--chart-3)" }, offers: { label: "Offers", color: "var(--chart-1)" }, institutionsRegistered: { label: "Institutions registered", color: "var(--chart-4)" } } satisfies ChartConfig
+const aiCfg = { calls: { label: "Calls", color: "var(--chart-2)" }, failures: { label: "Failed", color: "var(--chart-3)" }, blocked: { label: "Blocked", color: "var(--chart-5)" } } satisfies ChartConfig
+const QUICK: { href: string; label: string }[] = [{ href: "/platform/institutions", label: "Add an institution" }, { href: "/platform/support", label: "Review support requests" }, { href: "/platform/monitoring", label: "Check system health" }, { href: "/platform/ai", label: "Manage AI settings" }, { href: "/platform/audit", label: "Open the audit log" }]
+const n = (v: number | null | undefined) => (v === null || v === undefined ? "—" : v.toLocaleString())
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    setBusy(true)
-    try {
-      // "CODE Name" per line, for example "CSE Computer Science". Optional.
-      const departments = v.departments.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [code, ...rest] = l.split(/\s+/); return { code, name: rest.join(" ") || code } })
-      await api("/api/platform/institutions", { method: "POST", body: { name: v.name, ...(v.slug ? { slug: v.slug } : {}), admin: { name: v.adminName, email: v.adminEmail }, ...(departments.length ? { departments } : {}) } })
-      toast.success("Institution created. The administrator has been emailed an invitation.")
-      setV({ name: "", slug: "", adminName: "", adminEmail: "", departments: "" }); reload()
-    } catch (err) { toastError(err) } finally { setBusy(false) }
-  }
-  async function setActive(i: Institution) {
-    try { await api(`/api/platform/institutions/${i.id}`, { method: "PATCH", body: { isActive: !i.isActive } }); reload() } catch (err) { toastError(err) }
-  }
-
+/** One summary number with a link to the page that manages it. `value` is always read from the API, never typed in. */
+function Stat({ title, value, note, href, icon: Icon, loading, error }: { title: string; value: React.ReactNode; note?: React.ReactNode; href: string; icon: React.ComponentType<{ className?: string }>; loading: boolean; error: boolean }) {
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 md:p-8">
-      <header><h1 className="text-xl font-semibold tracking-tight">Institutions</h1><p className="text-sm text-muted-foreground">Create institutions and switch them on or off. You cannot see or change an institution&apos;s own records from here.</p></header>
-      <Card>
-        <CardHeader><CardTitle>New institution</CardTitle><CardDescription>Creates the institution, its settings and its first TPO administrator, who is invited by email.</CardDescription></CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <FieldGroup>
-              <Field><FieldLabel htmlFor="i-name">Institution name</FieldLabel><Input id="i-name" required value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></Field>
-              <Field><FieldLabel htmlFor="i-slug">Address (optional)</FieldLabel><Input id="i-slug" placeholder="made from the name if empty" value={v.slug} onChange={(e) => setV({ ...v, slug: e.target.value })} /></Field>
-              <Field><FieldLabel htmlFor="i-an">Administrator name</FieldLabel><Input id="i-an" required value={v.adminName} onChange={(e) => setV({ ...v, adminName: e.target.value })} /></Field>
-              <Field><FieldLabel htmlFor="i-ae">Administrator email</FieldLabel><Input id="i-ae" type="email" required value={v.adminEmail} onChange={(e) => setV({ ...v, adminEmail: e.target.value })} /></Field>
-              <Field><FieldLabel htmlFor="i-d">Starting departments (optional)</FieldLabel><textarea id="i-d" rows={3} className="rounded-md border bg-transparent p-2 text-sm" placeholder={"CSE Computer Science\nECE Electronics"} value={v.departments} onChange={(e) => setV({ ...v, departments: e.target.value })} /><FieldDescription>One per line: code, then name. Leave empty to let the administrator set these up.</FieldDescription></Field>
-            </FieldGroup>
-            <div><Button type="submit" disabled={busy}>{busy && <Spinner />}Create institution</Button></div>
-          </form>
-        </CardContent>
+    <Link href={href} className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-ring">
+      <Card className="h-full transition-colors group-hover:border-primary/40">
+        <CardHeader>
+          <CardDescription className="flex items-center gap-2"><Icon className="size-4 text-primary" />{title}</CardDescription>
+          <CardTitle className="text-3xl font-semibold tabular-nums">{loading ? <Skeleton className="h-8 w-20" /> : error ? <span className="text-base font-normal text-muted-foreground">Unavailable</span> : value}</CardTitle>
+        </CardHeader>
+        {note && !loading && !error ? <CardContent className="text-xs text-muted-foreground">{note}</CardContent> : null}
       </Card>
-      <div className="flex flex-wrap items-center gap-2">
-        <Input aria-label="Search institutions" className="max-w-xs" placeholder="Search name, address or administrator email" value={q} onChange={(e) => setQ(e.target.value)} />
-        {(["all", "active", "inactive"] as const).map((st) => <Button key={st} size="sm" variant={status === st ? "default" : "outline"} onClick={() => { setStatus(st); setPage(1) }}>{st === "all" ? "All" : st === "active" ? "Active" : "Inactive"}</Button>)}
-      </div>
-      {loading && !list ? <Skeleton className="h-32 w-full" /> : data && data.length === 0 ? (
-        <p className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{dq || status !== "all" ? "No institutions match your search." : "No institutions yet."}</p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <Table>
-            <TableHeader><TableRow><TableHead><button type="button" onClick={() => sortBy("name")}>Institution{arrow("name")}</button></TableHead><TableHead><button type="button" onClick={() => sortBy("createdAt")}>Created{arrow("createdAt")}</button></TableHead><TableHead><button type="button" onClick={() => sortBy("staff")}>Staff{arrow("staff")}</button></TableHead><TableHead><button type="button" onClick={() => sortBy("students")}>Students{arrow("students")}</button></TableHead><TableHead>State</TableHead><TableHead /></TableRow></TableHeader>
-            <TableBody>
-              {data?.map((i) => (
-                <TableRow key={i.id}>
-                  <TableCell><div className="font-medium">{i.name}</div><div className="text-xs text-muted-foreground">{i.slug}</div></TableCell>
-                  <TableCell>{fmtDate(i.createdAt)}</TableCell><TableCell>{i._count.users}</TableCell><TableCell>{i._count.students}</TableCell>
-                  <TableCell><Badge variant={i.isActive ? "default" : "secondary"}>{i.isActive ? "Active" : "Inactive"}</Badge></TableCell>
-                  <TableCell><Button variant="outline" size="sm" onClick={() => setActive(i)}>{i.isActive ? "Deactivate" : "Reactivate"}</Button></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-      {list && list.total > 0 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>{list.total} institution{list.total === 1 ? "" : "s"} · page {list.page} of {list.totalPages}</span>
-          <div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><Button size="sm" variant="outline" disabled={page >= list.totalPages} onClick={() => setPage(page + 1)}>Next</Button></div>
-        </div>
-      )}
-    </div>
+    </Link>
   )
 }
 
-type Me = { email: string; name: string; mfa: "setup_required" | "challenge" | "ok" }
-const digits = (v: string) => v.replace(/\s+/g, "")
-
-/** Hands the upgraded (two-step) session the server returned to the browser's Supabase client. */
-async function adopt(t: { access_token: string; refresh_token: string }) {
-  const { error } = await supabase().auth.setSession(t)
-  if (error) throw error
+function SectionError({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return <Alert variant="destructive"><AlertTitle>Could not load {what}</AlertTitle><AlertDescription className="flex flex-col items-start gap-2">The rest of the dashboard is unaffected.<Button size="sm" variant="outline" onClick={onRetry}>Try again</Button></AlertDescription></Alert>
 }
 
-function CodeForm({ label, onSubmit, busy }: { label: string; onSubmit: (code: string) => void; busy: boolean }) {
-  const [code, setCode] = React.useState("")
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(digits(code)) }} className="flex max-w-sm flex-col gap-3">
-      <Field><FieldLabel htmlFor="p-code">{label}</FieldLabel><Input id="p-code" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={8} required value={code} onChange={(e) => setCode(e.target.value)} /></Field>
-      <div><Button type="submit" disabled={busy || digits(code).length < 6}>{busy && <Spinner />}Confirm</Button></div>
-    </form>
-  )
-}
+export default function PlatformDashboard() {
+  const s = useApi<Summary>("/api/platform/analytics")
+  const h = useApi<Health>("/api/platform/monitoring")
+  const ai = useApi<AiUsage>("/api/platform/ai/usage", { days: 7 })
+  const open = useApi<SupportPage>("/api/platform/support", { status: "OPEN", pageSize: 5 })
+  const prog = useApi<SupportPage>("/api/platform/support", { status: "IN_PROGRESS", pageSize: 1 })
+  const adoption = useApi<Adoption>("/api/platform/analytics/modules")
+  const sd = s.data
+  const pending = (open.data?.total ?? 0) + (prog.data?.total ?? 0)
 
-/** Mandatory two-step sign-in. The server refuses every platform call until this is complete; this screen only walks the person through it. */
-function MfaGate({ me, onDone }: { me: Me; onDone: () => void }) {
-  const [step, setStep] = React.useState<{ factorId: string; qr: string; secret: string } | null>(null)
-  const [factorId, setFactorId] = React.useState<string | null>(null)
-  const [busy, setBusy] = React.useState(false)
-  React.useEffect(() => {
-    if (me.mfa !== "challenge") return
-    void (async () => { const { data } = await supabase().auth.mfa.listFactors(); setFactorId(data?.totp?.[0]?.id ?? null) })()
-  }, [me.mfa])
-
-  async function begin() {
-    setBusy(true)
-    try { setStep(await api<{ factorId: string; qr: string; secret: string }>("/api/platform/mfa/enroll", { method: "POST" })) } catch (e) { toastError(e) } finally { setBusy(false) }
-  }
-  async function verify(id: string, code: string) {
-    setBusy(true)
-    try { await adopt(await api<{ access_token: string; refresh_token: string }>("/api/platform/mfa/verify", { method: "POST", body: { factorId: id, code } })); onDone() } catch (e) { toastError(e) } finally { setBusy(false) }
-  }
-  return (
-    <div className="mx-auto flex max-w-md flex-col gap-4 p-6">
-      <Alert><ShieldCheckIcon /><AlertTitle>{me.mfa === "challenge" ? "Confirm it is you" : "Set up two-step sign-in"}</AlertTitle><AlertDescription>{me.mfa === "challenge" ? "Enter the code from your authenticator app to continue." : "Platform administrators must use an authenticator app. You cannot continue until it is set up."}</AlertDescription></Alert>
-      {me.mfa === "challenge" ? (factorId ? <CodeForm label="Code from your authenticator app" busy={busy} onSubmit={(c) => verify(factorId, c)} /> : <Skeleton className="h-20" />) : !step ? (
-        <div><Button onClick={begin} disabled={busy}>{busy ? <Spinner /> : <ShieldCheckIcon />}Set up authenticator app</Button></div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm">Scan this code with an authenticator app, then enter the 6-digit code it shows.</p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={step.qr} alt="QR code for your authenticator app" className="size-44 rounded-lg border bg-white p-2" />
-          <p className="text-xs text-muted-foreground">Cannot scan? Type this key: <code className="break-all select-all">{step.secret}</code></p>
-          <CodeForm label="Code from the app" busy={busy} onSubmit={(c) => verify(step.factorId, c)} />
-        </div>
-      )}
-    </div>
-  )
-}
-
-function RemoveMfa({ onDone }: { onDone: () => void }) {
-  const [open, setOpen] = React.useState(false)
-  const [busy, setBusy] = React.useState(false)
-  async function remove(code: string) {
-    setBusy(true)
-    try { await api("/api/platform/mfa", { method: "DELETE", body: { code } }); toast.success("Authenticator removed. Set up a new one to continue."); onDone() } catch (e) { toastError(e) } finally { setBusy(false) }
-  }
-  return open ? (
-    <div className="flex flex-col gap-2"><p className="text-sm text-muted-foreground">Removing it locks platform access until you set up a new authenticator. Enter a current code to confirm.</p><CodeForm label="Current code" busy={busy} onSubmit={remove} /></div>
-  ) : <Button variant="outline" size="sm" onClick={() => setOpen(true)}>Remove authenticator</Button>
-}
-
-export default function PlatformPage() {
-  const [tick, setTick] = React.useState(0)
-  const { data: me, error, loading } = useApi<Me>("/api/platform/me", { t: tick })
-  const reload = () => setTick((t) => t + 1)
-  if (error instanceof ApiClientError && (error.status === 401 || error.status === 403)) {
-    return (
-      <div className="mx-auto flex max-w-md flex-col gap-3 p-6">
-        <Alert variant="destructive"><AlertTitle>Platform administrators only</AlertTitle><AlertDescription>{error.status === 401 ? "Sign in to continue." : "This login is not a platform administrator."}</AlertDescription></Alert>
-        <Button render={<Link href="/login?next=/platform" />}>Sign in</Button>
-      </div>
-    )
-  }
-  if (error) return <div className="mx-auto max-w-md p-6"><Alert variant="destructive"><AlertTitle>Could not load</AlertTitle><AlertDescription>{error instanceof Error ? error.message : "Try again"}</AlertDescription></Alert></div>
-  if (loading && !me) return <div className="mx-auto max-w-md p-6"><Skeleton className="h-32" /></div>
-  if (!me) return null
-  if (me.mfa !== "ok") return <MfaGate me={me} onDone={reload} />
   return (
     <>
-      <InstitutionsView />
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-4 pb-8 md:px-8"><Button variant="outline" size="sm" render={<Link href="/platform/analytics" />}>Analytics</Button><Button variant="outline" size="sm" render={<Link href="/platform/ai" />}>AI</Button><Button variant="outline" size="sm" render={<Link href="/platform/monitoring" />}>System health</Button><Button variant="outline" size="sm" render={<Link href="/platform/audit" />}>Audit log</Button><RemoveMfa onDone={reload} /></div>
+      <PageHeader title="Platform dashboard" description="A live summary of every institution on the platform. Every number comes from the platform's own data; select a card to open the page that manages it." actions={<Button variant="outline" size="sm" render={<Link href="/platform/institutions" />}>Manage institutions</Button>} />
+
+      {s.error ? <SectionError what="the platform summary" onRetry={s.reload} /> : null}
+      <section aria-label="Key numbers" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat title="Institutions" icon={Building2Icon} href="/platform/institutions" loading={s.loading && !sd} error={!!s.error} value={n(sd?.institutions.total)} note={sd ? `${n(sd.institutions.active)} active · ${n(sd.institutions.suspended)} suspended · ${n(sd.institutions.registeredLast30Days)} new in 30 days` : undefined} />
+        <Stat title="Students" icon={GraduationCapIcon} href="/platform/analytics" loading={s.loading && !sd} error={!!s.error} value={n(sd?.users.students.total)} note={sd ? `${n(sd.users.students.active)} active` : undefined} />
+        <Stat title="Staff and employers" icon={UsersIcon} href="/platform/analytics" loading={s.loading && !sd} error={!!s.error} value={n(sd ? sd.users.staff.total + sd.users.recruiters.total : undefined)} note={sd ? `${n(sd.users.staff.total)} staff · ${n(sd.users.recruiters.total)} employer contacts` : undefined} />
+        <Stat title="Applications" icon={BriefcaseBusinessIcon} href="/platform/analytics" loading={s.loading && !sd} error={!!s.error} value={n(sd?.placement.applications.total)} note={sd ? `${n(sd.placement.drives.published)} published drives · ${n(sd.placement.offers.made)} ${sd.placement.offers.made === 1 ? "offer" : "offers"} · ${sd.placement.placementRate === null ? "no placement rate yet" : `${sd.placement.placementRate}% placed`}` : undefined} />
+        <Stat title="System health" icon={HeartPulseIcon} href="/platform/monitoring" loading={h.loading && !h.data} error={!!h.error} value={h.data ? STATUS[h.data.overall.status].label : "—"} note={h.data ? `${h.data.overall.counts.healthy ?? 0} of ${h.data.components.length} checks healthy` : undefined} />
+        <Stat title="AI calls, last 7 days" icon={BotIcon} href="/platform/ai" loading={ai.loading && !ai.data} error={!!ai.error} value={n(ai.data?.totals.calls)} note={ai.data ? `${n(ai.data.totals.blocked)} blocked · ${n(ai.data.totals.failures)} failed · ${n(ai.data.totals.rateLimited)} rate limited` : undefined} />
+        <Stat title="Open support requests" icon={LifeBuoyIcon} href="/platform/support" loading={(open.loading && !open.data) || (prog.loading && !prog.data)} error={!!open.error || !!prog.error} value={n(open.data?.total)} note={prog.data ? `${n(prog.data.total)} in progress · ${n(pending)} need attention` : undefined} />
+        <Stat title="Active users" icon={UsersIcon} href="/platform/analytics" loading={s.loading && !sd} error={!!s.error} value={n(sd?.users.activeUsers.distinctUsers)} note={sd ? `${n(sd.users.activeUsers.signIns)} sign-ins in the selected window` : undefined} />
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle>Platform activity</CardTitle><CardDescription>Sign-ins, applications, offers and new institutions over time, from recorded activity.</CardDescription><CardAction><Button variant="ghost" size="sm" render={<Link href="/platform/analytics" />}>Full analytics<ArrowRightIcon /></Button></CardAction></CardHeader>
+          <CardContent>
+            {s.error ? <SectionError what="the activity trend" onRetry={s.reload} /> : !sd ? <Skeleton className="h-56 w-full" /> : !sd.series.points.some((p) => p.signIns || p.applications || p.offers || p.institutionsRegistered) ? <p className="py-16 text-center text-sm text-muted-foreground">No activity recorded in this period yet.</p> : (
+              <ChartContainer config={trendCfg} className="h-56 w-full">
+                <LineChart data={sd.series.points}><CartesianGrid vertical={false} /><XAxis dataKey="period" tickLine={false} axisLine={false} minTickGap={24} /><YAxis allowDecimals={false} width={32} /><ChartTooltip content={<ChartTooltipContent />} /><ChartLegend content={<ChartLegendContent />} />
+                  {(["signIns", "applications", "offers", "institutionsRegistered"] as const).map((k) => <Line key={k} type="monotone" dataKey={k} stroke={`var(--color-${k})`} strokeWidth={2} dot={false} />)}
+                </LineChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Quick actions</CardTitle><CardDescription>Common tasks</CardDescription></CardHeader>
+          <CardContent className="flex flex-col gap-2">{QUICK.map((q) => <Button key={q.href} variant="outline" className="justify-between" render={<Link href={q.href} />}>{q.label}<ArrowRightIcon /></Button>)}</CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>System health</CardTitle><CardDescription>{h.data ? `Checked ${fmtDateTime(h.data.checkedAt)}` : "Live checks"}</CardDescription><CardAction><Button variant="ghost" size="sm" render={<Link href="/platform/monitoring" />}>Details<ArrowRightIcon /></Button></CardAction></CardHeader>
+          <CardContent>
+            {h.error ? <SectionError what="system health" onRetry={h.reload} /> : !h.data ? <Skeleton className="h-28 w-full" /> : (
+              <ul className="flex flex-col divide-y">
+                {h.data.components.map((c) => <li key={c.key} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="min-w-0 truncate">{c.label}</span><Badge variant={STATUS[c.status].variant}>{STATUS[c.status].label}</Badge></li>)}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Recent support requests</CardTitle><CardDescription>Newest open requests from institution administrators</CardDescription><CardAction><Button variant="ghost" size="sm" render={<Link href="/platform/support" />}>All requests<ArrowRightIcon /></Button></CardAction></CardHeader>
+          <CardContent>
+            {open.error ? <SectionError what="support requests" onRetry={open.reload} /> : !open.data ? <Skeleton className="h-28 w-full" /> : open.data.items.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No open requests.</p> : (
+              <ul className="flex flex-col divide-y">
+                {open.data.items.map((r) => <li key={r.id} className="flex flex-col gap-0.5 py-2 text-sm"><span className="truncate font-medium">{r.subject}</span><span className="text-xs text-muted-foreground">{r.college.name} · {titleCase(r.category)} · {fmtDateTime(r.createdAt)}</span></li>)}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Recent administrator activity</CardTitle><CardDescription>Latest platform and institution administrative actions</CardDescription><CardAction><Button variant="ghost" size="sm" render={<Link href="/platform/audit" />}>Audit log<ArrowRightIcon /></Button></CardAction></CardHeader>
+          <CardContent>
+            {s.error ? <SectionError what="recent activity" onRetry={s.reload} /> : !sd ? <Skeleton className="h-28 w-full" /> : sd.recent.adminActivity.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No activity recorded yet.</p> : (
+              <ul className="flex flex-col divide-y">
+                {sd.recent.adminActivity.slice(0, 6).map((a) => <li key={a.id} className="flex items-start justify-between gap-3 py-2 text-sm"><div className="min-w-0"><div className="truncate font-mono text-xs">{a.action}</div><div className="truncate text-xs text-muted-foreground">{a.actor?.email ?? "System"}{a.institution?.name ? ` · ${a.institution.name}` : ""} · {fmtDateTime(a.at)}</div></div><Badge variant={a.outcome === "success" ? "secondary" : "destructive"}>{titleCase(a.outcome)}</Badge></li>)}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Newest institutions</CardTitle><CardDescription>Most recently registered</CardDescription><CardAction><Button variant="ghost" size="sm" render={<Link href="/platform/institutions" />}>All institutions<ArrowRightIcon /></Button></CardAction></CardHeader>
+          <CardContent>
+            {s.error ? <SectionError what="institutions" onRetry={s.reload} /> : !sd ? <Skeleton className="h-28 w-full" /> : sd.recent.registrations.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No institutions yet.</p> : (
+              <ul className="flex flex-col divide-y">
+                {sd.recent.registrations.slice(0, 6).map((i) => <li key={i.id} className="flex items-center justify-between gap-3 py-2 text-sm"><Link href={`/platform/institutions/${i.id}`} className="min-w-0 truncate font-medium text-primary underline-offset-4 hover:underline">{i.name}</Link><span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">{fmtDateTime(i.createdAt)}<Badge variant={i.isActive ? "default" : "secondary"}>{i.isActive ? "Active" : "Inactive"}</Badge></span></li>)}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>AI usage</CardTitle><CardDescription>Calls, failures and blocked requests per day over the last 7 days. Counts only: no prompts or answers are recorded here.</CardDescription><CardAction><Button variant="ghost" size="sm" render={<Link href="/platform/ai" />}>AI Centre<ArrowRightIcon /></Button></CardAction></CardHeader>
+        <CardContent>
+          {ai.error ? <SectionError what="AI usage" onRetry={ai.reload} /> : !ai.data ? <Skeleton className="h-48 w-full" /> : !ai.data.trend?.some((t) => t.calls || t.failures || t.blocked) ? <p className="py-12 text-center text-sm text-muted-foreground">No AI calls have been recorded in this period.</p> : (
+            <ChartContainer config={aiCfg} className="h-48 w-full">
+              <LineChart data={ai.data.trend}><CartesianGrid vertical={false} /><XAxis dataKey="day" tickLine={false} axisLine={false} minTickGap={24} /><YAxis allowDecimals={false} width={32} /><ChartTooltip content={<ChartTooltipContent />} /><ChartLegend content={<ChartLegendContent />} />
+                {(["calls", "failures", "blocked"] as const).map((k) => <Line key={k} type="monotone" dataKey={k} stroke={`var(--color-${k})`} strokeWidth={2} dot={false} />)}
+              </LineChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Module adoption</CardTitle><CardDescription>How many active institutions have each module switched on. Switching a module on is a choice, so a low number is not a fault.</CardDescription><CardAction><Button variant="ghost" size="sm" render={<Link href="/platform/institutions" />}>Manage in an institution<ArrowRightIcon /></Button></CardAction></CardHeader>
+        <CardContent>
+          {adoption.error ? <SectionError what="module adoption" onRetry={adoption.reload} /> : !adoption.data ? <Skeleton className="h-40 w-full" /> : adoption.data.activeInstitutions === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No active institutions yet.</p> : (
+            <ul className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+              {adoption.data.items.map((m) => (
+                <li key={m.module} className="flex flex-col gap-1.5 text-sm">
+                  <div className="flex items-baseline justify-between gap-3"><span className="font-medium">{titleCase(m.module).replace("Crm", "CRM")}</span><span className="text-xs tabular-nums text-muted-foreground">{m.enabled} of {m.total} institution{m.total === 1 ? "" : "s"}</span></div>
+                  <Progress value={m.share ?? 0} aria-label={`${titleCase(m.module).replace("Crm", "CRM")} adoption`} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </>
   )
 }

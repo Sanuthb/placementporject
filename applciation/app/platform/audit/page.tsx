@@ -46,10 +46,10 @@ export default function PlatformAuditPage() {
   )
   const items = data?.items
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 md:p-8">
+    <div className="flex w-full min-w-0 flex-col gap-5">
       <header className="flex items-start justify-between gap-3">
-        <div><h1 className="text-xl font-semibold tracking-tight">Platform audit log</h1><p className="text-sm text-muted-foreground">Read-only record of platform administrator actions. Institution staff activity is not shown here.</p></div>
-        <Button variant="outline" size="sm" render={<Link href="/platform" />}>Institutions</Button>
+        <div><h1 className="text-2xl font-semibold tracking-tight">Platform audit log</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Read-only record of platform administrator actions. Institution staff activity is not shown here.</p></div>
+        
       </header>
       <div className="flex flex-wrap items-center gap-2">
         <Input aria-label="Search audit events" className="w-64" placeholder="Search event, administrator, institution, target" value={q} onChange={(e) => setQ(e.target.value)} />

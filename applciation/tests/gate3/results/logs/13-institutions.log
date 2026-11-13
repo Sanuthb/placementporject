@@ -99,3 +99,5 @@ PASS platform MFA recovery: refused without the matching confirmation
 PASS platform MFA: after recovery the old session is refused 
 PASS platform audit: enrolment, failures, challenges, removal and recovery are all recorded 
 ALL PASSED
+(node:19228) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)

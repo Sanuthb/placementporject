@@ -6,16 +6,16 @@ PASS needs-attention basics
 PASS upcoming drives within 7 days 
 PASS offers this week include C's 
 PASS quick actions for admin 
-FAIL 360 profile + 8 sections 
-FAIL 360 academics with semesters 
+PASS 360 profile + 9 sections (EDUCATION_HISTORY was added in M3 phase 2) 
+PASS 360 academics with semesters 
 PASS 360 drives summary 
 PASS 360 timeline has verification and application events 
 PASS 360 shows no blocks 
 PASS add note 
 PASS note appears 
 PASS C: placed, accepted offer 
-FAIL trend: 3 semesters, declining {"semesterTrend":[],"latest":null,"change":null,"direction":null,"weakSubjects":[]}
-FAIL weak subjects found (45% Maths) 
+PASS trend: 3 semesters, declining 
+FAIL weak subjects found (45% Maths) []
 PASS comparison with batch/department 
 PASS at-risk: repeated rejection at same round type 
 PASS readiness + personality placeholder 
@@ -49,7 +49,7 @@ PASS deactivate schedule
 PASS delete schedule 
 PASS students export 
 PASS offers export 
-FAIL officer and CSE coordinator notified of submission, EEE coordinator not 
+PASS officer and CSE coordinator notified of submission, EEE coordinator not; no recipient is a coordinator of another department 
 PASS student notified of offer 
 PASS student notified of requested changes 
 PASS my notifications + unread count 
@@ -80,4 +80,4 @@ PASS reply on resolved 409
 PASS student notified of reply and resolution 
 PASS plain ticket 
 PASS staff notified of new ticket 
-5 FAILED
+1 FAILED

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { ErrorQuery, MonitorError } from "@/lib/monitorStore";
-import { RETENTION_DAYS } from "@/lib/monitorRetention";
+import { getPolicy } from "@/lib/platformPolicy";
 import { Prisma } from "@/generated/prisma/client";
 
 /** Reads of the durable MonitorEvent table (what the System Administrator error view and the Server errors check use). Every query is bounded by the 14-day retention and by paging. */
@@ -8,7 +8,8 @@ type Row = { id: string; at: Date; service: string; status: number | null; code:
 const toError = (r: Row): MonitorError => ({ id: r.id, at: r.at.toISOString(), service: r.service as MonitorError["service"], status: r.status ?? 500, code: r.code, method: r.method, path: r.path, requestId: r.requestId, message: r.message });
 
 export async function listDurableErrors(q: ErrorQuery) {
-  const floor = new Date(Date.now() - RETENTION_DAYS.monitorEvent * 86_400_000);
+  const keepDays = (await getPolicy()).days.monitorEvent;
+  const floor = new Date(Date.now() - keepDays * 86_400_000);
   const at: Prisma.DateTimeFilter = { gte: q.from && q.from > floor ? q.from : floor, ...(q.to ? { lte: q.to } : {}) };
   const needle = q.q?.trim().replace(/\\/g, "").replace(/[%_]/g, (c) => "\\" + c) || undefined; // Prisma passes `contains` to LIKE unescaped: % and _ must match literally; backslashes are ignored
   const where: Prisma.MonitorEventWhereInput = {
@@ -21,7 +22,7 @@ export async function listDurableErrors(q: ErrorQuery) {
     db.monitorEvent.count({ where: { at: { gte: floor } } }),
     db.monitorEvent.findFirst({ where: { at: { gte: floor } }, orderBy: { at: "asc" }, select: { at: true } }),
   ]);
-  return { items: rows.map(toError), page: q.page, pageSize: q.pageSize, total, totalPages: Math.max(1, Math.ceil(total / q.pageSize)), retained, since: oldest?.at.toISOString() ?? null, durable: true as const, retentionDays: RETENTION_DAYS.monitorEvent };
+  return { items: rows.map(toError), page: q.page, pageSize: q.pageSize, total, totalPages: Math.max(1, Math.ceil(total / q.pageSize)), retained, since: oldest?.at.toISOString() ?? null, durable: true as const, retentionDays: keepDays };
 }
 
 /** The same counts as the in-memory tally, but from the table: across restarts and across every server instance. */

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { ApiError } from "@/lib/api/errors";
@@ -25,3 +26,16 @@ export async function lockName(tx: Prisma.TransactionClient, name: string) {
   await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${"institution-name:" + nameKey(name)}))`;
 }
 export const duplicateInstitution = DUPLICATE;
+
+/**
+ * The same rule for a rename. Takes the same per-name lock as registration (so concurrent renames and registrations of one name queue), then refuses the
+ * name when ANOTHER institution already has it. The institution's own row is excluded, so keeping its name, or changing only its letter case or spacing, is allowed.
+ */
+export async function assertRenameAllowed(tx: Prisma.TransactionClient, collegeId: string, name: string) {
+  await lockName(tx, name);
+  const rows = await tx.$queryRaw<{ id: string }[]>`select id from "College" where id <> ${collegeId}::uuid and lower(regexp_replace(btrim(name), '[[:space:]]+', ' ', 'g')) = ${nameKey(name)} limit 1`;
+  if (rows.length) throw DUPLICATE();
+}
+
+/** The one rule for an institution logo address, used by the platform edit and the institution's own settings: an http or https URL, nothing else (no javascript:, data:, file: or ftp:). */
+export const logoUrlSchema = z.url().refine((u) => /^https?:\/\//i.test(u), "Use an http or https address").refine((u) => u.length <= 2000, "Address too long");

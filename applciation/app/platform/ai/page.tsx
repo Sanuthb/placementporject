@@ -135,11 +135,10 @@ export default function AiAdminPage() {
     </div>
   )
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5 p-4 md:p-8">
+    <div className="flex w-full min-w-0 flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-xl font-semibold tracking-tight">AI providers and models</h1><p className="text-sm text-muted-foreground">Choose the model and key for each kind of AI work, and switch AI off. Changes are recorded in the audit log.</p></div>
-        <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" render={<Link href="/platform" />}>Institutions</Button><Button variant="outline" size="sm" render={<Link href="/platform/monitoring" />}>Monitoring</Button><Button variant="outline" size="sm" render={<Link href="/platform/audit" />}>Audit log</Button></div>
-      </header>
+        <div><h1 className="text-2xl font-semibold tracking-tight">AI providers and models</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Choose the model and key for each kind of AI work, and switch AI off. Changes are recorded in the audit log.</p></div>
+        </header>
       {!!error && !data && <Alert variant="destructive" role="alert" data-testid="ai-load-error"><AlertTitle>Could not load the AI settings</AlertTitle><AlertDescription>{errText(error)}</AlertDescription></Alert>}
       {!!error && !!data && <Alert role="alert"><AlertTitle>Showing the last loaded settings</AlertTitle><AlertDescription>The refresh failed: {errText(error)}</AlertDescription></Alert>}
       {loading && !data && <div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48" />)}</div>}

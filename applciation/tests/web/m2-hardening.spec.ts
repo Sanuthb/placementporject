@@ -43,7 +43,7 @@ test("platform: signed out, then mandatory MFA enrolment before any access", asy
 
   await signIn(page, PLATFORM, "/platform")
   await expect(page.getByText("Set up two-step sign-in").first()).toBeVisible()
-  await expect(page.getByText("New institution")).toHaveCount(0) // nothing of the platform is shown before enrolment
+  await expect(page.getByRole("heading", { name: "Platform dashboard" })).toHaveCount(0) // nothing of the platform is shown before enrolment
   await page.screenshot({ path: SHOT + "02-platform-mfa-setup-required.png" })
 
   await page.getByRole("button", { name: /set up authenticator/i }).click()
@@ -54,11 +54,11 @@ test("platform: signed out, then mandatory MFA enrolment before any access", asy
   await page.getByLabel("Code from the app").fill("000000")
   await page.getByRole("button", { name: "Confirm" }).click()
   await expect(page.getByText(/not right/i)).toBeVisible()
-  await expect(page.getByText("New institution")).toHaveCount(0) // a wrong code lets nothing through
+  await expect(page.getByRole("heading", { name: "Platform dashboard" })).toHaveCount(0) // a wrong code lets nothing through
 
   await page.getByLabel("Code from the app").fill(totp(secret))
   await page.getByRole("button", { name: "Confirm" }).click()
-  await expect(page.getByText("New institution")).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Platform dashboard" })).toBeVisible()
   await page.screenshot({ path: SHOT + "04-platform-landing.png" })
 })
 
@@ -66,14 +66,17 @@ test("platform: provisioning form, validation and result", async ({ page }) => {
   await signIn(page, PLATFORM, "/platform")
   // fresh password sign-in is a challenge, not access
   await expect(page.getByText("Confirm it is you")).toBeVisible()
-  await expect(page.getByText("New institution")).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Platform dashboard" })).toHaveCount(0)
   await page.screenshot({ path: SHOT + "05-platform-challenge.png" })
   await page.getByLabel("Code from your authenticator app").fill("111111")
   await page.getByRole("button", { name: "Confirm" }).click()
   await expect(page.getByText(/not right/i)).toBeVisible()
   await enterCode(page, secret, "Code from your authenticator app")
-  await expect(page.getByText("New institution")).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Platform dashboard" })).toBeVisible()
 
+  // institutions are managed on their own page; the form opens from "New institution"
+  await page.getByRole("link", { name: "Institutions", exact: true }).first().click()
+  await page.getByRole("button", { name: "New institution" }).click()
   await page.getByLabel("Institution name").fill(`Browser Test Institute ${stamp}`)
   await page.getByLabel("Administrator name").fill("Browser Admin")
   await page.getByLabel("Administrator email").fill(`browser-${stamp}@example.com`)
@@ -84,6 +87,7 @@ test("platform: provisioning form, validation and result", async ({ page }) => {
   await page.screenshot({ path: SHOT + "06-platform-provisioned.png" })
 
   // duplicate address -> error state
+  await page.getByRole("button", { name: "New institution" }).click()
   await page.getByLabel("Institution name").fill(`Browser Test Institute ${stamp}`)
   await page.getByLabel("Administrator name").fill("Browser Admin")
   await page.getByLabel("Administrator email").fill(`browser2-${stamp}@example.com`)
@@ -157,7 +161,8 @@ test("faculty: lands on the faculty page, sees only allocated students, no place
 test("platform: removing the authenticator locks access until re-enrolment", async ({ page }) => {
   await signIn(page, PLATFORM, "/platform")
   await enterCode(page, secret, "Code from your authenticator app")
-  await expect(page.getByText("New institution")).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Platform dashboard" })).toBeVisible()
+  await page.getByRole("link", { name: "Administrator Account" }).click()   // two-step settings live on the account page
   await page.getByRole("button", { name: "Remove authenticator" }).click()
   for (const off of [1, 2]) {
     await page.getByLabel("Current code").fill(totp(secret, off))
@@ -165,6 +170,6 @@ test("platform: removing the authenticator locks access until re-enrolment", asy
     try { await expect(page.getByText(/Set up two-step sign-in/).first()).toBeVisible({ timeout: 6000 }); break } catch { /* try the next window */ }
   }
   await expect(page.getByText("Set up two-step sign-in").first()).toBeVisible()
-  await expect(page.getByText("New institution")).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Platform dashboard" })).toHaveCount(0)
   await page.screenshot({ path: SHOT + "17-platform-after-removal.png" })
 })

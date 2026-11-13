@@ -21,7 +21,7 @@ try {
   t("intelligence: no data means no score, and the gap is said", dims.every((d) => d.kind === "none" && d.score === null) && dims.every((d) => d.gaps.length > 0), JSON.stringify(dims.map((d) => [d.key, d.kind, d.score])));
   t("intelligence: no reading exists yet, and AI availability is reported", empty.d.report === null && typeof empty.d.aiConfigured === "boolean");
   t("intelligence: no name, email or phone in the evidence", !JSON.stringify(empty.d.evidence).match(new RegExp(`Intel ${tag}|intel${tag}@|9876543210`)));
-  t("intelligence: DISC and RIASEC are honestly marked as not available", dims.find((d) => d.key === "disc").gaps[0].includes("No DISC") && dims.find((d) => d.key === "riasec").gaps[0].includes("No RIASEC"));
+  t("intelligence: the behavioural-style (DISC) and career-interest (RIASEC) tests are honestly marked as not taken yet (the M4 instruments replaced the old 'No DISC / No RIASEC' wording)", /not taken yet/.test(dims.find((d) => d.key === "disc").gaps[0]) && /not taken yet/.test(dims.find((d) => d.key === "riasec").gaps[0]), JSON.stringify([dims.find((d) => d.key === "disc").gaps, dims.find((d) => d.key === "riasec").gaps]));
 
   // Give the student declared marks (as submitted data) and see the scores appear, marked as unverified.
   await pgc.query(`insert into "StudentSection" (id,"collegeId","studentId",section,status,data,"updatedAt") select gen_random_uuid(), "collegeId", id, 'ACADEMICS', 'SUBMITTED', $2::jsonb, now() from "Student" where id=$1`, [id, JSON.stringify({ cgpa: 8, tenthPercentage: 90, twelfthPercentage: 80, activeBacklogs: 1 })]);

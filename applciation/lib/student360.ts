@@ -108,11 +108,17 @@ export async function timeline(collegeId: string, studentId: string, limit = 100
 }
 
 const norm = (v: unknown) => { const n = typeof v === "string" ? parseFloat(v) : (v as number); return Number.isFinite(n) ? (n <= 10 ? n * 10 : n) : null; }; // 0-10 scales become 0-100
+/** A subject's result as a percentage. Structured academic records (Module 3 phase 2) hold marksObtained and maxMarks; older entries held score, marks or percentage. */
+const subjectScore = (sub: Record<string, unknown>) => {
+  const m = Number(sub.marksObtained), mx = Number(sub.maxMarks);
+  if (sub.marksObtained != null && Number.isFinite(m) && Number.isFinite(mx) && mx > 0) return Math.round((m / mx) * 1000) / 10;
+  return norm(sub.score ?? sub.marks ?? sub.percentage);
+};
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100 : null);
 
 /**
  * Performance trend, comparison with peers, readiness and at-risk flags.
- * Semester entries are read as `{ semester, sgpa|gpa|percentage, subjects: [{ name, score|marks|percentage }] }`.
+ * Semester entries are read as `{ semester, sgpa|gpa|percentage, subjects: [{ name, marksObtained+maxMarks | score|marks|percentage }] }`.
  */
 export async function studentAnalysis(s: Session, id: string) {
   const [st, mods] = await Promise.all([scopedFullStudent(s, id), modulesOf(s.collegeId)]);
@@ -122,7 +128,7 @@ export async function studentAnalysis(s: Session, id: string) {
   const semesters = (acad?.semesters ?? []).map((x, i) => ({ semester: Number(x.semester ?? i + 1), score: norm(x.sgpa ?? x.gpa ?? x.percentage), subjects: listOf(x, "subjects") as Record<string, unknown>[] }));
   const trend = semesters.filter((x) => x.score !== null).sort((a, b) => a.semester - b.semester).map((x) => ({ semester: x.semester, score: x.score as number }));
   const last = trend.at(-1), prev = trend.at(-2);
-  const weak = semesters.flatMap((x) => x.subjects.map((sub) => ({ semester: x.semester, subject: String(sub.name ?? sub.subject ?? "?"), score: norm(sub.score ?? sub.marks ?? sub.percentage) }))).filter((x): x is { semester: number; subject: string; score: number } => x.score !== null && x.score < 50).sort((a, b) => a.score - b.score).slice(0, 5);
+  const weak = semesters.flatMap((x) => x.subjects.map((sub) => ({ semester: x.semester, subject: String(sub.name ?? sub.subject ?? "?"), score: subjectScore(sub) }))).filter((x): x is { semester: number; subject: string; score: number } => x.score !== null && x.score < 50).sort((a, b) => a.score - b.score).slice(0, 5);
 
   const peers = await db.studentSection.findMany({ where: { collegeId: s.collegeId, section: "ACADEMICS", status: "VERIFIED", student: { isActive: true, isArchived: false } }, select: { data: true, student: { select: { batchId: true, departmentId: true } } } });
   const cg = (xs: typeof peers) => xs.map((p) => (p.data as Academics).cgpa).filter((v): v is number => typeof v === "number");

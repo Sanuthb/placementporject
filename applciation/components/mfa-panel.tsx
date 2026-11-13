@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ShieldCheckIcon } from "lucide-react"
 import { toast } from "sonner"
+import { QRCodeSVG } from "qrcode.react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -84,8 +85,7 @@ export function MfaSetup({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={confirm} className="flex max-w-sm flex-col gap-3">
       <p className="text-sm">1. Install an authenticator app (Google Authenticator, Microsoft Authenticator, Authy) and scan this code.</p>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={step.qr} alt="QR code for your authenticator app" className="size-44 rounded-lg border bg-white p-2" />
+      <div role="img" aria-label="QR code for your authenticator app" className="w-fit rounded-lg border bg-white p-3"><QRCodeSVG value={`otpauth://totp/${encodeURIComponent("Placement Portal")}?secret=${step.secret}&issuer=${encodeURIComponent("Placement Portal")}`} size={168} /></div>
       <p className="text-xs text-muted-foreground">Cannot scan? Type this key into the app: <code className="break-all select-all">{step.secret}</code></p>
       <Field><FieldLabel htmlFor="setup-code">2. Enter the 6-digit code the app shows</FieldLabel><Input id="setup-code" inputMode="numeric" autoComplete="one-time-code" maxLength={8} value={code} onChange={(e) => setCode(e.target.value)} required /></Field>
       <div><Button type="submit" disabled={busy || clean(code).length < 6}>{busy && <Spinner />}Turn on</Button></div>

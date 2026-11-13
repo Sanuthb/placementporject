@@ -47,7 +47,8 @@ t("cron endpoints refuse anonymous POST", (await fetch(B + "/api/reports/schedul
 
 // --- database-backed rate limiting
 const codes = []; const probe = () => fetch(B + "/api/showcase/not-a-real-token").then((r) => r.status);
-for (let i = 0; i < 7; i++) codes.push(...(await Promise.all(Array.from({ length: 20 }, probe))));
+// The limit is a fixed one-minute window, so one burst of 140 can straddle a minute boundary and stay under 120 in each half. A working limiter shows a 429 within a few bursts; a broken one never does.
+for (let burst = 0; burst < 3 && !codes.includes(429); burst++) for (let i = 0; i < 7; i++) codes.push(...(await Promise.all(Array.from({ length: 20 }, probe))));
 t("public link probing is rate limited (120/min)", codes.filter((c) => c === 404).length >= 100 && codes.includes(429), JSON.stringify({ n404: codes.filter((c) => c === 404).length, n429: codes.filter((c) => c === 429).length }));
 const lim = await fetch(B + "/api/showcase/not-a-real-token"); const lj = await lim.json();
 t("429 explains itself and says when to retry", lim.status === 429 && lj.error.code === "RATE_LIMITED" && Number(lim.headers.get("retry-after")) >= 1);

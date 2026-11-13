@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { dayOf } from "@/lib/ai/limits";
+import { getPolicy } from "@/lib/platformPolicy";
 import type { Provider, Purpose } from "@/lib/ai/config";
 
 /**
@@ -74,11 +75,51 @@ export async function usageByCollege(days: number, page: number, pageSize = 20) 
   };
 }
 
-/** Keeps 90 days of usage and 3 days of counters, in small batches so a large backlog never locks the table. Returns rows removed. */
-export async function pruneAiUsage(now = new Date()): Promise<{ usage: number; counters: number }> {
-  const cut = (d: number) => dayOf(new Date(now.getTime() - d * 86_400_000));
-  let usage = 0, counters = 0;
-  for (let i = 0; i < 50; i++) { const c = await db.$executeRaw`DELETE FROM "AiUsageDaily" WHERE ctid IN (SELECT ctid FROM "AiUsageDaily" WHERE day < ${cut(MAX_DAYS)}::date LIMIT 1000)`; usage += c; if (c < 1000) break; }
-  for (let i = 0; i < 50; i++) { const c = await db.$executeRaw`DELETE FROM "AiQuotaCounter" WHERE ctid IN (SELECT ctid FROM "AiQuotaCounter" WHERE day < ${cut(3)}::date LIMIT 1000)`; counters += c; if (c < 1000) break; }
-  return { usage, counters };
+export const AI_PRUNE_LIMITS = { batch: 1000, maxBatches: 5 } as const;
+
+/**
+ * RETENTION cleanup of AiUsageDaily ONLY: removes usage rows older than the configured number of days (default 90). Same bounds as the job tables: at most `batch` rows per statement and
+ * `maxBatches` statements per call, skipping rows another cleanup holds (FOR UPDATE SKIP LOCKED, so overlapping runs never block or double-delete). `capped` means more remains for the next run.
+ * It touches no other table.
+ */
+export async function pruneAiUsage(now = new Date(), keepDays?: number, o: { batch?: number; maxBatches?: number } = {}): Promise<{ usage: number; capped: boolean }> {
+  const keep = keepDays ?? (await getPolicy()).days.aiUsage; // platform retention setting (default 90)
+  const batch = o.batch ?? AI_PRUNE_LIMITS.batch, maxBatches = o.maxBatches ?? AI_PRUNE_LIMITS.maxBatches;
+  const cutoff = dayOf(new Date(now.getTime() - keep * 86_400_000));
+  let usage = 0, capped = false;
+  for (let i = 0; ; i++) {
+    if (i >= maxBatches) { capped = true; break; }
+    const c = await db.$executeRaw`DELETE FROM "AiUsageDaily" WHERE ctid = ANY (ARRAY(SELECT ctid FROM "AiUsageDaily" WHERE day < ${cutoff}::date ORDER BY day LIMIT ${batch} FOR UPDATE SKIP LOCKED))`;
+    usage += c;
+    if (c < batch) break;
+  }
+  return { usage, capped };
+}
+
+/**
+ * NOT part of the retention settings and not reported or audited as retention: the per-day request counters that enforce AI limits only matter for the current day, so rows older than 3 days are dropped
+ * (fixed rule, unchanged by Gate 4; it predates the retention settings). Run by the hourly job separately from the retention cleanup. Returns rows removed.
+ */
+export async function pruneAiQuotaCounters(now = new Date()): Promise<number> {
+  const cutoff = dayOf(new Date(now.getTime() - 3 * 86_400_000));
+  let counters = 0;
+  for (let i = 0; i < 50; i++) { const c = await db.$executeRaw`DELETE FROM "AiQuotaCounter" WHERE ctid IN (SELECT ctid FROM "AiQuotaCounter" WHERE day < ${cutoff}::date LIMIT 1000)`; counters += c; if (c < 1000) break; }
+  return counters;
+}
+
+/**
+ * One institution's AI usage for a UTC day range (inclusive), read from the same daily table and the same counters as the platform-wide views above
+ * (the numbers add up to this institution's row in usageByCollege). Counts only; nothing of any request.
+ */
+export async function usageForCollege(collegeId: string, from: Date, to: Date) {
+  const where = { collegeKey: collegeId, day: { gte: from, lte: to } };
+  const [tot, byPurpose] = await Promise.all([
+    db.aiUsageDaily.aggregate({ where, _sum: { calls: true, failures: true, timeouts: true, rateLimited: true, blocked: true, totalMs: true } }),
+    db.aiUsageDaily.groupBy({ by: ["purpose"], where, _sum: { calls: true, failures: true, blocked: true }, orderBy: { purpose: "asc" } }),
+  ]);
+  const s = tot._sum;
+  return {
+    calls: n(s.calls), failures: n(s.failures), timeouts: n(s.timeouts), rateLimited: n(s.rateLimited), blocked: n(s.blocked), avgMs: n(s.calls) ? Math.round(n(s.totalMs) / n(s.calls)) : null,
+    byPurpose: byPurpose.map((r) => ({ purpose: r.purpose, calls: n(r._sum.calls), failures: n(r._sum.failures), blocked: n(r._sum.blocked) })),
+  };
 }

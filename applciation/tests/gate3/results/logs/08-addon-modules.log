@@ -34,8 +34,9 @@ PASS approved log is locked
 PASS evaluation recorded 
 PASS summary: hours + average score 
 PASS student sees evaluations 
-FAIL complete 
-FAIL no logs after completion 
+PASS completion runs the M9 checks: refused while the end date has not been reached, and the unmet check is listed 
+PASS complete (the placement admin may override unmet checks with a reason) 
+PASS no logs after completion 
 PASS virtual event needs a join link 
 PASS draft events are invisible to students 
 PASS publish 
@@ -92,12 +93,57 @@ PASS results export
 PASS analysis shows assessment scores 
 PASS baseline cohort of 4 is hidden 
 PASS baseline cohort of 5 shows distribution 
-file:///home/sanuth/Desktop/placement/applciation/tests/e2e/08-addon-modules.mjs:150
-t("student sees the resource", (await me.A("GET", "/api/student/prep/resources?category=INTERVIEW")).d.some((x) => x.id === rs.id));
-                                                                                                       ^
-
-TypeError: Cannot read properties of undefined (reading 'some')
-    at file:///home/sanuth/Desktop/placement/applciation/tests/e2e/08-addon-modules.mjs:150:104
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-
-Node.js v24.18.1
+PASS the old preparation-resource routes no longer exist (replaced by the M7 resource library) 
+PASS overlapping slots refused 
+PASS open slots 
+PASS A books 
+PASS slot cannot be taken twice 
+PASS one upcoming booking at a time 
+PASS simultaneous booking: exactly one wins 
+PASS late cancellation refused (under 2 hours) 
+PASS cancel in time reopens the slot 
+PASS staff cancel tells the student 
+PASS staff completes a booked session 
+PASS short experience refused 
+PASS unapproved experience is hidden from others 
+PASS author sees it as pending 
+PASS moderation queue 
+PASS reject needs a note 
+PASS approve 
+PASS approved experience is anonymous 
+PASS cannot moderate twice 
+PASS recruiter /me 
+PASS recruiter token refused on staff API 
+PASS recruiter token refused on student API 
+PASS student token refused on recruiter API 
+PASS sees only their company's drives 
+PASS other company's drive is a 404 
+PASS only shortlisted candidates (rejected in the drive or in a round never shown) 
+PASS filter by cleared round 
+PASS resume PDF for a shortlisted candidate 
+PASS no resume for a rejected candidate 
+PASS schedule with candidate and room 
+PASS feedback before the drive refused 
+PASS feedback after the drive 
+PASS recruiter posts a job 
+PASS staff sees it pending 
+PASS reject needs a reason 
+PASS approve publishes a job alert 
+PASS students see the alert 
+PASS recruiter sees the outcome 
+PASS deactivated recruiter loses access 
+PASS staff lists recruiters 
+PASS nothing shared by default 
+PASS student enables a profile 
+PASS public profile needs no login and shows chosen fields 
+PASS contact and identifiers are not leaked 
+PASS public resume PDF 
+PASS views are counted 
+PASS contact appears once the student allows it 
+PASS rotating invalidates the old link 
+PASS expired link is a 404 
+PASS renewed link works 
+PASS staff revoke takes it offline 
+PASS unknown token is a 404 
+PASS disabling by the student 
+ALL PASSED

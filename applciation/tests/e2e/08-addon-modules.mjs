@@ -63,7 +63,9 @@ t("approved log is locked", (await me.A("POST", `/api/student/internships/${it.d
 t("evaluation recorded", (await staff("POST", `/api/internships/${it.d.id}/evaluations`, { evaluatorType: "COMPANY", evaluatorName: "Mentor", score: 85, remarks: "Strong" })).s === 200 && (await staff("POST", `/api/internships/${it.d.id}/evaluations`, { evaluatorType: "FACULTY", evaluatorName: "Prof K", score: 75 })).s === 200);
 const idt = (await staff("GET", `/api/internships/${it.d.id}`)).d; t("summary: hours + average score", idt.summary.approvedHours === 32 && idt.summary.averageScore === 80, JSON.stringify(idt.summary));
 t("student sees evaluations", (await me.A("GET", "/api/student/internships")).d[0].evaluations.length === 2);
-t("complete", (await staff("PATCH", `/api/internships/${it.d.id}`, { status: "COMPLETED" })).d?.status === "COMPLETED");
+const early = await staff("PATCH", `/api/internships/${it.d.id}`, { status: "COMPLETED" });
+t("completion runs the M9 checks: refused while the end date has not been reached, and the unmet check is listed", early.s === 400 && JSON.stringify(early.j).includes("end date"), JSON.stringify(early.j));
+t("complete (the placement admin may override unmet checks with a reason)", (await staff("PATCH", `/api/internships/${it.d.id}`, { status: "COMPLETED", overrideReason: "Completed early by agreement with the company (test data)" })).d?.status === "COMPLETED");
 t("no logs after completion", (await me.A("POST", `/api/student/internships/${it.d.id}/logs`, { weekStart: d0(-6), hours: 5, summary: "Late entry after the internship ended" })).s === 409);
 
 // =============== Events and fairs ===============
@@ -146,10 +148,8 @@ await me.E("POST", `/api/student/assessments/${base}/start`); await me.E("POST",
 const bl = (await staff("GET", "/api/assessments/baseline")).d; t("baseline cohort of 5 shows distribution", bl.overall.hidden === false && bl.overall.distribution.length === 4 && bl.overall.students === 5, JSON.stringify(bl.overall));
 
 // =============== Student preparation ===============
-const rs = (await staff("POST", "/api/prep/resources", { title: `STAR method ${tag}`, category: "INTERVIEW", url: "https://prep.test/star" })).d;
-t("student sees the resource", (await me.A("GET", "/api/student/prep/resources?category=INTERVIEW")).d.some((x) => x.id === rs.id));
-await staff("PATCH", `/api/prep/resources/${rs.id}`, { isActive: false });
-t("deactivated resource disappears", !(await me.A("GET", "/api/student/prep/resources")).d.some((x) => x.id === rs.id));
+// The old preparation-resource endpoints were replaced by the Module 7 resource library (/api/resources, /api/student/resources); that module is tested on its own. Here we only record that the old routes are gone.
+t("the old preparation-resource routes no longer exist (replaced by the M7 resource library)", [(await staff("POST", "/api/prep/resources", { title: `STAR method ${tag}`, category: "INTERVIEW", url: "https://prep.test/star" })).s, (await me.A("GET", "/api/student/prep/resources")).s].every((c) => c === 404 || c === 405));
 const st1 = { startsAt: iso(2 * day), endsAt: iso(2 * day + 1800000) }, st2 = { startsAt: iso(2 * day + 3600000), endsAt: iso(2 * day + 5400000) }, soon = { startsAt: iso(3600000), endsAt: iso(5400000) };
 t("overlapping slots refused", (await staff("POST", "/api/prep/counselling", { slots: [st1, { startsAt: st1.startsAt, endsAt: st1.endsAt }] })).s === 400);
 t("open slots", (await staff("POST", "/api/prep/counselling", { slots: [st1, st2, soon] })).d?.created === 3);

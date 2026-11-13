@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 import { createHmac } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { createClient } from "@supabase/supabase-js"
+import pg from "pg"
 
 // Local-only. Needs the isolated stack, `source tests/e2e/stack/env.sh` and the production build (PW_BASE_URL).
 const stamp = Date.now().toString().slice(-6)
@@ -39,6 +40,8 @@ test.beforeAll(async () => {
   const s = (await anon.auth.signInWithPassword({ email: ADMIN.email, password: ADMIN.password })).data.session!
   const enr = await api(s.access_token, "POST", "/api/platform/mfa/enroll"); totpSecret = enr.j.data.secret
   await api(s.access_token, "POST", "/api/platform/mfa/verify", { factorId: enr.j.data.factorId, code: totp(totpSecret) })
+  // The page is expected to say "Unknown" for scheduled jobs that have never run, so start from an empty job history (local synthetic data; other suites run the jobs).
+  const c = new pg.Client({ connectionString: process.env.DIRECT_URL }); await c.connect(); await c.query(`delete from "JobRun"`); await c.end()
 })
 
 test("anonymous and a college administrator are refused and see no health data", async ({ page, context }) => {
@@ -75,9 +78,11 @@ test("platform administrator: second step, real health, refresh and throttling",
   await expect(comp(page, "ai")).not.toContainText("Healthy")
   await expect(comp(page, "ai")).toContainText("GROQ_API_KEY is not set")
   await expect(comp(page, "email")).toContainText(/Healthy|Not configured/)
+  await page.getByRole("tab", { name: "Scheduled jobs" }).click()
   await expect(page.getByRole("region", { name: "Scheduled jobs" })).toContainText("Unknown")
   await expect(page.getByRole("region", { name: "Scheduled jobs" }).locator("tbody tr")).toHaveCount(5)
   await expect(page.getByRole("region", { name: "Scheduled jobs" }).locator("tbody tr").first()).toContainText("Not recorded")
+  await page.getByRole("tab", { name: "Services" }).click()
   await expect(comp(page, "backgroundJobs")).toContainText("no general job queue")
   for (const w of ["not configured", "unknown"]) await expect(page.getByText(new RegExp(w, "i")).first()).toBeVisible()
   const html = await page.locator("body").innerText()
@@ -91,6 +96,7 @@ test("platform administrator: second step, real health, refresh and throttling",
   await page.getByRole("button", { name: "Refresh" }).click()
   await expect(page.getByRole("status").filter({ hasText: "Refreshed too recently" })).toBeVisible()
   // the page itself never wrote anything: one more look at the error section shows its honest scope
+  await page.getByRole("tab", { name: "Errors" }).click()
   await expect(page.getByText(/Stored in the database and shared by all servers/)).toBeVisible()
 
   // ---- same session: every status, errors table, filters, paging, empty/loading/error states (API responses intercepted)
@@ -125,7 +131,8 @@ test("platform administrator: second step, real health, refresh and throttling",
   await expect(comp(page, "email")).toContainText("Unknown")
   await expect(page.getByText("1 healthy · 1 degraded · 1 unavailable · 1 unknown · 1 not configured")).toBeVisible()
   await expect(page.getByText("1 component(s) cannot be confirmed · 1 component(s) not configured")).toBeVisible()
-  // errors table
+  // errors table (its own tab)
+  await page.getByRole("tab", { name: "Errors" }).click()
   const region = page.getByRole("region", { name: "Recent errors" })
   await expect(region.locator("tbody tr")).toHaveCount(10)
   await expect(region.locator("tbody tr").first()).toContainText("req-1")

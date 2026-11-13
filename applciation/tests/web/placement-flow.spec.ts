@@ -14,7 +14,8 @@ import { blockNonLocal, requireLocalBrowserEnv } from "./lib/local-only"
  */
 const stamp = Date.now().toString(36).toUpperCase()
 const dept = { name: `PW Department ${stamp}`, code: `PW${stamp}`.slice(0, 12) }
-const batch = `PW ${stamp}`
+const program = { name: `PW Programme ${stamp}`, code: `PGM${stamp}`.slice(0, 12), years: 4, semesters: 8 }
+const admissionYear = 2030 + (Date.now() % 60)   // a year nobody else uses; the batch name is generated from the programme code and the years
 const student = { enrollmentNo: `PW-${stamp}`, name: `PW Student ${stamp}`, email: `pw.${stamp.toLowerCase()}@example.com` }
 const company = `PW Company ${stamp}`
 
@@ -74,8 +75,11 @@ test("placement officer: sign in, set up, add a student and company, visit the m
     await expect(page.getByRole("link", { name: "Settings" })).toBeVisible()
   })
 
-  await test.step("settings: add a department and a batch", async () => {
+  await test.step("settings: add a department, a programme and a batch", async () => {
+    // The settings screen is a sidebar of sections (not tabs), and a batch is created from a programme (the name is generated), so this goes department -> programme -> batch.
     await page.goto("/staff/settings")
+    const sections = page.getByRole("navigation", { name: "Settings sections" })
+    await sections.getByRole("button", { name: "Departments" }).click()
     await page.getByRole("button", { name: "Add department" }).click()
     let dialog = page.getByRole("dialog")
     await dialog.getByLabel("Name").fill(dept.name)
@@ -83,24 +87,39 @@ test("placement officer: sign in, set up, add a student and company, visit the m
     await dialog.getByRole("button", { name: "Save" }).click()
     await expect(page.getByRole("cell", { name: dept.name })).toBeVisible()
 
-    await page.getByRole("tab", { name: "Batches" }).click()
+    await page.goto("/staff/settings")   // the lists behind the dropdowns are loaded when the page opens, so a newly added department is offered after a reload
+    await sections.getByRole("button", { name: "Programmes" }).click()
+    await page.getByRole("button", { name: "Add programme" }).click()
+    dialog = page.getByRole("dialog")
+    await dialog.getByLabel("Programme name").fill(program.name)
+    await dialog.getByLabel("Code").fill(program.code)
+    await choose(page, dialog, "Choose department", dept.name)
+    await choose(page, dialog, "Choose level", "Undergraduate")
+    await dialog.getByLabel("Duration in years").fill(String(program.years))
+    await dialog.getByLabel("Number of semesters").fill(String(program.semesters))
+    await dialog.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByRole("cell", { name: program.name })).toBeVisible()
+
+    await page.goto("/staff/settings")
+    await sections.getByRole("button", { name: "Batches" }).click()
     await page.getByRole("button", { name: "Add batch" }).click()
     dialog = page.getByRole("dialog")
-    await dialog.getByLabel("Name (for example 2026)").fill(batch)
-    await dialog.getByLabel("Start year").fill("2022")
-    await dialog.getByLabel("End year").fill("2026")
+    await choose(page, dialog, "Choose programme", program.name)
+    await dialog.getByLabel("Admission year").fill(String(admissionYear))
+    await choose(page, dialog, "Choose status", "Active")
     await dialog.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByRole("cell", { name: batch })).toBeVisible()
+    await expect(page.getByRole("cell", { name: new RegExp(program.code) }).first()).toBeVisible()
   })
 
   await test.step("students: invite one and find it in the list", async () => {
     await page.goto("/staff/students")
-    await page.getByRole("link", { name: "Invite student" }).click()
+    await page.getByRole("button", { name: "Invite student", exact: true }).click()
     await page.getByLabel("Student full name").fill(student.name)
     await page.getByLabel("Admission number").fill(student.enrollmentNo)
     await page.getByLabel("College email address").fill(student.email)
     await choose(page, page.locator("body"), "Choose a department", dept.name)
-    await choose(page, page.locator("body"), "Choose a batch", batch)
+    await page.getByRole("combobox").filter({ hasText: "Choose a batch" }).click()
+    await page.getByRole("option", { name: new RegExp(program.code) }).first().click()   // the generated batch name contains the programme code
     await page.getByRole("button", { name: "Send invitation" }).click()
     await expect(page.getByText(/Invitation sent to|The student was added but the email could not be sent/)).toBeVisible()
     await page.getByPlaceholder("Search name, admission no, email").fill(student.enrollmentNo)

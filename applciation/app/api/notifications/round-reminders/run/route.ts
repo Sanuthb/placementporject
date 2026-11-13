@@ -4,8 +4,8 @@ import { isCronRequest } from "@/lib/cron";
 import { db } from "@/lib/db";
 import { sendRoundReminders } from "@/lib/roundReminders";
 import { withJobRun } from "@/lib/jobRun";
-import { pruneMonitoring } from "@/lib/monitorRetention";
-import { pruneAiUsage } from "@/lib/ai/usage";
+import { runCleanup } from "@/lib/platformPolicyAdmin";
+import { pruneAiQuotaCounters } from "@/lib/ai/usage";
 
 const adminRun = route({ roles: ["TPO_ADMIN"], module: "DRIVES" }, (_req, s) => sendRoundReminders(s.collegeId));
 
@@ -18,9 +18,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<Record<strin
     for (const c of colleges) reminded += (await sendRoundReminders(c.collegeId)).reminded;
     return { colleges: colleges.length, reminded };
   });
-  // Housekeeping for the monitoring tables (JobRun 90 days, MonitorEvent 14 days). Bounded, never throws, and runs after the job's own outcome is recorded.
-  await pruneMonitoring();
-  await pruneAiUsage().catch(() => undefined); // AI usage 90 days, quota counters 3 days; bounded, never fails the job
+  // Housekeeping for the operational tables (job history, monitoring events, AI usage statistics) with the retention the platform administrator has set (defaults 90 / 14 / 90 days).
+  // Bounded, never fails the job, runs after the job's own outcome is recorded, and is written to the platform audit trail whenever it removed rows.
+  await runCleanup(null).catch(() => undefined);
+  await pruneAiQuotaCounters().catch(() => undefined); // not retention: the rate-limit counters only matter for today (fixed 3 days, unchanged)
   return NextResponse.json({ data: out });
 }
 

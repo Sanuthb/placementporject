@@ -201,7 +201,7 @@ await clean();
   await U.recordUsage({ collegeKey: A, purpose: "TEXT", provider: "GROQ", model: "m", feature: "f" }, "success", 1);
   await L.reserve({ collegeKey: A, provider: "GROQ", purpose: "TEXT" }, new Date(Date.now() - 5 * 86_400_000));
   await L.reserve({ collegeKey: A, provider: "GROQ", purpose: "TEXT" });
-  const r = await U.pruneAiUsage();
+  const r = { ...(await U.pruneAiUsage()), counters: await U.pruneAiQuotaCounters() };
   t("usage older than 90 days is removed; 60-day-old and current usage is kept", r.usage === 1 && (await db.aiUsageDaily.count()) === 2, JSON.stringify(r));
   t("quota counters older than 3 days are removed; today's are kept", r.counters >= 3 && (await db.aiQuotaCounter.count({ where: { day: { lt: new Date(Date.now() - 3 * 86_400_000) } } })) === 0);
   t("pruning an already-clean table removes nothing and does not fail", (await U.pruneAiUsage()).usage === 0);

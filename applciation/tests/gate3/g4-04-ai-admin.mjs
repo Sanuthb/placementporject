@@ -66,7 +66,7 @@ try {
   const aal1 = client(await login(emailA, pw), BASE), noMfa = client(await login(emailC, pw), BASE);
   const colAdmin = client(await login(process.env.SEED_ADMIN_EMAIL, process.env.SEED_ADMIN_PASSWORD), BASE);
   const S = await makeStudents(colAdmin, 1, "AIA"); const stu = client(S.tokens.A, BASE);
-  col = (await rows(`select id from "College" limit 1`))[0].id; aiBefore = (await rows(`select "aiDocumentReading" a from "CollegeSettings" where "collegeId"=$1`, [col]))[0]?.a ?? false;
+  col = (await rows(`select "collegeId" id from "User" where email=$1 limit 1`, [process.env.SEED_ADMIN_EMAIL]))[0].id; aiBefore = (await rows(`select "aiDocumentReading" a from "CollegeSettings" where "collegeId"=$1`, [col]))[0]?.a ?? false;
   const mkc = await import("../../lib/ai/crypto.ts"); Object.assign(crypto, mkc);
   const MK = mkc.loadMasterKeys({ AI_MASTER_KEY_V1: M1.toString("base64"), AI_MASTER_KEY_V2: M2.toString("hex"), AI_MASTER_KEY_ACTIVE: "1" });
   const dbRow = async (purpose) => (await rows(`select * from "AiProviderConfig" where purpose = $1::"AiPurpose"`, [purpose]))[0];

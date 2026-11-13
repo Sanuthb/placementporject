@@ -3,10 +3,11 @@ import { route } from "@/lib/api/handler";
 import { parseBody } from "@/lib/api/parse";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { assertRenameAllowed, cleanName, logoUrlSchema } from "@/lib/institutionName";
 
 const patch = z.object({
-  name: z.string().trim().min(2).max(200).optional(),
-  logoUrl: z.url().nullable().optional(),
+  name: z.string().trim().min(2).max(200).transform(cleanName).optional(),
+  logoUrl: logoUrlSchema.nullable().optional(),
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #1a73e8").nullable().optional(),
 });
 
@@ -20,6 +21,7 @@ export const GET = route({ facultyOk: true }, (_req, s) =>
 export const PATCH = route({ roles: ["TPO_ADMIN"] }, async (req, s) => {
   const data = await parseBody(req, patch);
   return db.$transaction(async (tx) => {
+    if (data.name !== undefined) await assertRenameAllowed(tx, s.collegeId, data.name); // another institution's name (any case or spacing) is a 409 DUPLICATE_INSTITUTION
     const before = await tx.college.findUniqueOrThrow({ where: { id: s.collegeId } });
     const after = await tx.college.update({ where: { id: s.collegeId }, data });
     await audit(s, { action: "college.update", entity: "College", entityId: s.collegeId, before: { name: before.name, logoUrl: before.logoUrl, brandColor: before.brandColor }, after: data }, tx);

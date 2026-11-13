@@ -1,0 +1,80 @@
+{
+ "date": "2026-11-12",
+ "node": "v24.17.0",
+ "platform": "win32",
+ "functionalServer": "production build (next start)",
+ "suites": [
+  {
+   "suite": "unit: scoring, config, templates",
+   "passed": true
+  },
+  {
+   "suite": "unit: invitations",
+   "passed": true
+  },
+  {
+   "suite": "unit: intelligence",
+   "passed": true
+  },
+  {
+   "suite": "unit: institution",
+   "passed": true
+  },
+  {
+   "suite": "unit: personal details",
+   "passed": true
+  },
+  {
+   "suite": "unit: academic records",
+   "passed": true
+  },
+  {
+   "suite": "03-companies-drives",
+   "passed": true
+  },
+  {
+   "suite": "04-rounds-offers-approvals-email",
+   "passed": true
+  },
+  {
+   "suite": "05-attendance-blocking-alerts-history",
+   "passed": true
+  },
+  {
+   "suite": "06-dashboard-360-analytics-comms",
+   "passed": false
+  },
+  {
+   "suite": "07-student-api-psychometrics",
+   "passed": true
+  },
+  {
+   "suite": "08-addon-modules",
+   "passed": true
+  },
+  {
+   "suite": "09-security",
+   "passed": true
+  },
+  {
+   "suite": "10-student-invitations",
+   "passed": true
+  },
+  {
+   "suite": "11-intelligence",
+   "passed": true
+  },
+  {
+   "suite": "12-access-security",
+   "passed": true
+  },
+  {
+   "suite": "13-institutions",
+   "passed": true
+  },
+  {
+   "suite": "14-academic-records",
+   "passed": true
+  }
+ ]
+}

@@ -29,7 +29,7 @@ try {
   const short = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "scripts/create-platform-admin.ts"], { encoding: "utf8", shell: process.platform === "win32", env: { ...process.env, PLATFORM_ADMIN_EMAIL: `g3short${tag}@example.com`, PLATFORM_ADMIN_NAME: "x", PLATFORM_ADMIN_PASSWORD: "short" } });
   R.t(["SA-TC-018"], "script refuses a password under 12 characters", short.status !== 0);
   const noApi = [await fetch(B + "/api/platform/admins", { method: "POST" }), await fetch(B + "/api/platform/admin", { method: "POST" })];
-  R.t(["SA-TC-018"], "no API route can create a platform administrator", noApi.every((r) => r.status === 404 || r.status === 401 || r.status === 403 || r.status === 405), noApi.map((r) => r.status).join(","));
+  R.t(["SA-TC-018"], "no API route can create a platform administrator (DEC-01: creation is script-only; a verified platform administrator is refused too, tested in g4-09)", noApi.every((r) => r.status === 404 || r.status === 401 || r.status === 403 || r.status === 405), noApi.map((r) => r.status).join(","));
   const uid = (await pgc.query(`select id from "PlatformAdmin" where email=$1`, [email])).rows[0]?.id; created.auth.push(uid);
 
   // SA-TC-014 invalid login
@@ -104,23 +104,18 @@ try {
   for (const [m, p] of routes) { const a = await fetch(B + p, { method: m, headers: { "content-type": "application/json" }, body: m === "GET" ? undefined : "{}" }); if (![401, 403].includes(a.status)) badOnes.push(`anon ${m} ${p} ${a.status}`); const t = await colAdmin(m, p, m === "GET" ? undefined : {}); if (![401, 403].includes(t.s)) badOnes.push(`TPO ${m} ${p} ${t.s}`); }
   R.t(["SA-TC-035", "SA-TC-037"], "anonymous and college administrator refused on all platform routes", badOnes.length === 0, badOnes.join("; "));
   // Not testable here, recorded honestly
-  R.blocked(["SA-TC-033"], "platform session expiry and logout", "Needs a token expiry clock control or a signed-out token revocation check; test not built yet");
-  R.blocked(["SA-TC-034"], "rate limits on platform endpoints", "Dev server runs with RATE_LIMIT_DISABLED=true; needs the production-mode server (:3112) and a flood harness");
-  R.blocked(["SA-TC-025"], "rollback through a forced mid-transaction failure", "Only an input-level failure was exercised; a forced mid-transaction fault needs a fault-injection seam");
-  R.blocked(["SA-TC-030"], "suspended institution: scheduled jobs", "Cron-secret routes need a run against seeded due work; planned for the next Gate 3 pass");
+  // SA-TC-025, 030, 033 and 034 were Blocked here for want of a harness; Gate 4 WP-01 built it and tests them in g4-10-platform-harness.mjs.
   R.blocked(["SA-TC-038", "SA-TC-039", "SA-TC-040"], "/platform page states, create/suspend flow, accessibility", "Browser (Playwright) run not built in this pass; the page is a client of the APIs tested above");
 
   // Missing features: probe for any plausible endpoint; none exists in the code base => FAIL as expected
   const probe = async (paths) => { const out = []; for (const p of paths) { const r = await P("GET", p); out.push(`${p}:${r.s}`); if (r.s === 200) return { found: true, out }; } return { found: false, out }; };
   const missing = [
-    [["SA-TC-043"], "institution detail view", [`/api/platform/institutions/${cid}`]],
-    [["SA-TC-044"], "institution editing (name, contact)", []],
-    [["SA-TC-046"], "institution usage view", [`/api/platform/institutions/${cid}/usage`]],
+    // SA-TC-043, 044, 046: built in Gate 4 and tested in g4-07-institution-admin.mjs (the "missing" probes were retired).
     [["SA-TC-047", "SA-TC-048", "SA-TC-049", "SA-TC-050", "SA-TC-051", "SA-TC-009"], "platform analytics", ["/api/platform/analytics", "/api/platform/stats", "/api/platform/overview"]],
     [["SA-TC-052", "SA-TC-053"], "platform audit-log viewer", ["/api/platform/audit-logs", "/api/platform/audit"]],
     [["SA-TC-058", "SA-TC-059", "SA-TC-060", "SA-TC-061", "SA-TC-062", "SA-TC-006"], "AI configuration and usage", ["/api/platform/ai", "/api/platform/ai-config", "/api/platform/settings/ai"]],
-    [["SA-TC-063", "SA-TC-064", "SA-TC-065", "SA-TC-011"], "platform support requests", ["/api/platform/support", "/api/platform/tickets"]],
-    [["SA-TC-067", "SA-TC-007", "SA-TC-010", "SA-TC-012", "SA-TC-004"], "platform-wide settings, integrations, roles and permissions, retention", ["/api/platform/settings", "/api/platform/integrations", "/api/platform/roles", "/api/platform/retention"]],
+    // SA-TC-011, 063, 064, 065: built in Gate 4 and tested in g4-06-platform-support.mjs (the "missing" probe was retired).
+    // SA-TC-004, 007, 010, 012, 067: built under the approved A-18 scope and tested in g4-09-platform-governance.mjs (the "missing" probe was retired).
   ];
   for (const [ids, name, paths, extra] of missing) {
     const r = paths.length ? await probe(paths) : { found: false, out: ["no endpoint exists"] };

@@ -442,6 +442,7 @@ model College {
   departments           Department[]
   users                 User[]
   auditLogs             AuditLog[]
+  supportRequests       PlatformSupportRequest[]
   programs              Program[]
   academicYears         AcademicYear[]
   batches               Batch[]
@@ -1459,6 +1460,43 @@ model TicketAttachment {
   @@index([ticketId])
 }
 
+/// A request from an institution's administrator to the platform team (Gate 4, SA-TC-011/063/064/065). Distinct from Ticket, which is a student's request to their own college.
+/// Status reuses TicketStatus. No foreign key to PlatformAdmin, so history survives removal of an administrator (same rule as PlatformAuditLog).
+model PlatformSupportRequest {
+  id               String       @id @default(uuid()) @db.Uuid
+  collegeId        String       @db.Uuid
+  requesterId      String?      @db.Uuid
+  category         String
+  subject          String
+  status           TicketStatus @default(OPEN)
+  assigneeAdminId  String?      @db.Uuid
+  priority         SupportPriority @default(NORMAL)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  resolvedAt       DateTime?
+
+  college College                 @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  entries PlatformSupportEntry[]
+
+  @@index([collegeId, status, createdAt])
+  @@index([status, createdAt])
+}
+
+/// One line of a request's history. kind: REPLY (shown to the institution), NOTE (platform team only, never returned by any institution route), EVENT (assignment / status change).
+model PlatformSupportEntry {
+  id           String   @id @default(uuid()) @db.Uuid
+  requestId    String   @db.Uuid
+  kind         String
+  authorAdminId String? @db.Uuid
+  authorUserId String?  @db.Uuid
+  body         String
+  createdAt    DateTime @default(now())
+
+  request PlatformSupportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+}
+
 // Questions and placement rules the college publishes for students. Staff edit them; students read them.
 model FaqItem {
   id          String   @id @default(uuid()) @db.Uuid
@@ -2351,6 +2389,19 @@ model AiGlobalSetting {
   reason    String?
   updatedAt DateTime @updatedAt
   updatedBy String?  @db.Uuid
+}
+
+/// Platform-wide policy (Gate 4, SA-TC-012): one row, id "platform". A minimum two-step sign-in rule for institution administrators that an institution may tighten but never weaken, and
+/// retention periods (days) for the platform's own operational records. A null period means "use the built-in default" (job history 90, monitoring events 14, AI usage statistics 90).
+/// No student or institution data is governed here.
+model PlatformPolicy {
+  id                       String   @id @default("platform")
+  requireAdminMfa          Boolean  @default(false)
+  retentionJobRunDays      Int?
+  retentionMonitorEventDays Int?
+  retentionAiUsageDays     Int?
+  updatedAt                DateTime @updatedAt
+  updatedBy                String?  @db.Uuid
 }
 
 /// Daily AI usage, aggregated: counts and latency only. Never a prompt, an answer, a transcript or a person. One row per day, institution (or "platform" for calls outside any
@@ -4080,4 +4131,155 @@ model CalendarFeed {
   lastReadAt DateTime?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+// ---- Super Admin Control Centre (Batch 4). Platform-level records: none holds student or staff data; institution links are plain ids with no foreign key.
+
+enum SupportPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum IncidentSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum IncidentStatus {
+  INVESTIGATING
+  IDENTIFIED
+  MONITORING
+  RESOLVED
+}
+
+/// A platform-wide incident (an outage or degradation). Recorded by a platform administrator; nothing is detected or created automatically.
+model PlatformIncident {
+  id               String           @id @default(uuid()) @db.Uuid
+  title            String
+  severity         IncidentSeverity
+  status           IncidentStatus   @default(INVESTIGATING)
+  startedAt        DateTime         @default(now())
+  resolvedAt       DateTime?
+  createdByAdminId String?          @db.Uuid
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  updates PlatformIncidentUpdate[]
+
+  @@index([status, startedAt])
+}
+
+model PlatformIncidentUpdate {
+  id         String         @id @default(uuid()) @db.Uuid
+  incidentId String         @db.Uuid
+  status     IncidentStatus
+  message    String
+  adminId    String?        @db.Uuid
+  createdAt  DateTime       @default(now())
+
+  incident PlatformIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt])
+}
+
+enum AnnouncementKind {
+  MAINTENANCE
+  FEATURE
+  OUTAGE
+}
+
+/// A notice from the platform to institutions. publishedAt null means draft. Shown inside the application only: nothing is emailed, texted or sent over WhatsApp.
+model PlatformAnnouncement {
+  id               String           @id @default(uuid()) @db.Uuid
+  kind             AnnouncementKind
+  title            String
+  body             String
+  allInstitutions  Boolean          @default(true)
+  startsAt         DateTime
+  endsAt           DateTime?
+  publishedAt      DateTime?
+  cancelledAt      DateTime?
+  createdByAdminId String?          @db.Uuid
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  targets PlatformAnnouncementTarget[]
+  acks    PlatformAnnouncementAck[]
+
+  @@index([publishedAt, startsAt])
+}
+
+/// The institutions a non-global announcement is for. collegeId is a plain id (no foreign key) so this table never constrains an institution.
+model PlatformAnnouncementTarget {
+  announcementId String @db.Uuid
+  collegeId      String @db.Uuid
+
+  announcement PlatformAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, collegeId])
+  @@index([collegeId])
+}
+
+/// An institution administrator confirming they have read an announcement.
+model PlatformAnnouncementAck {
+  announcementId String   @db.Uuid
+  collegeId      String   @db.Uuid
+  userId         String   @db.Uuid
+  ackedAt        DateTime @default(now())
+
+  announcement PlatformAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
+  @@index([collegeId])
+}
+
+/// A platform-wide emergency switch for one module. An absent row means "on". It can only ever REDUCE access: an institution still needs the module switched on for itself.
+model PlatformModuleSetting {
+  module          ModuleKey @id
+  globallyEnabled Boolean   @default(true)
+  reason          String?
+  /// The module is not available to anyone before this time (scheduled launch). Null means no schedule.
+  availableFrom   DateTime?
+  /// Gradual rollout: the share of institutions (0 to 100) the module is available to. Which institutions is decided by a stable hash, so it never flips between requests.
+  rolloutPercent  Int       @default(100)
+  updatedAt       DateTime  @updatedAt
+  updatedBy       String?   @db.Uuid
+}
+
+enum SecurityReviewStatus {
+  UNDER_REVIEW
+  RESOLVED
+  NO_ACTION
+}
+
+/// A platform administrator's review of one recorded security event. An event with no row here has not been reviewed. Nothing is called an attack: the status says what was done about it.
+model PlatformSecurityReview {
+  id                 String               @id @default(uuid()) @db.Uuid
+  source             String
+  eventId            String               @db.Uuid
+  status             SecurityReviewStatus
+  note               String?
+  reviewedByAdminId  String?              @db.Uuid
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@unique([source, eventId])
+  @@index([status, updatedAt])
+}
+
+/// One recorded refusal of a signed-in person's request (a role or module the person is not allowed). Counts and a route pattern only: no person, no request content.
+/// collegeId is a plain id (no foreign key). This is NOT a record of sign-in failures, which happen inside the Auth service, nor of attempts that end in "not found".
+model PlatformAccessDenial {
+  id        String   @id @default(uuid()) @db.Uuid
+  collegeId String?  @db.Uuid
+  role      String?
+  kind      String
+  route     String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([collegeId, createdAt])
 }

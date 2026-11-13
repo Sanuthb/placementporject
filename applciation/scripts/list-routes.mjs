@@ -21,12 +21,12 @@ for (const f of files.sort()) {
     else optRaw = /^\w+/.exec(src.slice(at))?.[0] ?? "";
     const opts = optRaw.startsWith("{") ? optRaw : named[optRaw] ?? "";
     const roles = /roles:\s*\[([^\]]*)\]/.exec(opts)?.[1].replace(/"/g, "").replace(/\s+/g, "").split(",").filter(Boolean);
-    const module = /module:\s*"(\w+)"/.exec(opts)?.[1] ?? "";
+    const moduleKey = /module:\s*"(\w+)"/.exec(opts)?.[1] ?? ""; // not named "module": that shadows a Node/Next global (lint)
     const limit = /limit:\s*\{\s*name:\s*"[^"]*",\s*max:\s*(\d+),\s*windowSec:\s*(\d+)/.exec(opts);
     const who = wrapper === "studentRoute" ? "student" : wrapper === "recruiterRoute" ? "recruiter" : roles?.length ? roles.map((r) => r.replace("TPO_ADMIN", "admin").replace("PLACEMENT_OFFICER", "officer").replace("DEPARTMENT_COORDINATOR", "coordinator")).join(", ") : "any staff";
     const method = name === "adminRun" ? "POST" : name;
     seen.add(method);
-    rows.push({ method, path, who, module, limit: limit ? `${limit[1]}/${limit[2] >= 3600 ? Math.round(limit[2] / 3600) + "h" : limit[2] + "s"}` : "" });
+    rows.push({ method, path, who, module: moduleKey, limit: limit ? `${limit[1]}/${limit[2] >= 3600 ? Math.round(limit[2] / 3600) + "h" : limit[2] + "s"}` : "" });
   }
   for (const m of src.matchAll(/export async function (GET|POST|PUT|PATCH|DELETE)\b/g)) {
     const method = m[1];

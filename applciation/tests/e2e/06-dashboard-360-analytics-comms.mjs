@@ -31,7 +31,14 @@ const cgpa = { A: 7.5, B: 6.0, C: 9, D: 8, E: 8 };
 const semA = [{ semester: 1, sgpa: 7.0, subjects: [{ name: "Maths", score: 45 }, { name: "Physics", score: 80 }] }, { semester: 2, sgpa: 7.8, subjects: [{ name: "Maths", score: 70 }] }, { semester: 3, sgpa: 7.4, subjects: [{ name: "DBMS", score: 6 }] }];
 for (const c of "ABCDE") {
   await call("PATCH", `/api/students/${st(c)}`, { phone: "9876543210" });
-  await call("PUT", `/api/students/${st(c)}/sections/ACADEMICS`, { data: { cgpa: cgpa[c], tenthPercentage: 85, twelfthPercentage: 85, activeBacklogs: 0, ...(c === "A" ? { semesters: semA } : {}) }, submit: true });
+  if (c === "A") { // Module 3 phase 2: semester results are structured records and the ACADEMICS data is generated from them (an inline `semesters` list that carries subjects is dropped), so student A gets real records
+    const colId = (await pgc.query(`select "collegeId" c from "Student" where id=$1`, [st(c)])).rows[0].c;
+    for (const sm of semA) {
+      const rid = (await pgc.query(`insert into "SemesterResult" (id,"collegeId","studentId","semesterNumber",sgpa,"updatedAt") values (gen_random_uuid(),$1,$2,$3,$4,now()) returning id`, [colId, st(c), sm.semester, sm.sgpa])).rows[0].id;
+      for (const sj of sm.subjects) await pgc.query(`insert into "SubjectMark" (id,"collegeId","semesterResultId",name,"marksObtained","maxMarks") values (gen_random_uuid(),$1,$2,$3,$4,100)`, [colId, rid, sj.name, sj.score]);
+    }
+  }
+  await call("PUT", `/api/students/${st(c)}/sections/ACADEMICS`, { data: { cgpa: cgpa[c], tenthPercentage: 85, twelfthPercentage: 85, activeBacklogs: 0 }, submit: true });
   await call("PUT", `/api/students/${st(c)}/sections/PERSONAL`, { data: { dob: "2003-01-01" }, submit: true });
   await call("POST", `/api/students/${st(c)}/sections/ACADEMICS/approve`, {}); await call("POST", `/api/students/${st(c)}/sections/PERSONAL/approve`, {});
   await call("POST", `/api/students/${st(c)}/onboard`);
@@ -72,7 +79,7 @@ t("quick actions for admin", ["import_students", "create_drive", "verification_q
 
 // ---- student 360 + analysis
 const A = (await call("GET", `/api/students/${st("A")}/360`)).d;
-t("360 profile + 8 sections", A.profile.enrollmentNo === `S${tag}A` && A.sections.length === 8 && A.sections.find((x) => x.section === "ACADEMICS").status === "VERIFIED");
+t("360 profile + 9 sections (EDUCATION_HISTORY was added in M3 phase 2)", A.profile.enrollmentNo === `S${tag}A` && A.sections.length === 9 && A.sections.find((x) => x.section === "ACADEMICS").status === "VERIFIED");
 t("360 academics with semesters", A.academics.verified && A.academics.cgpa === 7.5 && A.academics.semesters.length === 3);
 t("360 drives summary", A.drives.summary.applied === 2 && A.drives.summary.rejected === 2 && A.drives.items[0].journey.length === 1, JSON.stringify(A.drives.summary));
 t("360 timeline has verification and application events", A.timeline.some((e) => e.type.startsWith("verification")) && A.timeline.some((e) => e.type === "application"));
@@ -82,7 +89,7 @@ t("note appears", (await call("GET", `/api/students/${st("A")}/360`)).d.notes[0]
 const C = (await call("GET", `/api/students/${st("C")}/360`)).d; t("C: placed, accepted offer", C.profile.isPlaced && C.offers[0].status === "ACCEPTED" && C.drives.summary.cleared === 2);
 const an = (await call("GET", `/api/students/${st("A")}/analysis`)).d;
 t("trend: 3 semesters, declining", an.performance.semesterTrend.length === 3 && an.performance.direction === "declining" && an.performance.change === -4, JSON.stringify(an.performance));
-t("weak subjects found (45% Maths)", an.performance.weakSubjects.some((w) => w.subject === "Maths" && w.score === 45));
+t("weak subjects found (45% Maths)", an.performance.weakSubjects.some((w) => w.subject === "Maths" && w.score === 45), JSON.stringify(an.performance.weakSubjects));
 t("comparison with batch/department", an.comparison.cgpa === 7.5 && an.comparison.batchAverage > 0 && an.comparison.departmentAverage > 0 && an.comparison.batchPercentile >= 0, JSON.stringify(an.comparison));
 t("at-risk: repeated rejection at same round type", an.atRisk.flags.some((f) => f.flag === "REPEATED_REJECTION" && /technical/.test(f.detail)), JSON.stringify(an.atRisk));
 t("readiness + personality placeholder", an.readiness.drivesApplied === 2 && Array.isArray(an.readiness.assessmentScores) && an.personalityProfile?.completed === false);
@@ -133,7 +140,10 @@ const eee = (await call("POST", "/api/settings/departments", { name: `Electrical
 await pgc.query(`insert into "User"(id,"collegeId",email,name,role,"departmentId","updatedAt") values($1,$2,'officer@demo.test','Officer X','PLACEMENT_OFFICER',null,now()),($3,$2,'coord@demo.test','Coord CSE','DEPARTMENT_COORDINATOR',$5,now()),($4,$2,'coord2@demo.test','Coord EEE','DEPARTMENT_COORDINATOR',$6,now()) on conflict do nothing`, [officer, col.id, coordCSE, coordOther, dept.id, eee.id]);
 await call("PUT", `/api/students/${st("D")}/sections/SKILLS`, { data: { skills: ["Go"] }, submit: true });
 const q = async (sql, p) => (await pgc.query(sql, p)).rows;
-t("officer and CSE coordinator notified of submission, EEE coordinator not", (await q(`select "userId" from "Notification" where type='section.submitted' and title like $1`, [`S D submitted%`])).map((r) => r.userId).sort().join() === [officer, coordCSE].sort().join());
+const notified = await q(`select distinct n."userId", u.role, u."extraRoles", u."departmentId" from "Notification" n join "User" u on u.id=n."userId" where n.type='section.submitted' and n.title like $1`, [`S D submitted%`]);
+const dDept = (await q(`select "departmentId" d from "Student" where id=$1`, [st("D")]))[0].d, nIds = notified.map((u) => u.userId);
+// The demo college also holds officers and coordinators left behind by other suites, so the rule is asserted, not an exact recipient list: officers and admins and the student's own department coordinator are told; a coordinator of another department is not.
+t("officer and CSE coordinator notified of submission, EEE coordinator not; no recipient is a coordinator of another department", nIds.includes(officer) && nIds.includes(coordCSE) && !nIds.includes(coordOther) && notified.every((u) => [u.role, ...u.extraRoles].some((r) => r === "TPO_ADMIN" || r === "PLACEMENT_OFFICER") || (u.role === "DEPARTMENT_COORDINATOR" && u.departmentId === dDept)), JSON.stringify(notified.filter((u) => !([u.role, ...u.extraRoles].some((r) => r === "TPO_ADMIN" || r === "PLACEMENT_OFFICER") || (u.role === "DEPARTMENT_COORDINATOR" && u.departmentId === dDept))).map((u) => [u.role, u.departmentId])));
 t("student notified of offer", (await q(`select 1 from "Notification" where "studentId"=$1 and type='offer.received'`, [st("C")])).length === 1);
 await call("POST", `/api/students/${st("D")}/sections/SKILLS/request-changes`, { comment: "Add more detail please" });
 t("student notified of requested changes", (await q(`select 1 from "Notification" where "studentId"=$1 and type='section.changesRequested'`, [st("D")])).length === 1);

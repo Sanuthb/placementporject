@@ -3,7 +3,7 @@ PASS first sign-in activated the invite
 PASS student token refused on staff API 
 PASS staff token refused on student API 
 PASS no token refused 
-FAIL 8 sections, 2 required 
+PASS 9 sections, 2 required (EDUCATION_HISTORY was added in M3 phase 2) 
 PASS save academics draft 
 PASS invalid academics rejected 
 PASS upload proof to a draft section 
@@ -80,8 +80,8 @@ PASS individual result with a reason
 PASS access is logged 
 PASS 360 analysis shows completion, not scores 
 PASS psychometrics never changed A's eligibility 
-FAIL reminder emails pending students 
+PASS reminder emails pending students 
 PASS onboarding blocked until assessment is done 
 PASS onboarding allowed after the assessment 
 PASS deactivated student loses access 
-2 FAILED
+ALL PASSED

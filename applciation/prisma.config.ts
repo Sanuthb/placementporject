@@ -7,8 +7,8 @@ loadEnvFiles();
 
 const url = process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"];
 // Commands that open a database connection are refused unless the target is the isolated local stack. `prisma generate` and `validate` never connect, so builds are unaffected.
-// A deliberate, approved operation against anything else needs ALLOW_REMOTE_DB=I_UNDERSTAND_THIS_IS_NOT_LOCAL (see docs/LOCAL_ENV.md).
-if (process.argv.some((a) => ["migrate", "db", "studio"].includes(a))) assertLocalTargets({ DIRECT_URL: url }, { what: "run a Prisma database command" });
+// A deliberate, approved operation against anything else needs ALLOW_REMOTE_DB=I_UNDERSTAND_THIS_IS_NOT_LOCAL (see docs/LOCAL_ENV.md). The value is handed to the check here: before, it was never passed on, so the documented override could not work for Prisma.
+if (process.argv.some((a) => ["migrate", "db", "studio"].includes(a))) assertLocalTargets({ DIRECT_URL: url, ALLOW_REMOTE_DB: process.env["ALLOW_REMOTE_DB"] }, { what: "run a Prisma database command" });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

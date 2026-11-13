@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Prisma } from "@/generated/prisma/client";
+import { ModuleKey, Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { escapeLike } from "@/lib/platformList";
 import { listAudit } from "@/lib/platformAuditView";
@@ -187,4 +187,22 @@ export async function recentActivity(f: AnalyticsFilters) {
     with ${FC(f)} select id, name, "isActive", "createdAt" from fc where true ${rangeOf(Prisma.sql`"createdAt"`, f)} order by "createdAt" desc, id asc limit 10`);
   const admin = await listAudit({ sort: "createdAt", order: "desc", page: 1, pageSize: 10, from: f.from, to: f.to, institution: f.institution });
   return { registrations, adminActivity: admin.items };
+}
+
+// ---- Module adoption: how many active institutions have each module switched on (counts only)
+/** One row per known module, including modules no institution uses (shown as zero, never left out). `enabledByModule` comes from the database; the total is the number of active institutions. */
+export function summariseAdoption(modules: readonly string[], enabledByModule: Record<string, number>, activeInstitutions: number) {
+  return modules.map((m) => {
+    const enabled = Math.min(enabledByModule[m] ?? 0, activeInstitutions);
+    return { module: m, enabled, total: activeInstitutions, share: rate(enabled, activeInstitutions) };
+  });
+}
+export async function moduleAdoption() {
+  const [rows, activeInstitutions] = await Promise.all([
+    db.collegeModule.groupBy({ by: ["module"], where: { enabled: true, college: { isActive: true } }, _count: { _all: true } }),
+    db.college.count({ where: { isActive: true } }),
+  ]);
+  const byModule: Record<string, number> = {};
+  for (const r of rows) byModule[r.module] = r._count._all;
+  return { generatedAt: new Date().toISOString(), activeInstitutions, items: summariseAdoption(Object.values(ModuleKey), byModule, activeInstitutions) };
 }

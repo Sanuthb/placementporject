@@ -9,6 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { B, client, login, makeStudents, tag } from "../e2e/lib.mjs";
 import { recorder } from "./rec.mjs";
 import { writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url"; // .pathname gives "/D:/..." on Windows ("D:D:..."); fileURLToPath is correct everywhere
 
 const R = recorder("g3-07-platform-analytics");
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -218,7 +219,7 @@ try {
   t(SA, `large dataset: every institution appears exactly once across ${f2.d.totalPages} pages and the rows sum to the global figures`, walk2.length === gb.ins && new Set(walk2.map((r) => r.id)).size === gb.ins && walk2.reduce((a, r) => a + r.students, 0) === gb.st && walk2.reduce((a, r) => a + r.offers, 0) === gb.ofr);
   const worst = Math.max(...timings.map((x) => x.medianMs));
   t(SA, `performance: every analytics call answers in under 3000 ms at this size (worst median ${worst} ms; all measured, see results/g3-07-timings.json)`, worst < 3000, JSON.stringify(timings));
-  writeFileSync(new URL("./results/g3-07-timings.json", import.meta.url).pathname, JSON.stringify({ dataset: sz, note: "Median and maximum of 5 sequential requests per call, production build, local Docker Postgres, this machine, after ANALYZE. Measured, not estimated.", staleStatisticsObservation: { call: "institution table, search + date range", firstCallBeforeAnalyzeMs: staleMs, note: "Observed on the first call after a bulk insert, before planner statistics existed. A separate run measured 7.6-8.7 s before ANALYZE and about 0.14 s after, for the same query." }, timings }, null, 1));
+  writeFileSync(fileURLToPath(new URL("./results/g3-07-timings.json", import.meta.url)), JSON.stringify({ dataset: sz, note: "Median and maximum of 5 sequential requests per call, production build, local Docker Postgres, this machine, after ANALYZE. Measured, not estimated.", staleStatisticsObservation: { call: "institution table, search + date range", firstCallBeforeAnalyzeMs: staleMs, note: "Observed on the first call after a bulk insert, before planner statistics existed. A separate run measured 7.6-8.7 s before ANALYZE and about 0.14 s after, for the same query." }, timings }, null, 1));
 } finally {
   for (const ids of [made.bulk, made.colleges]) if (ids.length) { await pgc.query(`delete from "LoginEvent" where "collegeId" = any($1::uuid[])`, [ids]).catch(() => 0); await pgc.query(`delete from "Offer" where "collegeId" = any($1::uuid[])`, [ids]).catch(() => 0); await pgc.query(`delete from "Application" where "collegeId" = any($1::uuid[])`, [ids]).catch(() => 0); await pgc.query(`delete from "Recruiter" where "collegeId" = any($1::uuid[])`, [ids]).catch(() => 0); await pgc.query(`delete from "College" where id = any($1::uuid[])`, [ids]).catch((e) => console.log("cleanup:", e.message)); }
   await pgc.query(`delete from "Recruiter" where email like $1`, [`g3anarec${tag}%`]).catch(() => 0);

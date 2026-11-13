@@ -57,6 +57,7 @@ export const NAV: Record<Kind, NavSection[]> = {
       items: [
         { title: "Messages", href: "/staff/communications", icon: MailIcon, roles: ["TPO_ADMIN", "PLACEMENT_OFFICER"] },
         { title: "Support tickets", href: "/staff/tickets", icon: TicketIcon },
+        { title: "Platform support", href: "/staff/platform-support", icon: LifeBuoyIcon, roles: ["TPO_ADMIN"] },
         { title: "Notifications", href: "/staff/notifications", icon: InboxIcon },
         { title: "Reports", href: "/staff/reports", icon: FileBarChartIcon, roles: ["TPO_ADMIN", "PLACEMENT_OFFICER", "PRINCIPAL"], principal: true },
       ],

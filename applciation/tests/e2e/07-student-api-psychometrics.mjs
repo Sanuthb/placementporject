@@ -17,7 +17,7 @@ t("staff token refused on student API", (await staff("GET", "/api/student/me")).
 t("no token refused", (await client("x")("GET", "/api/student/me")).s === 401);
 
 // ---- profile sections
-const secs = (await me.A("GET", "/api/student/sections")).d; t("8 sections, 2 required", secs.sections.length === 8 && secs.sections.filter((x) => x.required).length === 2);
+const secs = (await me.A("GET", "/api/student/sections")).d; t("9 sections, 2 required (EDUCATION_HISTORY was added in M3 phase 2)", secs.sections.length === 9 && secs.sections.filter((x) => x.required).length === 2);
 t("save academics draft", (await me.A("PUT", "/api/student/sections/ACADEMICS", { data: { cgpa: 8, tenthPercentage: 85, twelfthPercentage: 85, activeBacklogs: 0 } })).d?.status === "DRAFT");
 t("invalid academics rejected", (await me.A("PUT", "/api/student/sections/ACADEMICS", { data: { cgpa: 15 } })).s === 400);
 t("upload proof to a draft section", (await me.A("POST", "/api/student/sections/ACADEMICS/documents", null, upload("marks.pdf", "%PDF-1.4\n1 0 obj<<>>endobj\n" + " ".repeat(80) + "\n%%EOF\n", "application/pdf"))).s === 200);

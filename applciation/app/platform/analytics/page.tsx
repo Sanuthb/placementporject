@@ -77,11 +77,10 @@ export default function PlatformAnalyticsPage() {
   const head = (k: Sort, label: string, right = false) => <TableHead className={right ? "text-right" : undefined}><button type="button" onClick={() => sortBy(k)}>{label}{arrow(k)}</button></TableHead>
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5 p-4 md:p-8">
+    <div className="flex w-full min-w-0 flex-col gap-5">
       <header className="flex items-start justify-between gap-3">
-        <div><h1 className="text-xl font-semibold tracking-tight">Platform analytics</h1><p className="text-sm text-muted-foreground">Counts and rates across institutions. No student or staff records are shown. Dates are UTC days.</p></div>
-        <div className="flex gap-2"><Button variant="outline" size="sm" render={<Link href="/platform" />}>Institutions</Button><Button variant="outline" size="sm" render={<Link href="/platform/audit" />}>Audit log</Button></div>
-      </header>
+        <div><h1 className="text-2xl font-semibold tracking-tight">Platform analytics</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Counts and rates across institutions. No student or staff records are shown. Dates are UTC days.</p></div>
+        </header>
 
       <div className="flex flex-wrap items-center gap-2">
         <Input aria-label="From date" type="date" className="w-40" value={f.from} onChange={(e) => set("from")(e.target.value)} />
